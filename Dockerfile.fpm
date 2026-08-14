@@ -1,9 +1,9 @@
 FROM php:8.3-fpm-bookworm
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    git unzip libzip-dev libonig-dev libsqlite3-dev \
+    git unzip libzip-dev libonig-dev libsqlite3-dev libpq-dev \
     libfreetype6-dev libjpeg62-turbo-dev libpng-dev \
-    && docker-php-ext-install -j"$(nproc)" pdo_mysql pdo_sqlite zip opcache mbstring bcmath \
+    && docker-php-ext-install -j"$(nproc)" pdo_mysql pdo_pgsql pdo_sqlite zip opcache mbstring bcmath \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer

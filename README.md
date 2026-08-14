@@ -29,15 +29,17 @@ MySQL: `localhost:33062` / `trazabilidad` / `laravel` / `secret`
 - [Manual de uso](docs/manual-de-uso.md) (también en la app: **Consulta → Ayuda**)
 - [Propuesta de presupuesto para empresa de transportes](docs/presupuesto-empresa-transportes.md)
 - QA por rol: `php artisan qa:roles` (logs en `storage/logs/qa/` y `docs/qa/`)
-- Railway: variables en [`.env.railway`](.env.railway) (MySQL del plugin + `APP_KEY` / `APP_URL`)
+- Railway: variables en [`.env.railway`](.env.railway) + release [`scripts/railway-db-setup.sh`](scripts/railway-db-setup.sh)
+- **Base de datos:** el producto usa **MySQL 8** (local y Railway recomendado). PostgreSQL también está soportado vía el mismo script.
 
 ### Deploy Railway (resumen)
 
-1. Servicio web + plugin **MySQL**.
-2. Pegá [`.env.railway`](.env.railway) en Variables (Raw Editor).
+1. Servicio web + plugin **MySQL** (recomendado) o **PostgreSQL**.
+2. Pegá [`.env.railway`](.env.railway) en Variables (Raw Editor) y dejá activo el bloque del motor que uses.
 3. Generá `APP_KEY` con `php artisan key:generate --show` y pegala.
 4. Poné `APP_URL` con el dominio público (`https://….up.railway.app`).
-5. En el release command: `php artisan migrate --force` (y `db:seed` solo si querés la demo).
+5. Release command (también en `railway.toml`): `bash scripts/railway-db-setup.sh`  
+   Migra y carga la demo (`admin` / `password`, etc.). Para solo migrar: variable `SEED_DEMO=0`.
 
 ### Usuarios demo
 

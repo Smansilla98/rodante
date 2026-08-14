@@ -1,0 +1,4 @@
+# https://docs.railway.com/guides/config-as-code
+[deploy]
+# Monta MySQL o PostgreSQL (según variables), migra y carga la demo.
+releaseCommand = "bash scripts/railway-db-setup.sh"
