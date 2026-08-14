@@ -1,9 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "smansilla98/rodanta",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "Rodanta — gestión inteligente de neumáticos para flotas.",
+    "keywords": ["laravel", "rodanta", "neumaticos", "flotas"],
     "license": "MIT",
     "require": {
         "php": "^8.3",

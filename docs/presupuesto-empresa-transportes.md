@@ -1,12 +1,13 @@
-# Propuesta económica — Trazabilidad de cubiertas
+# Propuesta económica — Rodanta
 
+**Producto:** Rodanta — gestión inteligente de neumáticos para flotas  
 **Para:** [Nombre de la empresa de transportes]  
 **De:** [Razón social del proveedor]  
 **Fecha:** 14 de agosto de 2026  
 **Validez de la oferta:** 30 días  
 **Moneda de referencia:** USD (facturación en ARS al tipo de cambio acordado el día de emisión de factura)
 
-Este documento sirve para cotizar la **puesta en marcha** del sistema de trazabilidad individual de cubiertas ya desarrollado, no un desarrollo desde cero. Los importes son una **propuesta de trabajo** para una flota de transporte de cargas: ajustarlos según cantidad de unidades, bases y usuarios.
+Este documento sirve para cotizar la **puesta en marcha** de **Rodanta**, el sistema de trazabilidad individual de cubiertas ya desarrollado, no un desarrollo desde cero. Los importes son una **propuesta de trabajo** para una flota de transporte de cargas: ajustarlos según cantidad de unidades, bases y usuarios.
 
 ---
 

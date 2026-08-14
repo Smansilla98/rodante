@@ -1,6 +1,6 @@
-# Manual de uso — Trazabilidad de cubiertas
+# Manual de uso — Rodanta
 
-Sistema para flotas de camiones, semirremolques, tanques y bateas. El historial es de **cada cubierta** (por ejemplo `FH:01 Nº30363`), no de la patente. Tractor + acoplado es solo la vista de trabajo.
+**Rodanta** es la gestión inteligente de neumáticos para flotas de camiones, semirremolques, tanques y bateas. El historial es de **cada cubierta** (por ejemplo `FH:01 Nº30363`), no de la patente. Tractor + acoplado es solo la vista de trabajo.
 
 Este manual describe el producto tal como está hoy. La pantalla **Ayuda** muestra qué puede hacer tu usuario según el rol.
 

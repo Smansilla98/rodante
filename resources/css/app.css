@@ -7,23 +7,23 @@
 
 @theme {
     --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-    --color-primary: #8b7cff;
+    --color-primary: #c8102e;
 }
 
 :root {
     color-scheme: dark;
     --ink: #f4f6fb;
     --ink-soft: #d7dced;
-    --page: #15172a;
-    --page-2: #1a1d2f;
-    --card: #1e2136;
-    --card-2: #252845;
-    --line: #32364f;
+    --page: #0f141c;
+    --page-2: #141a24;
+    --card: #171e2a;
+    --card-2: #1d2634;
+    --line: #2a3344;
     --muted: #c5cbe0;
-    --primary: #8b7cff;
-    --primary-hover: #a99bff;
-    --primary-soft: rgb(139 124 255 / 0.18);
-    --sidebar: #17192b;
+    --primary: #c8102e;
+    --primary-hover: #e11d3a;
+    --primary-soft: rgb(200 16 46 / 0.18);
+    --sidebar: #101820;
     --accent-pink: #f472b6;
     --accent-teal: #2dd4bf;
     --accent-orange: #fb923c;
@@ -36,8 +36,8 @@
     --r: 0.75rem;
     --tap: 2.25rem;
     --shadow: 0 10px 30px rgb(0 0 0 / 0.28);
-    --focus: 0 0 0 3px rgb(167 139 250 / 0.55);
-    --g-purple: linear-gradient(135deg, #6d5efc 0%, #8b5cf6 52%, #6366f1 100%);
+    --focus: 0 0 0 3px rgb(200 16 46 / 0.45);
+    --g-purple: linear-gradient(135deg, #8a0f24 0%, #c8102e 52%, #e11d3a 100%);
     --g-pink: linear-gradient(135deg, #ec4899 0%, #f97316 100%);
     --g-teal: linear-gradient(135deg, #22d3ee 0%, #34d399 100%);
     --g-gold: linear-gradient(135deg, #fbbf24 0%, #f97316 100%);
@@ -154,6 +154,22 @@ body.nav-lock {
     min-width: 0;
 }
 
+.sb-brand-lockup {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.sb-mark-img {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    object-fit: cover;
+    flex-shrink: 0;
+    box-shadow: 0 8px 18px rgb(200 16 46 / 0.28);
+}
+
 .sb-mark {
     width: 32px;
     height: 32px;
@@ -165,7 +181,7 @@ body.nav-lock {
     font-weight: 800;
     letter-spacing: 0.04em;
     flex-shrink: 0;
-    box-shadow: 0 8px 18px rgb(109 94 252 / 0.35);
+    box-shadow: 0 8px 18px rgb(200 16 46 / 0.35);
 }
 
 .sb-brand-k {
@@ -1949,9 +1965,17 @@ textarea.inp,
 
 .auth-hero {
     display: none;
-    background: var(--g-purple);
+    background: #101820;
     color: #fff;
-    padding: 52px 42px;
+    padding: 40px 36px;
+}
+
+.brand-logo--auth {
+    width: min(100%, 360px);
+    height: auto;
+    display: block;
+    margin-bottom: 28px;
+    border-radius: 12px;
 }
 
 .auth-hero__mark {
@@ -1967,26 +1991,41 @@ textarea.inp,
 }
 
 .auth-hero__k {
-    font-size: 1rem;
+    font-size: 0.9rem;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    opacity: 0.92;
+    opacity: 0.85;
     margin-bottom: 8px;
     font-weight: 800;
+    color: #e8eaef;
 }
 
 .auth-hero h1 {
-    font-size: 2rem;
+    font-size: 1.65rem;
     font-weight: 800;
     letter-spacing: -0.03em;
-    line-height: 1.2;
+    line-height: 1.25;
 }
 
 .auth-hero p:last-child {
     margin-top: 14px;
-    color: rgb(255 255 255 / 0.92);
-    max-width: 28ch;
-    font-size: 1.08rem;
+    color: rgb(255 255 255 / 0.88);
+    max-width: 32ch;
+    font-size: 1.05rem;
+}
+
+.auth-panel__brand {
+    display: grid;
+    gap: 6px;
+}
+
+.auth-panel__icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 12px;
+    object-fit: cover;
+    margin-bottom: 8px;
+    box-shadow: 0 8px 18px rgb(200 16 46 / 0.28);
 }
 
 .auth-panel {
@@ -2004,7 +2043,7 @@ textarea.inp,
     font-size: 1rem;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: #c4b5fd;
+    color: #f87171;
     font-weight: 800;
 }
 

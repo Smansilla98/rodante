@@ -1,6 +1,8 @@
-# Trazabilidad de neumáticos
+# Rodanta
 
-Sistema de gestión y trazabilidad individual de cubiertas para flotas de camiones, semirremolques, tanques y bateas.
+Gestión inteligente de neumáticos para flotas. Sistema de trazabilidad individual de cubiertas para camiones, semirremolques, tanques y bateas.
+
+Repositorio: [github.com/Smansilla98/rodanta](https://github.com/Smansilla98/rodanta)
 
 El historial es del **neumático** (`FH:01 Nº30363`), no de la patente. Tractor + semi es solo una vista. Semi/tanque/batea usan el odómetro del tractor acoplado en ese momento.
 
@@ -11,7 +13,7 @@ Laravel 13, PHP 8.3, Blade, Tailwind 4, MySQL 8, PHPUnit, Docker.
 ## Inicio (Docker)
 
 ```bash
-cd trazabilidad-neumaticos
+cd rodanta
 cp .env.example .env
 docker compose up -d --build
 docker compose exec app php artisan key:generate

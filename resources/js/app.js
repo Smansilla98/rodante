@@ -2,13 +2,18 @@ const typeButtons = document.querySelectorAll('.type-ctl [data-type]');
 const applyType = (size) => {
     const next = ['md', 'lg', 'xl'].includes(size) ? size : 'md';
     document.documentElement.dataset.type = next;
-    localStorage.setItem('tn-scale', next);
+    localStorage.setItem('rodanta-scale', next);
     typeButtons.forEach((button) => {
         button.classList.toggle('is-on', button.dataset.type === next);
         button.setAttribute('aria-pressed', button.dataset.type === next ? 'true' : 'false');
     });
 };
-applyType(document.documentElement.dataset.type || localStorage.getItem('tn-scale') || 'md');
+applyType(
+    document.documentElement.dataset.type
+        || localStorage.getItem('rodanta-scale')
+        || localStorage.getItem('tn-scale')
+        || 'md'
+);
 typeButtons.forEach((button) => {
     button.addEventListener('click', () => applyType(button.dataset.type));
 });

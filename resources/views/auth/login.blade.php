@@ -3,26 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <title>Ingresar — Trazabilidad de neumáticos</title>
+    <title>Ingresar — {{ config('app.name', 'Rodanta') }}</title>
+    <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('brand/rodanta-icon-180.png') }}">
     <script>
-        document.documentElement.dataset.type = localStorage.getItem('tn-scale') || 'md';
+        document.documentElement.dataset.type = localStorage.getItem('rodanta-scale') || localStorage.getItem('tn-scale') || 'md';
     </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="auth-body">
     <main class="auth-shell">
         <section class="auth-hero" aria-hidden="true">
-            <div class="auth-hero__mark">TN</div>
-            <p class="auth-hero__k">Flota</p>
-            <h1>Trazabilidad de cubiertas</h1>
+            <x-brand-logo variant="auth" />
+            <p class="auth-hero__k">Flotas</p>
+            <h1>Gestión inteligente de neumáticos</h1>
             <p>Historial por cubierta, no por patente. Stock, rotación y planilla en un mismo lugar.</p>
         </section>
 
         <section class="auth-panel" aria-labelledby="login-title">
             <form method="POST" action="{{ route('login') }}" class="auth-form">
                 @csrf
-                <div>
-                    <p class="auth-kicker">Bienvenido</p>
+                <div class="auth-panel__brand">
+                    <img src="{{ asset('brand/rodanta-app-icon.png') }}" alt="{{ config('app.name', 'Rodanta') }}" class="auth-panel__icon">
+                    <p class="auth-kicker">Bienvenido a Rodanta</p>
                     <h2 id="login-title">Ingresar</h2>
                     <p class="auth-lead">Escribí tu usuario y contraseña. Las letras son grandes para leer con comodidad.</p>
                 </div>
