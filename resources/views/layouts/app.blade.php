@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Inicio') — {{ config('app.name', 'Rodanta') }}</title>
+    <title>@yield('title', 'Inicio') — {{ config('app.name', 'Rodante') }}</title>
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
-    <link rel="apple-touch-icon" href="{{ asset('brand/rodanta-icon-180.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('brand/rodante-icon-180.png') }}">
     <script>
-        document.documentElement.dataset.type = localStorage.getItem('rodanta-scale') || localStorage.getItem('tn-scale') || 'md';
+        document.documentElement.dataset.type = localStorage.getItem('rodante-scale') || localStorage.getItem('rodanta-scale') || localStorage.getItem('tn-scale') || 'md';
     </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -19,7 +19,7 @@
 
     <aside class="app-sidebar" id="sidebar" aria-label="Navegación principal">
         <div class="sb-top">
-            <a href="{{ route('dashboard') }}" class="sb-brand" aria-label="{{ config('app.name', 'Rodanta') }}">
+            <a href="{{ route('dashboard') }}" class="sb-brand" aria-label="{{ config('app.name', 'Rodante') }}">
                 <x-brand-logo />
             </a>
             <button type="button" class="btn btn-ghost btn-ico sb-close lg:hidden" id="navClose" aria-label="Cerrar menú">

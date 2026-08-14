@@ -1,9 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "smansilla98/rodanta",
+    "name": "smansilla98/rodante",
     "type": "project",
-    "description": "Rodanta — gestión inteligente de neumáticos para flotas.",
-    "keywords": ["laravel", "rodanta", "neumaticos", "flotas"],
+    "description": "Rodante — gestión inteligente de neumáticos para flotas.",
+    "keywords": ["laravel", "rodante", "neumaticos", "flotas"],
     "license": "MIT",
     "require": {
         "php": "^8.3",

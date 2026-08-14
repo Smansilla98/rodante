@@ -2,7 +2,7 @@ const typeButtons = document.querySelectorAll('.type-ctl [data-type]');
 const applyType = (size) => {
     const next = ['md', 'lg', 'xl'].includes(size) ? size : 'md';
     document.documentElement.dataset.type = next;
-    localStorage.setItem('rodanta-scale', next);
+    localStorage.setItem('rodante-scale', next);
     typeButtons.forEach((button) => {
         button.classList.toggle('is-on', button.dataset.type === next);
         button.setAttribute('aria-pressed', button.dataset.type === next ? 'true' : 'false');
@@ -10,6 +10,7 @@ const applyType = (size) => {
 };
 applyType(
     document.documentElement.dataset.type
+        || localStorage.getItem('rodante-scale')
         || localStorage.getItem('rodanta-scale')
         || localStorage.getItem('tn-scale')
         || 'md'
