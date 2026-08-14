@@ -13,6 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Railway (y cualquier reverse proxy) termina TLS afuera: hace falta
+        // confiar en X-Forwarded-* para URL HTTPS y cookies secure.
+        $middleware->trustProxies(at: '*');
+
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureRole::class,
             'capability' => \App\Http\Middleware\EnsureCapability::class,

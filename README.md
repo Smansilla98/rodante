@@ -27,6 +27,15 @@ MySQL: `localhost:33062` / `trazabilidad` / `laravel` / `secret`
 - [Manual de uso](docs/manual-de-uso.md) (también en la app: **Consulta → Ayuda**)
 - [Propuesta de presupuesto para empresa de transportes](docs/presupuesto-empresa-transportes.md)
 - QA por rol: `php artisan qa:roles` (logs en `storage/logs/qa/` y `docs/qa/`)
+- Railway: variables en [`.env.railway`](.env.railway) (MySQL del plugin + `APP_KEY` / `APP_URL`)
+
+### Deploy Railway (resumen)
+
+1. Servicio web + plugin **MySQL**.
+2. Pegá [`.env.railway`](.env.railway) en Variables (Raw Editor).
+3. Generá `APP_KEY` con `php artisan key:generate --show` y pegala.
+4. Poné `APP_URL` con el dominio público (`https://….up.railway.app`).
+5. En el release command: `php artisan migrate --force` (y `db:seed` solo si querés la demo).
 
 ### Usuarios demo
 
