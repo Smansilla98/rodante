@@ -87,7 +87,7 @@
         @endforelse
         </tbody>
     </x-content-table>
-    @if(! $purchase->isConfirmed())
+    @if(! $purchase->isConfirmed() && auth()->user()->role->canWrite())
         <form method="POST" action="{{ route('purchases.confirm', $purchase) }}" class="mt-6">
             @csrf
             <button class="btn btn-primary">Confirmar e ingresar a stock</button>

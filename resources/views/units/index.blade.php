@@ -4,9 +4,11 @@
 @section('content')
 <x-page-header kicker="Operación" title="Unidades" subtitle="Planilla por tractor y acoplado. El historial vive en cada cubierta.">
     <x-slot:actions>
-        <a href="{{ route('units.create') }}" class="btn btn-primary">
-            <x-icon name="plus" class="w-4 h-4" /> Nueva unidad
-        </a>
+        @if(auth()->user()->role->canWrite())
+            <a href="{{ route('units.create') }}" class="btn btn-primary">
+                <x-icon name="plus" class="w-4 h-4" /> Nueva unidad
+            </a>
+        @endif
     </x-slot:actions>
 </x-page-header>
 
@@ -48,7 +50,7 @@
         @empty
             <tr>
                 <td colspan="6">
-                    <x-empty title="No hay unidades" action="Nueva unidad" :href="route('units.create')" />
+                    <x-empty title="No hay unidades" :action="auth()->user()->role->canWrite() ? 'Nueva unidad' : null" :href="route('units.create')" />
                 </td>
             </tr>
         @endforelse

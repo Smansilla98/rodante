@@ -274,7 +274,7 @@
             <div><span>Odómetro</span>{{ $unit->hasOdometer() ? number_format($unit->current_odometer).' km' : 'Usa el del tractor acoplado' }}</div>
             <div><span>Acoplado</span>{{ $coupled?->plate ?? 'Sin acoplar' }}</div>
         </div>
-        @if(! $unit->hasOdometer())
+        @if(! $unit->hasOdometer() && auth()->user()->role->canWrite())
             <form method="POST" action="{{ route('units.specs', $unit) }}" class="flex flex-wrap gap-2 mt-4">
                 @csrf
                 <select name="tire_width" class="inp flex-1" required>
@@ -286,6 +286,7 @@
         @endif
     </x-panel>
 
+    @if(auth()->user()->role->canManageCouplings())
     <x-panel title="Acoplar / desacoplar">
         <form method="POST" action="{{ route('units.couple', $unit) }}" class="flex flex-wrap gap-2 mb-3">
             @csrf
@@ -305,6 +306,7 @@
             </form>
         @endif
     </x-panel>
+    @endif
 
     @if(auth()->user()->role->canChangeConfiguration())
         <x-panel title="Cambio de configuración">

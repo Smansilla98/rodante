@@ -29,29 +29,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/neumaticos', [TireController::class, 'index'])->name('tires.index');
     Route::get('/stock', [TireController::class, 'stock'])->name('tires.stock');
     Route::get('/neumaticos/{tire}', [TireController::class, 'show'])->name('tires.show');
-    Route::post('/neumaticos/{tire}/incidencias', [TireController::class, 'storeIncident'])->name('tires.incidents.store');
-    Route::post('/neumaticos/{tire}/mediciones', [TireController::class, 'storeMeasurement'])->name('tires.measurements.store');
-    Route::post('/neumaticos/{tire}/baja', [TireController::class, 'retire'])->name('tires.retire');
 
     Route::get('/compras', [PurchaseController::class, 'index'])->name('purchases.index');
-    Route::get('/compras/nueva', [PurchaseController::class, 'create'])->name('purchases.create');
-    Route::post('/compras', [PurchaseController::class, 'store'])->name('purchases.store');
-    Route::get('/compras/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
-    Route::post('/compras/{purchase}/confirmar', [PurchaseController::class, 'confirm'])->name('purchases.confirm');
-
     Route::get('/unidades', [UnitController::class, 'index'])->name('units.index');
-    Route::get('/unidades/nueva', [UnitController::class, 'create'])->name('units.create');
-    Route::post('/unidades', [UnitController::class, 'store'])->name('units.store');
-    Route::get('/unidades/{unit}', [UnitController::class, 'show'])->name('units.show');
-    Route::post('/unidades/{unit}/operacion', [UnitController::class, 'operate'])->name('units.operate');
-    Route::post('/unidades/{unit}/posicion', [UnitController::class, 'slotAction'])->name('units.slot');
-    Route::post('/unidades/{unit}/acoplar', [UnitController::class, 'couple'])->name('units.couple');
-    Route::post('/unidades/{unit}/desacoplar', [UnitController::class, 'uncouple'])->name('units.uncouple');
-    Route::post('/unidades/{unit}/configuracion', [UnitController::class, 'changeConfiguration'])->name('units.configuration');
-    Route::post('/unidades/{unit}/datos', [UnitController::class, 'updateSpecs'])->name('units.specs');
-
     Route::get('/odometros', [OdometerController::class, 'index'])->name('odometers.index');
-    Route::put('/odometros/{reading}', [OdometerController::class, 'update'])->name('odometers.update');
 
     Route::get('/reportes/kilometros', [ReportController::class, 'kilometers'])->name('reports.kilometers');
     Route::get('/reportes/consumo', [ReportController::class, 'consumption'])->name('reports.consumption');
@@ -60,6 +41,41 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/ayuda', [HelpController::class, 'index'])->name('help.index');
     Route::get('/ayuda/manual', [HelpController::class, 'manual'])->name('help.manual');
+
+    Route::middleware('capability:write')->group(function () {
+        Route::post('/neumaticos/{tire}/incidencias', [TireController::class, 'storeIncident'])->name('tires.incidents.store');
+        Route::post('/neumaticos/{tire}/mediciones', [TireController::class, 'storeMeasurement'])->name('tires.measurements.store');
+
+        Route::get('/compras/nueva', [PurchaseController::class, 'create'])->name('purchases.create');
+        Route::post('/compras', [PurchaseController::class, 'store'])->name('purchases.store');
+        Route::post('/compras/{purchase}/confirmar', [PurchaseController::class, 'confirm'])->name('purchases.confirm');
+
+        Route::get('/unidades/nueva', [UnitController::class, 'create'])->name('units.create');
+        Route::post('/unidades', [UnitController::class, 'store'])->name('units.store');
+        Route::post('/unidades/{unit}/operacion', [UnitController::class, 'operate'])->name('units.operate');
+        Route::post('/unidades/{unit}/posicion', [UnitController::class, 'slotAction'])->name('units.slot');
+        Route::post('/unidades/{unit}/datos', [UnitController::class, 'updateSpecs'])->name('units.specs');
+    });
+
+    Route::get('/compras/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
+    Route::get('/unidades/{unit}', [UnitController::class, 'show'])->name('units.show');
+
+    Route::middleware('capability:retire')->group(function () {
+        Route::post('/neumaticos/{tire}/baja', [TireController::class, 'retire'])->name('tires.retire');
+    });
+
+    Route::middleware('capability:couplings')->group(function () {
+        Route::post('/unidades/{unit}/acoplar', [UnitController::class, 'couple'])->name('units.couple');
+        Route::post('/unidades/{unit}/desacoplar', [UnitController::class, 'uncouple'])->name('units.uncouple');
+    });
+
+    Route::middleware('capability:config')->group(function () {
+        Route::post('/unidades/{unit}/configuracion', [UnitController::class, 'changeConfiguration'])->name('units.configuration');
+    });
+
+    Route::middleware('capability:odometer')->group(function () {
+        Route::put('/odometros/{reading}', [OdometerController::class, 'update'])->name('odometers.update');
+    });
 
     Route::middleware('role:ADMINISTRADOR')->group(function () {
         Route::put('/neumaticos/{tire}', [TireController::class, 'update'])->name('tires.update');

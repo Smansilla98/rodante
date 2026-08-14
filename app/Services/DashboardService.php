@@ -47,7 +47,9 @@ class DashboardService
             ->groupBy('type')
             ->get()
             ->map(fn ($row) => [
-                'type' => IncidentType::from($row->type)->label(),
+                'type' => $row->type instanceof IncidentType
+                    ? $row->type->label()
+                    : IncidentType::from($row->type)->label(),
                 'total' => $row->total,
             ]);
 

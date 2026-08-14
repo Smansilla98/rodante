@@ -26,6 +26,7 @@ MySQL: `localhost:33062` / `trazabilidad` / `laravel` / `secret`
 
 - [Manual de uso](docs/manual-de-uso.md) (también en la app: **Consulta → Ayuda**)
 - [Propuesta de presupuesto para empresa de transportes](docs/presupuesto-empresa-transportes.md)
+- QA por rol: `php artisan qa:roles` (logs en `storage/logs/qa/` y `docs/qa/`)
 
 ### Usuarios demo
 

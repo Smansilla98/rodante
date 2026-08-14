@@ -73,6 +73,7 @@
         @endif
     </x-panel>
 
+    @if(auth()->user()->role->canWrite())
     <x-panel title="Nueva incidencia">
         <form method="POST" action="{{ route('tires.incidents.store', $tire) }}" class="space-y-3">
             @csrf
@@ -88,8 +89,10 @@
             <button class="btn btn-dark">Registrar</button>
         </form>
     </x-panel>
+    @endif
 
     <x-panel title="Medición de profundidad">
+        @if(auth()->user()->role->canWrite())
         <form method="POST" action="{{ route('tires.measurements.store', $tire) }}" class="space-y-3">
             @csrf
             @foreach($tire->size->zones as $i => $zone)
@@ -101,6 +104,7 @@
             @endforeach
             <button class="btn btn-dark">Guardar medición</button>
         </form>
+        @endif
         @if(auth()->user()->role->canRetireOrRecap() && $tire->status->value !== 'DE_BAJA')
             <form method="POST" action="{{ route('tires.retire', $tire) }}" class="mt-6 space-y-3 border-t border-slate-100 pt-4">
                 @csrf

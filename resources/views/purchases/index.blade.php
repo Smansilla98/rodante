@@ -4,7 +4,9 @@
 @section('content')
 <x-page-header kicker="Operación" title="Compras" subtitle="Cada línea genera números individuales consecutivos.">
     <x-slot:actions>
-        <a href="{{ route('purchases.create') }}" class="btn btn-primary"><x-icon name="plus" class="w-4 h-4" /> Nueva compra</a>
+        @if(auth()->user()->role->canWrite())
+            <a href="{{ route('purchases.create') }}" class="btn btn-primary"><x-icon name="plus" class="w-4 h-4" /> Nueva compra</a>
+        @endif
     </x-slot:actions>
 </x-page-header>
 
@@ -33,7 +35,7 @@
                 </td>
             </tr>
         @empty
-            <tr><td colspan="5"><x-empty title="No hay compras" action="Nueva compra" :href="route('purchases.create')" /></td></tr>
+            <tr><td colspan="5"><x-empty title="No hay compras" :action="auth()->user()->role->canWrite() ? 'Nueva compra' : null" :href="route('purchases.create')" /></td></tr>
         @endforelse
         </tbody>
     </x-content-table>

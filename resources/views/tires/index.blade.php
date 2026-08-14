@@ -8,7 +8,9 @@
     :subtitle="request()->routeIs('tires.stock') ? 'Cubiertas disponibles para instalar.' : 'Buscá por modelo o número individual.'"
 >
     <x-slot:actions>
-        <a href="{{ route('purchases.create') }}" class="btn btn-primary"><x-icon name="plus" class="w-4 h-4" /> Nueva compra</a>
+        @if(auth()->user()->role->canWrite())
+            <a href="{{ route('purchases.create') }}" class="btn btn-primary"><x-icon name="plus" class="w-4 h-4" /> Nueva compra</a>
+        @endif
     </x-slot:actions>
 </x-page-header>
 

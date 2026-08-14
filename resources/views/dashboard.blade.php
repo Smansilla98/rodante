@@ -80,11 +80,13 @@
         <div class="hub__t">Stock</div>
         <div class="hub__s">Cubiertas listas para instalar.</div>
     </a>
+    @if(auth()->user()->role->canWrite())
     <a class="hub" href="{{ route('purchases.create') }}">
         <span class="hub__ico" aria-hidden="true"><x-icon name="plus" class="w-6 h-6" /></span>
         <div class="hub__t">Nueva compra</div>
         <div class="hub__s">Ingreso por número individual.</div>
     </a>
+    @endif
     <a class="hub" href="{{ route('odometers.index') }}">
         <span class="hub__ico" aria-hidden="true"><x-icon name="gauge" class="w-6 h-6" /></span>
         <div class="hub__t">Odómetros</div>
