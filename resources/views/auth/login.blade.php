@@ -15,7 +15,7 @@
     <main class="auth-shell">
         <section class="auth-hero" aria-hidden="true">
             <x-brand-logo variant="auth" />
-            <p class="auth-hero__k">Flotas</p>
+            <p class="auth-hero__k">Rodante</p>
             <h1>Gestión inteligente de neumáticos</h1>
             <p>Historial por cubierta, no por patente. Stock, rotación y planilla en un mismo lugar.</p>
         </section>

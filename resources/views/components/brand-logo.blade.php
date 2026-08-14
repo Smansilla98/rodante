@@ -8,7 +8,7 @@
 
 @if ($variant === 'auth')
     <img
-        src="{{ asset('brand/rodante-logo.png') }}"
+        src="{{ asset('brand/rodante-app-icon.png') }}"
         alt="{{ $alt }}"
         {{ $attributes->class('brand-logo brand-logo--auth') }}
     >

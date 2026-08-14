@@ -1971,11 +1971,13 @@ textarea.inp,
 }
 
 .brand-logo--auth {
-    width: min(100%, 360px);
+    width: min(100%, 168px);
     height: auto;
+    aspect-ratio: 1;
     display: block;
     margin-bottom: 28px;
-    border-radius: 12px;
+    border-radius: 28px;
+    box-shadow: 0 14px 32px rgb(0 0 0 / 0.35);
 }
 
 .auth-hero__mark {
