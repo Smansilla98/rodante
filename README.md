@@ -22,6 +22,11 @@ cd /ruta/del/proyecto && npm install && npm run build
 App: http://localhost:8093  
 MySQL: `localhost:33062` / `trazabilidad` / `laravel` / `secret`
 
+### Documentación
+
+- [Manual de uso](docs/manual-de-uso.md) (también en la app: **Consulta → Ayuda**)
+- [Propuesta de presupuesto para empresa de transportes](docs/presupuesto-empresa-transportes.md)
+
 ### Usuarios demo
 
 | Usuario    | Contraseña | Rol            |

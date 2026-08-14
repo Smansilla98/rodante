@@ -47,8 +47,6 @@ class CouplingService
             $tractor = FleetUnit::lockForUpdate()->findOrFail($tractor->id);
             $trailer = FleetUnit::lockForUpdate()->findOrFail($trailer->id);
 
-            $this->odometers->assertNotDecreasing($tractor, $odometer);
-
             $openTrailer = UnitCoupling::where('trailer_id', $trailer->id)->whereNull('uncoupled_at')->lockForUpdate()->first();
             if ($openTrailer) {
                 $this->uncouple($openTrailer, $odometer, $user, 'Reemplazo de acoplamiento');
@@ -94,7 +92,6 @@ class CouplingService
             $coupling = UnitCoupling::lockForUpdate()->findOrFail($coupling->id);
             $tractor = FleetUnit::lockForUpdate()->findOrFail($coupling->tractor_id);
 
-            $this->odometers->assertNotDecreasing($tractor, $odometer);
             if ($odometer < $coupling->tractor_odometer_start) {
                 throw new DomainException('El odómetro de desacople no puede ser menor al de acople.');
             }
@@ -111,7 +108,11 @@ class CouplingService
 
             $coupling->loadMissing('trailer');
             $this->odometers->record($tractor, $odometer, $user, null, 'Desacople de '.$coupling->trailer->plate);
-            $this->audit->log('coupling.closed', $coupling);
+            $this->audit->log('coupling.closed', $coupling, null, [
+                'tractor' => $tractor->plate,
+                'trailer' => $coupling->trailer->plate,
+                'odometer' => $odometer,
+            ]);
 
             return $coupling->refresh();
         });

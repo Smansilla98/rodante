@@ -2,25 +2,34 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Inicio') — Trazabilidad de neumáticos</title>
+    <script>
+        document.documentElement.dataset.type = localStorage.getItem('tn-scale') || 'md';
+    </script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
+<a class="skip-link" href="#contenido">Saltar al contenido</a>
 <div class="app-shell" id="appShell">
-    <button type="button" class="app-backdrop" id="navBackdrop" aria-label="Cerrar menú"></button>
+    <button type="button" class="app-backdrop" id="navBackdrop" tabindex="-1" aria-hidden="true"></button>
 
-    <aside class="app-sidebar" id="sidebar">
-        <a href="{{ route('dashboard') }}" class="sb-brand">
-            <span class="sb-mark">TN</span>
-            <span>
-                <span class="sb-brand-k">Flota</span>
-                <span class="sb-brand-t">Trazabilidad</span>
-            </span>
-        </a>
+    <aside class="app-sidebar" id="sidebar" aria-label="Navegación principal">
+        <div class="sb-top">
+            <a href="{{ route('dashboard') }}" class="sb-brand">
+                <span class="sb-mark" aria-hidden="true">TN</span>
+                <span>
+                    <span class="sb-brand-t">Trazabilidad</span>
+                    <span class="sb-brand-k">Cubiertas de flota</span>
+                </span>
+            </a>
+            <button type="button" class="btn btn-ghost btn-ico sb-close lg:hidden" id="navClose" aria-label="Cerrar menú">
+                <x-icon name="x" class="w-6 h-6" />
+            </button>
+        </div>
 
-        <nav class="sb-nav" aria-label="Principal">
+        <nav class="sb-nav" aria-label="Secciones">
             <div class="sb-group">
                 <div class="sb-lbl">Operación</div>
                 <x-nav-link :href="route('dashboard')" icon="home" label="Tablero" match="dashboard" />
@@ -35,7 +44,8 @@
                 <x-nav-link :href="route('reports.kilometers')" icon="chart" label="Km por cubierta" match="reports.kilometers" />
                 <x-nav-link :href="route('reports.consumption')" icon="grid" label="Consumo" match="reports.consumption" />
                 <x-nav-link :href="route('reports.incidents')" icon="alert" label="Incidencias" match="reports.incidents" />
-                <x-nav-link :href="route('reports.audit')" icon="shield" label="Auditoría" match="reports.audit" />
+                <x-nav-link :href="route('reports.audit')" icon="shield" label="Movimientos" match="reports.audit" />
+                <x-nav-link :href="route('help.index')" icon="book" label="Ayuda" match="help.*" />
             </div>
             @if(auth()->user()->role->canManageCatalogs())
                 <div class="sb-group">
@@ -51,49 +61,54 @@
                 </div>
             @endif
         </nav>
-
-        <div class="sb-foot">
-            <div class="sb-user">
-                <span class="sb-av">{{ mb_substr(auth()->user()->name, 0, 1) }}</span>
-                <span class="min-w-0">
-                    <span class="sb-user-n">{{ auth()->user()->name }}</span>
-                    <span class="sb-user-r">{{ auth()->user()->role->label() }}</span>
-                </span>
-            </div>
-            <form method="POST" action="{{ route('logout') }}">
-                @csrf
-                <button class="sb-out" type="submit" title="Salir">
-                    <x-icon name="logout" class="w-4 h-4" />
-                    Salir
-                </button>
-            </form>
-        </div>
     </aside>
 
     <div class="app-main">
         <header class="app-topbar">
-            <button type="button" class="btn btn-ghost btn-ico md:hidden" id="navOpen" aria-label="Abrir menú">
-                <x-icon name="menu" class="w-5 h-5" />
+            <button type="button" class="btn btn-ghost btn-ico lg:hidden" id="navOpen" aria-label="Abrir menú" aria-controls="sidebar" aria-expanded="false">
+                <x-icon name="menu" class="w-6 h-6" />
             </button>
-            <div class="min-w-0">
-                <div class="top-kicker">@yield('kicker', 'Flota')</div>
-                <div class="top-title">@yield('title', 'Inicio')</div>
-            </div>
+
+            <form class="top-search" method="GET" action="{{ route('tires.index') }}" role="search">
+                <label class="sr-only" for="topSearch">Buscar cubierta</label>
+                <x-icon name="search" class="top-search__ico" />
+                <input id="topSearch" name="q" value="{{ request('q') }}" type="search" placeholder="Escribí para buscar una cubierta…" autocomplete="off">
+            </form>
+
             <div class="top-right">
-                <span class="top-date">{{ now()->format('d/m/Y') }}</span>
+                <div class="type-ctl" role="group" aria-label="Tamaño de letra">
+                    <span>Letra</span>
+                    <button type="button" data-type="md" aria-label="Letra normal">A</button>
+                    <button type="button" data-type="lg" aria-label="Letra grande">A+</button>
+                    <button type="button" data-type="xl" aria-label="Letra extra grande">A++</button>
+                </div>
+                <time class="top-date" datetime="{{ now()->toDateString() }}">{{ now()->format('d/m/Y') }}</time>
                 <span class="top-chip">{{ auth()->user()->role->label() }}</span>
+                <div class="top-user">
+                    <span class="sb-av" aria-hidden="true">{{ mb_substr(auth()->user()->name, 0, 1) }}</span>
+                    <span class="top-user__meta">
+                        <span class="sb-user-n">{{ auth()->user()->name }}</span>
+                        <span class="sb-user-r">{{ auth()->user()->username }}</span>
+                    </span>
+                </div>
+                <form method="POST" action="{{ route('logout') }}">
+                    @csrf
+                    <button class="btn btn-ghost" type="submit" aria-label="Cerrar sesión">
+                        <x-icon name="logout" class="w-5 h-5" /> Salir
+                    </button>
+                </form>
             </div>
         </header>
 
-        <div class="app-page">
+        <main class="app-page @yield('page_class')" id="contenido" tabindex="-1">
             @if(session('success'))
-                <div class="flash flash--ok">{{ session('success') }}</div>
+                <div class="flash flash--ok" role="status">{{ session('success') }}</div>
             @endif
             @if($errors->any())
-                <div class="flash flash--err">{{ $errors->first() }}</div>
+                <div class="flash flash--err" role="alert">{{ $errors->first() }}</div>
             @endif
             @yield('content')
-        </div>
+        </main>
     </div>
 </div>
 </body>

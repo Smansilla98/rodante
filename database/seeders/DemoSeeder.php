@@ -15,6 +15,7 @@ use App\Models\UnitConfiguration;
 use App\Models\UnitType;
 use App\Models\Tire;
 use App\Models\User;
+use App\Services\ConfigurationChangeService;
 use App\Services\CouplingService;
 use App\Services\PurchaseService;
 use App\Services\TireOperationService;
@@ -51,33 +52,36 @@ class DemoSeeder extends Seeder
         }
 
         if (FleetUnit::query()->where('plate', 'HKH 448')->exists()) {
+            $this->upgradeDemoTrailersToLineal();
+
             return;
         }
 
-        $tractorType = UnitType::where('code', 'CAMION_TRACTOR')->first();
+        $tractorType = UnitType::where('code', 'TRACTOR')->first();
         $tankType = UnitType::where('code', 'TANQUE')->first();
         $semiType = UnitType::where('code', 'SEMIRREMOLQUE')->first();
-        $cfgT = UnitConfiguration::where('code', '6X24-T')->first();
-        $cfgA = UnitConfiguration::where('code', '6X24-A')->first();
-        $cfg61 = UnitConfiguration::where('code', '6X1')->first();
+        $cfg64 = UnitConfiguration::where('code', '6X4')->first();
+        $cfg62 = UnitConfiguration::where('code', '6X2')->first();
+        $cfg3s = UnitConfiguration::where('code', '3E-S')->first();
+        $cfg2s = UnitConfiguration::where('code', '2E-S')->first();
         $comb = Fleet::where('code', 'AXN-COMB')->first();
         $alc = Fleet::where('code', 'AXN-ALC')->first();
         $base = Base::where('code', 'SLT')->first();
 
         $pairs = [
-            ['HKH 448', 'FWI 093', 'Scania', 'R450', 184200, $comb, $tankType],
-            ['AC 363 CB', 'JNH 143', 'Mercedes-Benz', 'Axor 1933', 210450, $comb, $tankType],
-            ['OZK 888', 'FVX 336', 'Volvo', 'FH 460', 156000, $comb, $semiType],
-            ['KUW 620', 'LRA 259', 'Iveco', 'Cursor', 98000, $comb, $semiType],
-            ['NLO 982', 'DRO 762', 'Volkswagen', '24.280', 72000, $alc, $tankType],
+            ['HKH 448', 'FWI 093', 'Scania', 'R450', 184200, $comb, $tankType, $cfg64, $cfg3s, ['product' => 'combustible', 'compartments' => 3, 'suspension' => 'neumatica', 'tire_width' => 385]],
+            ['AC 363 CB', 'JNH 143', 'Mercedes-Benz', 'Axor 1933', 210450, $comb, $tankType, $cfg62, $cfg3s, ['product' => 'combustible', 'compartments' => 4, 'suspension' => 'neumatica', 'tire_width' => 295]],
+            ['OZK 888', 'FVX 336', 'Volvo', 'FH 460', 156000, $comb, $semiType, $cfg64, $cfg3s, ['suspension' => 'neumatica', 'tire_width' => 385]],
+            ['KUW 620', 'LRA 259', 'Iveco', 'Cursor', 98000, $comb, $semiType, $cfg64, $cfg3s, ['suspension' => 'mecanica', 'tire_width' => 295]],
+            ['NLO 982', 'DRO 762', 'Volkswagen', '24.280', 72000, $alc, $tankType, $cfg62, $cfg2s, ['product' => 'alcohol', 'compartments' => 2, 'suspension' => 'neumatica', 'tire_width' => 385]],
         ];
 
-        foreach ($pairs as [$tractorPlate, $trailerPlate, $brand, $model, $odo, $fleet, $trailerType]) {
+        foreach ($pairs as [$tractorPlate, $trailerPlate, $brand, $model, $odo, $fleet, $trailerType, $tractorCfg, $trailerCfg, $trailerSpecs]) {
             FleetUnit::create([
                 'fleet_id' => $fleet->id,
                 'base_id' => $base->id,
                 'unit_type_id' => $tractorType->id,
-                'unit_configuration_id' => $cfgT->id,
+                'unit_configuration_id' => $tractorCfg->id,
                 'plate' => $tractorPlate,
                 'brand' => $brand,
                 'model_name' => $model,
@@ -88,12 +92,13 @@ class DemoSeeder extends Seeder
                 'fleet_id' => $fleet->id,
                 'base_id' => $base->id,
                 'unit_type_id' => $trailerType->id,
-                'unit_configuration_id' => $trailerType->code === 'TANQUE' && $tractorPlate === 'NLO 982' ? $cfg61->id : $cfgA->id,
+                'unit_configuration_id' => $trailerCfg->id,
                 'plate' => $trailerPlate,
                 'brand' => 'Bonano',
                 'model_name' => $trailerType->name,
                 'current_odometer' => 0,
                 'status' => UnitStatus::Activa,
+                'specs' => $trailerSpecs,
             ]);
         }
 
@@ -101,8 +106,9 @@ class DemoSeeder extends Seeder
         $pirelli = TireBrand::where('name', 'Pirelli')->first();
         $fh01 = TireModel::where('code', 'FH:01')->first();
         $tr01 = TireModel::where('code', 'TR:01')->first();
+        $fr01 = TireModel::where('code', 'FR:01')->first();
         $size = TireSize::where('code', '295/80 R22.5')->first();
-        $gomon = TireSize::where('code', '385/90 R22.5')->first();
+        $gomon = TireSize::where('code', '385/65 R22.5')->first() ?: TireSize::where('code', '385/90 R22.5')->first();
         $supplier = Supplier::where('name', 'Pirelli Neumáticos')->first();
 
         $purchases = app(PurchaseService::class);
@@ -114,7 +120,8 @@ class DemoSeeder extends Seeder
             'items' => [
                 ['tire_brand_id' => $pirelli->id, 'tire_model_id' => $fh01->id, 'tire_size_id' => $size->id, 'quantity' => 12, 'first_number' => 30360],
                 ['tire_brand_id' => $pirelli->id, 'tire_model_id' => $tr01->id, 'tire_size_id' => $size->id, 'quantity' => 16, 'first_number' => 30400],
-                ['tire_brand_id' => $pirelli->id, 'tire_model_id' => $fh01->id, 'tire_size_id' => $gomon->id, 'quantity' => 4, 'first_number' => 31001],
+                ['tire_brand_id' => $pirelli->id, 'tire_model_id' => $fr01->id, 'tire_size_id' => $gomon->id, 'quantity' => 8, 'first_number' => 31001],
+                ['tire_brand_id' => $pirelli->id, 'tire_model_id' => $fr01->id, 'tire_size_id' => $size->id, 'quantity' => 8, 'first_number' => 31101],
             ],
         ], $admin);
         $purchases->confirm($purchase, $admin);
@@ -125,9 +132,9 @@ class DemoSeeder extends Seeder
         $couplings->couple($tractor, $trailer, 184200, $admin, 'Acoplamiento habitual combustible');
 
         $operations = app(TireOperationService::class);
-        $steer = $cfgT->positions()->where('axle_number', 1)->where('is_spare', false)->orderBy('sort_order')->get();
-        $drive = $cfgT->positions()->where('axle_number', 2)->where('is_spare', false)->orderBy('sort_order')->get();
-        $drive3 = $cfgT->positions()->where('axle_number', 3)->where('is_spare', false)->orderBy('sort_order')->get();
+        $steer = $cfg64->positions()->where('axle_number', 1)->where('is_spare', false)->orderBy('sort_order')->get();
+        $drive = $cfg64->positions()->where('axle_number', 2)->where('is_spare', false)->orderBy('sort_order')->get();
+        $drive3 = $cfg64->positions()->where('axle_number', 3)->where('is_spare', false)->orderBy('sort_order')->get();
 
         $byNumber = fn (int $n) => Tire::where('individual_number', $n)->value('id');
         $operations->execute($tractor, [
@@ -146,16 +153,54 @@ class DemoSeeder extends Seeder
             ],
         ], $admin);
 
-        $trailerSlots = $cfgA->positions()->where('is_spare', false)->orderBy('sort_order')->get();
+        $trailerSlots = $cfg3s->positions()->where('is_spare', false)->orderBy('sort_order')->get();
         $operations->execute($trailer, [
             'odometer' => 184200,
-            'installations' => [
-                ['tire_id' => $byNumber(30362), 'position_id' => $trailerSlots[3]->id],
-                ['tire_id' => $byNumber(30363), 'position_id' => $trailerSlots[4]->id],
-                ['tire_id' => $byNumber(30364), 'position_id' => $trailerSlots[7]->id],
-                ['tire_id' => $byNumber(30365), 'position_id' => $trailerSlots[8]->id],
-                ['tire_id' => $byNumber(30366), 'position_id' => $trailerSlots[11]->id],
-            ],
+            'installations' => $trailerSlots->values()->map(fn ($position, $i) => [
+                'tire_id' => $byNumber(31001 + $i),
+                'position_id' => $position->id,
+            ])->all(),
         ], $admin);
+    }
+
+    private function upgradeDemoTrailersToLineal(): void
+    {
+        $admin = User::where('username', 'admin')->first();
+        $changes = app(ConfigurationChangeService::class);
+        $targets = [
+            'FWI 093' => ['3E-S', 385],
+            'JNH 143' => ['3E-S', 295],
+            'FVX 336' => ['3E-S', 385],
+            'LRA 259' => ['3E-S', 295],
+            'DRO 762' => ['2E-S', 385],
+        ];
+
+        foreach ($targets as $plate => [$code, $width]) {
+            $unit = FleetUnit::where('plate', $plate)->first();
+            $cfg = UnitConfiguration::where('code', $code)->first();
+            if (! $unit || ! $cfg) {
+                continue;
+            }
+
+            $specs = $unit->specs ?? [];
+            $specs['tire_width'] = $width;
+            $unit->update(['specs' => $specs]);
+
+            if ((int) $unit->unit_configuration_id === (int) $cfg->id || ! $admin) {
+                continue;
+            }
+
+            try {
+                $changes->change(
+                    $unit,
+                    $cfg->id,
+                    'Paso a lineal '.$width,
+                    $admin,
+                    'Tanques, semis y bateas llevan una cubierta por lado.'
+                );
+            } catch (\Throwable) {
+                // Ya es lineal o no se puede cambiar en este entorno.
+            }
+        }
     }
 }

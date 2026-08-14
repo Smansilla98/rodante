@@ -16,6 +16,7 @@ use App\Services\IncidentService;
 use App\Services\MeasurementService;
 use App\Services\ReportService;
 use App\Services\RetirementService;
+use App\Support\TireProductCatalog;
 use Illuminate\Http\Request;
 
 class TireController extends Controller
@@ -25,7 +26,12 @@ class TireController extends Controller
         $tires = Tire::query()
             ->with(['brand', 'model', 'size', 'currentLocation.unit', 'currentLocation.position', 'currentLocation.base'])
             ->when($request->brand_id, fn ($q, $id) => $q->where('tire_brand_id', $id))
-            ->when($request->model_id, fn ($q, $id) => $q->where('tire_model_id', $id))
+            ->when($request->model_id, function ($q, $id) use ($request) {
+                $q->where('tire_model_id', $id);
+                if ($request->brand_id) {
+                    $q->whereHas('model', fn ($m) => $m->where('tire_brand_id', $request->brand_id));
+                }
+            })
             ->when($request->size_id, fn ($q, $id) => $q->where('tire_size_id', $id))
             ->when($request->status, fn ($q, $status) => $q->where('status', $status))
             ->when($request->condition, fn ($q, $condition) => $q->where('condition', $condition))
@@ -41,9 +47,7 @@ class TireController extends Controller
 
         return view('tires.index', [
             'tires' => $tires,
-            'brands' => TireBrand::orderBy('name')->get(),
-            'models' => TireModel::orderBy('code')->get(),
-            'sizes' => TireSize::orderBy('code')->get(),
+            'catalog' => TireProductCatalog::uiPayload(),
             'statuses' => TireStatus::cases(),
             'conditions' => TireCondition::cases(),
         ]);
@@ -62,7 +66,35 @@ class TireController extends Controller
             'tire' => $reports->tireHistory($tire),
             'incidentTypes' => IncidentType::cases(),
             'retirementReasons' => MovementReason::where('applies_to', 'BAJA')->get(),
+            'brands' => TireBrand::orderBy('name')->get(),
+            'models' => TireModel::with('brand')->orderBy('code')->get(),
+            'sizes' => TireSize::orderBy('code')->get(),
+            'conditions' => TireCondition::cases(),
         ]);
+    }
+
+    public function update(Request $request, Tire $tire)
+    {
+        $data = $request->validate([
+            'individual_number' => 'required|integer|min:1|unique:tires,individual_number,'.$tire->id,
+            'tire_brand_id' => 'required|exists:tire_brands,id',
+            'tire_model_id' => 'required|exists:tire_models,id',
+            'tire_size_id' => 'required|exists:tire_sizes,id',
+            'condition' => 'required|string',
+        ]);
+        $model = TireModel::with('sizes')->findOrFail($data['tire_model_id']);
+        if ((int) $model->tire_brand_id !== (int) $data['tire_brand_id']) {
+            return back()->withErrors(['tire_model_id' => $model->code.' no pertenece a esa marca.']);
+        }
+        if (! $model->sizes->contains('id', (int) $data['tire_size_id'])) {
+            return back()->withErrors(['tire_size_id' => $model->code.' no se fabrica en esa medida.']);
+        }
+        if (! TireCondition::tryFrom($data['condition'])) {
+            return back()->withErrors(['condition' => 'Condición inválida.']);
+        }
+        $tire->update($data);
+
+        return redirect()->route('tires.show', $tire)->with('success', 'Cubierta actualizada.');
     }
 
     public function storeIncident(Request $request, Tire $tire, IncidentService $incidents)

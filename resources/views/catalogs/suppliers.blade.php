@@ -2,20 +2,46 @@
 @section('kicker', 'Catálogo')
 @section('title', 'Proveedores')
 @section('content')
+@php $editing = $suppliers->firstWhere('id', (int) request('edit')); @endphp
 <x-page-header kicker="Catálogo" title="Proveedores" />
-<x-panel title="Agregar">
-    <form method="POST" action="{{ route('suppliers.store') }}" class="toolbar">
+<x-panel :title="$editing ? 'Modificar proveedor' : 'Nuevo proveedor'">
+    <form method="POST" action="{{ $editing ? route('suppliers.update', $editing) : route('suppliers.store') }}" class="toolbar">
         @csrf
-        <input name="name" placeholder="Nombre" required>
-        <input name="tax_id" placeholder="CUIT">
-        <button class="btn btn-dark btn-sm">Agregar</button>
+        @if($editing) @method('PUT') @endif
+        <input name="name" value="{{ old('name', $editing?->name) }}" placeholder="Nombre" required>
+        <input name="tax_id" value="{{ old('tax_id', $editing?->tax_id) }}" placeholder="CUIT">
+        <input name="phone" value="{{ old('phone', $editing?->phone) }}" placeholder="Teléfono">
+        @if($editing)
+            <label class="abm-check"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $editing->is_active))> Activo</label>
+        @endif
+        <x-abm-actions :editing="(bool) $editing" :cancel="route('suppliers.index')" />
     </form>
+    @if($editing)
+        <div class="abm-actions mt-3">
+            <x-abm-delete :action="route('suppliers.destroy', $editing)" confirm="¿Eliminar este proveedor?" />
+        </div>
+    @endif
 </x-panel>
 <x-panel title="Listado" :flush="true" class="mt-5">
-    @forelse($suppliers as $supplier)
-        <div class="list-row px-5"><span>{{ $supplier->name }}</span><span class="mono text-slate-500">{{ $supplier->tax_id }}</span></div>
-    @empty
-        <x-empty title="No hay proveedores" />
-    @endforelse
+    <x-content-table>
+        <thead>
+            <tr>
+                <th scope="col">Proveedor</th>
+                <th scope="col">CUIT</th>
+                <th scope="col" class="text-right"> </th>
+            </tr>
+        </thead>
+        <tbody>
+        @forelse($suppliers as $supplier)
+            <tr>
+                <td>{{ $supplier->name }}</td>
+                <td class="mono">{{ $supplier->tax_id }}</td>
+                <td class="text-right"><a class="abm-link" href="{{ route('suppliers.index', ['edit' => $supplier->id]) }}">Editar</a></td>
+            </tr>
+        @empty
+            <tr><td colspan="3"><x-empty title="No hay proveedores" /></td></tr>
+        @endforelse
+        </tbody>
+    </x-content-table>
 </x-panel>
 @endsection

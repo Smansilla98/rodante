@@ -6,10 +6,9 @@ use App\Exceptions\DomainException;
 use App\Http\Controllers\Controller;
 use App\Models\Base;
 use App\Models\Supplier;
-use App\Models\TireBrand;
-use App\Models\TireModel;
 use App\Models\TirePurchase;
 use App\Models\TireSize;
+use App\Support\TireProductCatalog;
 use App\Services\PurchaseService;
 use Illuminate\Http\Request;
 
@@ -27,9 +26,8 @@ class PurchaseController extends Controller
         return view('purchases.create', [
             'suppliers' => Supplier::where('is_active', true)->orderBy('name')->get(),
             'bases' => Base::where('is_active', true)->orderBy('name')->get(),
-            'brands' => TireBrand::where('is_active', true)->with(['models' => fn ($q) => $q->where('is_active', true)->with('sizes')])->orderBy('name')->get(),
             'sizes' => TireSize::where('is_active', true)->orderBy('code')->get(),
-            'models' => TireModel::where('is_active', true)->with('brand', 'sizes')->orderBy('code')->get(),
+            'catalog' => TireProductCatalog::uiPayload(),
         ]);
     }
 
@@ -52,7 +50,11 @@ class PurchaseController extends Controller
             return back()->withErrors(['items' => 'Cargá al menos una línea de compra.'])->withInput();
         }
 
-        $purchase = $purchases->create($data, $request->user());
+        try {
+            $purchase = $purchases->create($data, $request->user());
+        } catch (DomainException $e) {
+            return back()->withErrors(['items' => $e->getMessage()])->withInput();
+        }
 
         return redirect()->route('purchases.show', $purchase)->with('success', 'Compra creada en borrador.');
     }
@@ -61,6 +63,8 @@ class PurchaseController extends Controller
     {
         return view('purchases.show', [
             'purchase' => $purchase->load(['supplier', 'base', 'items.brand', 'items.model', 'items.size', 'items.tires']),
+            'suppliers' => Supplier::orderBy('name')->get(),
+            'bases' => Base::orderBy('name')->get(),
         ]);
     }
 
@@ -73,5 +77,35 @@ class PurchaseController extends Controller
         }
 
         return back()->with('success', 'Compra confirmada. Los neumáticos ingresaron a stock.');
+    }
+
+    public function update(Request $request, TirePurchase $purchase, PurchaseService $purchases)
+    {
+        $data = $request->validate([
+            'supplier_id' => 'required|exists:suppliers,id',
+            'base_id' => 'required|exists:bases,id',
+            'purchased_at' => 'required|date',
+            'notes' => 'nullable|string',
+        ]);
+
+        try {
+            $purchases->updateDraft($purchase, $data);
+        } catch (DomainException $e) {
+            return back()->withErrors(['purchase' => $e->getMessage()]);
+        }
+
+        return redirect()->route('purchases.show', $purchase)->with('success', 'Compra actualizada.');
+    }
+
+    public function destroy(TirePurchase $purchase, PurchaseService $purchases)
+    {
+        $number = $purchase->number;
+        try {
+            $purchases->discard($purchase);
+        } catch (DomainException $e) {
+            return back()->withErrors(['purchase' => $e->getMessage()]);
+        }
+
+        return redirect()->route('purchases.index')->with('success', 'Se anuló la compra '.$number.'.');
     }
 }

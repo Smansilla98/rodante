@@ -22,10 +22,16 @@ class UnitType extends Model
         return $this->hasMany(FleetUnit::class);
     }
 
+    public function isPowered(): bool
+    {
+        return (bool) $this->has_odometer;
+    }
+
     public function sheetLabel(): string
     {
         return match ($this->code) {
-            'CAMION_TRACTOR' => 'TRACTOR',
+            'TRACTOR', 'CAMION_TRACTOR' => 'TRACTOR',
+            'CAMION' => 'CAMIÓN',
             'TANQUE' => 'TANQUE',
             'SEMIRREMOLQUE' => 'SEMIRREMOLQUE',
             'BATEA' => 'BATEA',
@@ -36,7 +42,8 @@ class UnitType extends Model
     public function sheetPrefix(): string
     {
         return match ($this->code) {
-            'CAMION_TRACTOR' => 'TC',
+            'TRACTOR', 'CAMION_TRACTOR' => 'TC',
+            'CAMION' => 'CM',
             'SEMIRREMOLQUE' => 'SR',
             'TANQUE' => 'TQ',
             'BATEA' => 'BT',

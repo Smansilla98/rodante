@@ -49,7 +49,12 @@ class IncidentService
                 $this->openNewLife($tire, $user);
             }
 
-            $this->audit->log('tire.incident', $incident, null, ['type' => $type->value]);
+            $incident->load('unit');
+            $this->audit->log('tire.incident', $incident, null, [
+                'type' => $type->value,
+                'tire' => $tire->auditLabel(),
+                'unit' => $incident->unit?->plate,
+            ]);
 
             return $incident;
         });

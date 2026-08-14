@@ -19,11 +19,13 @@
         'plus' => '<path stroke-linecap="round" stroke-linejoin="round" d="M12 5.25v13.5M5.25 12h13.5"/>',
         'search' => '<path stroke-linecap="round" stroke-linejoin="round" d="m16.5 16.5 3.75 3.75M18 11.25a6.75 6.75 0 1 1-13.5 0 6.75 6.75 0 0 1 13.5 0Z"/>',
         'menu' => '<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 7h15M4.5 12h15M4.5 17h15"/>',
+        'x' => '<path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6 6 18"/>',
         'logout' => '<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 8.25V6A1.5 1.5 0 0 0 14.25 4.5h-7.5A1.5 1.5 0 0 0 5.25 6v12a1.5 1.5 0 0 0 1.5 1.5h7.5A1.5 1.5 0 0 0 15.75 18v-2.25M12 12h9m0 0-2.25-2.25M21 12l-2.25 2.25"/>',
         'back' => '<path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5"/>',
         'inbox' => '<path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12.75 6 4.5h12l2.25 8.25v6.75H3.75v-6.75Zm0 0h5.1a3.15 3.15 0 0 0 6.3 0h5.1"/>',
+        'book' => '<path stroke-linecap="round" stroke-linejoin="round" d="M4.5 5.25A2.25 2.25 0 0 1 6.75 3H19.5v16.5H6.75A2.25 2.25 0 0 0 4.5 21.75V5.25Zm0 0v13.5M8.25 7.5h7.5M8.25 11.25h7.5"/>',
     ];
 @endphp
-<svg {{ $attributes->merge(['class' => $class, 'viewBox' => '0 0 24 24', 'fill' => 'none', 'stroke' => 'currentColor', 'aria-hidden' => 'true']) }} stroke-width="1.8">
+<svg {{ $attributes->merge(['class' => $class, 'viewBox' => '0 0 24 24', 'fill' => 'none', 'stroke' => 'currentColor', 'aria-hidden' => 'true']) }} stroke-width="2.35">
     {!! $paths[$name] ?? $paths['circle'] !!}
 </svg>

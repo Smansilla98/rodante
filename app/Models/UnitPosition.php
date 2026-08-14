@@ -10,13 +10,18 @@ class UnitPosition extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'unit_configuration_id', 'code', 'name', 'axle_number',
-        'side', 'dual', 'is_spare', 'grid_row', 'grid_col', 'sort_order',
+        'unit_configuration_id', 'code', 'name', 'axle_number', 'axle_role',
+        'side', 'dual', 'is_spare', 'is_liftable', 'is_self_steer',
+        'grid_row', 'grid_col', 'sort_order',
     ];
 
     protected function casts(): array
     {
-        return ['is_spare' => 'boolean'];
+        return [
+            'is_spare' => 'boolean',
+            'is_liftable' => 'boolean',
+            'is_self_steer' => 'boolean',
+        ];
     }
 
     public function configuration(): BelongsTo
@@ -38,15 +43,26 @@ class UnitPosition extends Model
         return $code;
     }
 
-    public function axleRole(bool $hasOdometer, bool $isSteer = false): string
+    public function axleRole(bool $hasOdometer = true, bool $isSteer = false): string
     {
-        if ($this->is_spare) {
+        if ($this->is_spare || $this->axle_role === 'AUXILIO') {
             return 'Auxilio';
         }
-        if (! $hasOdometer) {
-            return 'Arrastre';
+
+        $label = match ($this->axle_role) {
+            'DIRECCION' => 'Dirección',
+            'TRACCION' => 'Tracción',
+            'DIRECCIONAL' => 'Direccional',
+            default => 'Arrastre',
+        };
+
+        if ($this->is_liftable) {
+            $label .= ' elevable';
+        }
+        if ($this->is_self_steer) {
+            $label .= ' autodir.';
         }
 
-        return ($isSteer || $this->axle_number === 1) ? 'Dirección' : 'Tracción';
+        return $label;
     }
 }

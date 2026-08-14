@@ -23,23 +23,25 @@
             </label>
         </div>
         <h3 class="font-semibold mb-3">Líneas</h3>
+        <p class="hint mb-3">Primero la marca, después el diseño de esa marca, después la medida en la que se fabrica.</p>
+        <script type="application/json" id="tireCatalog">@json($catalog)</script>
         <div class="space-y-3 mb-4">
             @for($i=0;$i<3;$i++)
-                <div class="grid md:grid-cols-5 gap-2">
-                    <select name="items[{{ $i }}][tire_brand_id]" class="inp">
+                <div class="grid md:grid-cols-5 gap-2" data-catalog-row>
+                    <select name="items[{{ $i }}][tire_brand_id]" class="inp" data-catalog="brand" aria-label="Marca">
                         <option value="">Marca</option>
-                        @foreach($brands as $brand)<option value="{{ $brand->id }}">{{ $brand->name }}</option>@endforeach
+                        @foreach($catalog['brands'] as $brand)
+                            <option value="{{ $brand['id'] }}">{{ $brand['name'] }}</option>
+                        @endforeach
                     </select>
-                    <select name="items[{{ $i }}][tire_model_id]" class="inp">
+                    <select name="items[{{ $i }}][tire_model_id]" class="inp" data-catalog="model" aria-label="Modelo">
                         <option value="">Modelo</option>
-                        @foreach($models as $model)<option value="{{ $model->id }}">{{ $model->code }}</option>@endforeach
                     </select>
-                    <select name="items[{{ $i }}][tire_size_id]" class="inp">
+                    <select name="items[{{ $i }}][tire_size_id]" class="inp" data-catalog="size" aria-label="Medida">
                         <option value="">Medida</option>
-                        @foreach($sizes as $size)<option value="{{ $size->id }}">{{ $size->displayName() }}</option>@endforeach
                     </select>
-                    <input name="items[{{ $i }}][quantity]" type="number" min="1" class="inp" placeholder="Cantidad">
-                    <input name="items[{{ $i }}][first_number]" type="number" min="1" class="inp" placeholder="Desde Nº">
+                    <input name="items[{{ $i }}][quantity]" type="number" min="1" class="inp" placeholder="Cantidad" aria-label="Cantidad">
+                    <input name="items[{{ $i }}][first_number]" type="number" min="1" class="inp" placeholder="Desde Nº" aria-label="Número inicial">
                 </div>
             @endfor
         </div>

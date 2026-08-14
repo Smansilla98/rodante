@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Odometer;
 
-use App\Enums\OdometerStatus;
 use App\Exceptions\DomainException;
 use App\Http\Controllers\Controller;
 use App\Models\OdometerReading;
@@ -11,35 +10,33 @@ use Illuminate\Http\Request;
 
 class OdometerController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $editing = $request->integer('edit')
+            ? OdometerReading::with('unit')->find($request->integer('edit'))
+            : null;
+
         return view('odometers.index', [
-            'readings' => OdometerReading::with('unit', 'recorder', 'validator')
-                ->latest()
+            'readings' => OdometerReading::with('unit', 'recorder')
+                ->latest('recorded_at')
                 ->paginate(40),
+            'editing' => $editing,
         ]);
     }
 
-    public function validateReading(OdometerReading $reading, OdometerService $odometers, Request $request)
+    public function update(Request $request, OdometerReading $reading, OdometerService $odometers)
     {
+        $data = $request->validate([
+            'value' => 'required|integer|min:0',
+            'notes' => 'nullable|string|max:255',
+        ]);
+
         try {
-            $odometers->validate($reading, $request->user());
+            $odometers->update($reading, (int) $data['value'], $request->user(), $data['notes'] ?? null);
         } catch (DomainException $e) {
             return back()->withErrors(['odometer' => $e->getMessage()]);
         }
 
-        return back()->with('success', 'Odómetro validado.');
-    }
-
-    public function reject(OdometerReading $reading, OdometerService $odometers, Request $request)
-    {
-        $data = $request->validate(['notes' => 'required|string|max:255']);
-        try {
-            $odometers->reject($reading, $request->user(), $data['notes']);
-        } catch (DomainException $e) {
-            return back()->withErrors(['odometer' => $e->getMessage()]);
-        }
-
-        return back()->with('success', 'Lectura rechazada. Debe cargarse una corrección nueva.');
+        return redirect()->route('odometers.index')->with('success', 'Odómetro corregido.');
     }
 }

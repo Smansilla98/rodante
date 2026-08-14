@@ -1,21 +1,262 @@
 @extends('layouts.app')
 @section('kicker', 'Planilla')
 @section('title', $sheetUnits->pluck('plate')->join(' + '))
+@section('page_class', 'app-page--planilla')
 @section('content')
 @php $coupled = $unit->coupledPartner(); @endphp
 
-<x-page-header
-    kicker="Planilla"
-    :title="$sheetUnits->pluck('plate')->join(' + ')"
-    :subtitle="$unit->type->name.' · '.$unit->configuration->name.' · '.$unit->fleet->name.' · códigos TC/SR por eje-lado'"
->
-    <x-slot:actions>
-        <a href="{{ route('units.index') }}" class="btn btn-ghost"><x-icon name="back" class="w-4 h-4" /> Unidades</a>
-    </x-slot:actions>
-</x-page-header>
+<div class="planilla-bar">
+    <div class="planilla-bar__id">
+        <span class="planilla-bar__k">Planilla</span>
+        <h1>{{ $sheetUnits->pluck('plate')->join(' + ') }}</h1>
+        <p>{{ $unit->type->name }} · {{ $unit->configuration->label() }}{{ $unit->specSummary() ? ' · '.$unit->specSummary() : '' }} · {{ $unit->fleet->name }}</p>
+    </div>
+    <div class="planilla-bar__meta">
+        <span><em>Base</em> {{ $unit->base->name }}</span>
+        <span><em>Fecha</em> {{ now()->format('d/m/Y') }}</span>
+        @if($canOperate)
+            <label class="planilla-bar__km">
+                <em>Odómetro</em>
+                <input id="sheetOdometer" type="number" required min="0" value="{{ $unit->hasOdometer() ? $unit->current_odometer : ($unit->currentCouplingAsTrailer?->tractor?->current_odometer ?? '') }}">
+            </label>
+        @endif
+    </div>
+    <a href="{{ route('units.index') }}" class="btn btn-ghost btn-sm"><x-icon name="back" class="w-4 h-4" /> Unidades</a>
+    @if(auth()->user()->role->canManageAbm())
+        <a href="{{ route('units.edit', $unit) }}" class="btn btn-ghost btn-sm">Editar</a>
+    @endif
+</div>
 
-<div class="mb-8">
-    <x-tire-sheet :units="$sheetUnits" :current="$unit" />
+<div class="planilla-work {{ $canOperate ? 'planilla-work--ops' : '' }}">
+    @if($canOperate)
+        <aside class="stock-rail no-print">
+            <h2 class="stock-rail__title">Disponibles</h2>
+            <div class="stock-rail__list" id="stockPool">
+                @forelse($stockTires as $stockTire)
+                    <button type="button" class="stock-chip" draggable="true"
+                        data-tire-id="{{ $stockTire->id }}"
+                        title="{{ $stockTire->fullName() }} · {{ $stockTire->size->displayName() }}">
+                        <strong>{{ $stockTire->displayName() }}</strong>
+                        <span>{{ $stockTire->brand?->name }} {{ $stockTire->size?->code }}</span>
+                    </button>
+                @empty
+                    <p class="stock-rail__empty">No hay cubiertas en stock.</p>
+                @endforelse
+            </div>
+
+            <h2 class="stock-rail__title">Auxilio</h2>
+            <div class="refaccion-drop" id="refaccionDrop" data-spare-slot="{{ $spareSlotId }}" data-slot="{{ $spareSlotId }}">
+                @php $spareLoc = $unit->locations->firstWhere('position_id', $spareSlotId); @endphp
+                @if($spareLoc?->tire)
+                    <p class="refaccion-drop__tire">{{ $spareLoc->tire->displayName() }}</p>
+                    <p class="refaccion-drop__meta">Montada en auxilio</p>
+                @else
+                    <p class="refaccion-drop__empty">Agregar auxilio</p>
+                @endif
+            </div>
+
+            @if($rotationPatterns)
+                <h2 class="stock-rail__title">Rotación</h2>
+                <div class="pattern-list">
+                    @foreach($rotationPatterns as $pattern)
+                        <button type="button" class="pattern-btn" data-pattern="{{ $pattern['code'] }}"
+                            @disabled(! $pattern['ready'])
+                            title="{{ $pattern['ready'] ? $pattern['hint'] : $pattern['blocked'] }}">
+                            <x-rotation-mini :code="$pattern['code']" />
+                            <span>{{ $pattern['name'] }}</span>
+                        </button>
+                    @endforeach
+                </div>
+            @endif
+        </aside>
+    @endif
+
+    <x-tire-sheet :units="$sheetUnits" :current="$unit" :interactive="$canOperate" />
+
+    @if($canOperate)
+        <aside class="recambio-dock no-print" id="recambioDock">
+            <h2 class="recambio-dock__title">Ubicación</h2>
+            <p class="recambio-dock__idle" id="recambioIdle">Tocá una cubierta del mapa o arrastrá una de stock.</p>
+
+            <div id="recambioPanel" hidden>
+                <p class="recambio-dock__slot" id="recambioSlot"></p>
+                <p class="recambio-dock__role" id="recambioRole"></p>
+
+                <form method="POST" action="{{ route('units.slot', $unit) }}" id="recambioInstall" hidden>
+                    @csrf
+                    <input type="hidden" name="action" value="install">
+                    <input type="hidden" name="odometer">
+                    <input type="hidden" name="position_id" id="installPosition">
+                    <p class="recambio-dock__idle mb-3">Ubicación vacía. Elegí una cubierta compatible de stock.</p>
+                    <label class="field">
+                        <span>Cubierta de stock</span>
+                        <select name="tire_id" id="installTire" class="inp" required></select>
+                    </label>
+                    <p class="recambio-dock__empty" id="installEmpty" hidden>No hay cubiertas compatibles en stock.</p>
+                    <button class="btn btn-primary w-full mt-3" id="installSubmit">Instalar</button>
+                </form>
+
+                <div id="recambioMounted" hidden>
+                    <div class="recambio-facts" id="tireFacts">
+                        <p class="recambio-facts__name" id="mountedName"></p>
+                        <p class="recambio-facts__link"><a id="mountedLink" href="#">Ver ficha completa</a></p>
+                        <div class="dl dl--compact" id="tireFactsList"></div>
+                    </div>
+
+                    <div class="slot-actions" id="slotActions">
+                        <button type="button" class="slot-actions__btn is-on" data-action="cambio">Cambio</button>
+                        <button type="button" class="slot-actions__btn" data-action="pinchadura">Pinchadura</button>
+                        <button type="button" class="slot-actions__btn" data-action="rotacion">Rotación</button>
+                        <button type="button" class="slot-actions__btn" data-action="retirar">Retirar</button>
+                        <button type="button" class="slot-actions__btn" data-action="incidencia">Incidencia</button>
+                        <button type="button" class="slot-actions__btn" data-action="medicion">Medición</button>
+                    </div>
+
+                    <form method="POST" action="{{ route('units.slot', $unit) }}" id="formCambio">
+                        @csrf
+                        <input type="hidden" name="action" value="cambio">
+                        <input type="hidden" name="odometer">
+                        <input type="hidden" name="position_id" id="cambioPosition">
+                        <label class="field">
+                            <span>Cubierta nueva</span>
+                            <select name="tire_id" id="cambioTire" class="inp" required></select>
+                        </label>
+                        <p class="recambio-dock__empty" id="cambioEmpty" hidden>No hay cubiertas compatibles para el cambio.</p>
+                        <label class="field mt-2">
+                            <span>Nota</span>
+                            <input name="notes" class="inp" placeholder="Opcional">
+                        </label>
+                        <button class="btn btn-primary w-full mt-3" id="cambioSubmit">Confirmar cambio</button>
+                    </form>
+
+                    <form method="POST" action="{{ route('units.slot', $unit) }}" id="formPinchadura" hidden>
+                        @csrf
+                        <input type="hidden" name="action" value="pinchadura">
+                        <input type="hidden" name="odometer">
+                        <input type="hidden" name="position_id" id="pinchaduraPosition">
+                        <p class="recambio-dock__idle mb-3">Registra la pinchadura y manda la cubierta a reparación. La ubicación queda libre.</p>
+                        <label class="field">
+                            <span>Nota</span>
+                            <input name="notes" class="inp" placeholder="Opcional">
+                        </label>
+                        <button class="btn btn-dark w-full mt-3">Registrar pinchadura</button>
+                    </form>
+
+                    <form method="POST" action="{{ route('units.slot', $unit) }}" id="formRotacion" hidden>
+                        @csrf
+                        <input type="hidden" name="action" value="rotacion">
+                        <input type="hidden" name="odometer">
+                        <input type="hidden" name="position_id" id="rotacionFrom">
+                        <label class="field">
+                            <span>Rotar o intercambiar con</span>
+                            <select name="to_position_id" id="rotatePosition" class="inp" required></select>
+                        </label>
+                        <p class="recambio-dock__empty" id="rotateEmpty" hidden>No hay otra ubicación compatible.</p>
+                        <label class="field mt-2">
+                            <span>Nota</span>
+                            <input name="notes" class="inp" placeholder="Opcional">
+                        </label>
+                        <button class="btn btn-ghost w-full mt-3" id="rotateSubmit">Confirmar rotación</button>
+                    </form>
+
+                    <form method="POST" action="{{ route('units.slot', $unit) }}" id="formRetirar" hidden>
+                        @csrf
+                        <input type="hidden" name="action" value="retirar">
+                        <input type="hidden" name="odometer">
+                        <input type="hidden" name="position_id" id="retirarPosition">
+                        <p class="recambio-dock__idle mb-3">Retira la cubierta de esta ubicación sin instalar otra.</p>
+                        <label class="field">
+                            <span>Motivo</span>
+                            <select name="reason_id" class="inp" required>
+                                <option value="">Elegir motivo</option>
+                                @foreach($reasons as $reason)
+                                    <option value="{{ $reason->id }}">{{ $reason->name }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <label class="field mt-2">
+                            <span>Destino</span>
+                            <select name="destination" class="inp" required>
+                                @foreach($destinations as $destination)
+                                    <option value="{{ $destination->value }}" @selected($destination === \App\Enums\TireStatus::Stock)>{{ $destination->label() }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <label class="field mt-2">
+                            <span>Nota</span>
+                            <input name="notes" class="inp" placeholder="Opcional">
+                        </label>
+                        <button class="btn btn-dark w-full mt-3">Confirmar retiro</button>
+                    </form>
+
+                    <form method="POST" action="{{ route('units.slot', $unit) }}" id="formIncidencia" hidden>
+                        @csrf
+                        <input type="hidden" name="action" value="incidencia">
+                        <input type="hidden" name="odometer">
+                        <input type="hidden" name="position_id" id="incidenciaPosition">
+                        <p class="recambio-dock__idle mb-3">La cubierta sigue montada. Usá pinchadura o cambio si hay que retirarla.</p>
+                        <label class="field">
+                            <span>Tipo</span>
+                            <select name="incident_type" class="inp" required>
+                                <option value="">Elegir tipo</option>
+                                @foreach($incidentTypes as $type)
+                                    <option value="{{ $type->value }}">{{ $type->label() }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <label class="field mt-2">
+                            <span>Descripción</span>
+                            <input name="description" class="inp" placeholder="Opcional">
+                        </label>
+                        <label class="field mt-2">
+                            <span>Nota</span>
+                            <input name="notes" class="inp" placeholder="Opcional">
+                        </label>
+                        <button class="btn btn-dark w-full mt-3">Registrar incidencia</button>
+                    </form>
+
+                    <form method="POST" action="{{ route('units.slot', $unit) }}" id="formMedicion" hidden>
+                        @csrf
+                        <input type="hidden" name="action" value="medicion">
+                        <input type="hidden" name="odometer">
+                        <input type="hidden" name="position_id" id="medicionPosition">
+                        <p class="recambio-dock__idle mb-3">Cargá la profundidad de cada franja. Un desgaste lateral disparado genera alerta.</p>
+                        <div id="measureFields" class="space-y-2"></div>
+                        <p class="recambio-dock__empty" id="measureEmpty" hidden>Esta medida no tiene franjas de profundidad configuradas.</p>
+                        <label class="field mt-2">
+                            <span>Nota</span>
+                            <input name="notes" class="inp" placeholder="Opcional">
+                        </label>
+                        <button class="btn btn-primary w-full mt-3" id="measureSubmit">Guardar medición</button>
+                    </form>
+                </div>
+            </div>
+
+            <form method="POST" action="{{ route('units.slot', $unit) }}" id="formPatron" hidden>
+                @csrf
+                <input type="hidden" name="action" value="patron">
+                <input type="hidden" name="odometer">
+                <input type="hidden" name="pattern" id="patronCode">
+                <p class="recambio-dock__slot">Esquema de rotación</p>
+                <p class="recambio-dock__idle mb-3" id="patronHint"></p>
+                <label class="field">
+                    <span>Nota</span>
+                    <input name="notes" class="inp" placeholder="Opcional">
+                </label>
+                <button class="btn btn-primary w-full mt-3" id="patronSubmit">Aplicar esquema</button>
+            </form>
+        </aside>
+        <script type="application/json" id="slotMap">@json($slotMap)</script>
+        <script type="application/json" id="rotationPatterns">@json($rotationPatterns)</script>
+        <div id="slotMenu" class="slot-menu" hidden>
+            <button type="button" data-menu="ficha">Ver ficha</button>
+            <button type="button" data-menu="cambio">Cambio</button>
+            <button type="button" data-menu="rotar">Rotar / intercambiar</button>
+            <button type="button" data-menu="quitar">Quitar cubierta</button>
+            <button type="button" data-menu="incidencia">Incidencia</button>
+            <button type="button" data-menu="medicion">Medición</button>
+        </div>
+    @endif
 </div>
 
 <div class="grid lg:grid-cols-3 gap-5 mb-6 no-print">
@@ -23,9 +264,26 @@
         <div class="dl">
             <div><span>Base</span>{{ $unit->base->name }}</div>
             <div><span>Equipo</span>{{ $unit->brand }} {{ $unit->model_name }}</div>
+            <div><span>Configuración</span>{{ $unit->configuration->label() }}</div>
+            @if($unit->configuration->description)
+                <div><span>Layout</span>{{ $unit->configuration->description }}</div>
+            @endif
+            @if($unit->specSummary())
+                <div><span>Chasis</span>{{ $unit->specSummary() }}</div>
+            @endif
             <div><span>Odómetro</span>{{ $unit->hasOdometer() ? number_format($unit->current_odometer).' km' : 'Usa el del tractor acoplado' }}</div>
             <div><span>Acoplado</span>{{ $coupled?->plate ?? 'Sin acoplar' }}</div>
         </div>
+        @if(! $unit->hasOdometer())
+            <form method="POST" action="{{ route('units.specs', $unit) }}" class="flex flex-wrap gap-2 mt-4">
+                @csrf
+                <select name="tire_width" class="inp flex-1" required>
+                    <option value="295" @selected($unit->allowedTireWidth() === 295)>Lineal 295</option>
+                    <option value="385" @selected($unit->allowedTireWidth() === 385)>Lineal 385 (gomón)</option>
+                </select>
+                <button class="btn btn-ghost btn-sm">Guardar medida</button>
+            </form>
+        @endif
     </x-panel>
 
     <x-panel title="Acoplar / desacoplar">
@@ -54,7 +312,7 @@
                 @csrf
                 <select name="unit_configuration_id" class="inp">
                     @foreach($configurations as $cfg)
-                        <option value="{{ $cfg->id }}" @selected($cfg->id===$unit->unit_configuration_id)>{{ $cfg->code }}</option>
+                        <option value="{{ $cfg->id }}" @selected($cfg->id===$unit->unit_configuration_id)>{{ $cfg->label() }}</option>
                     @endforeach
                 </select>
                 <input name="reason" class="inp" placeholder="Motivo (urbana → ripio)" required>
@@ -64,94 +322,28 @@
     @endif
 </div>
 
-<form method="POST" action="{{ route('units.operate', $unit) }}" class="no-print mb-6" id="operation-form">
-    @csrf
-    <x-panel title="Carga / descarga">
-        <p class="text-sm text-slate-500 mb-4">Un retiro siempre pasa por STOCK, aunque después se instale en otra posición o unidad.</p>
-        <div class="grid md:grid-cols-2 gap-4 mb-6">
-            <label class="field"><span>Odómetro del tractor</span>
-                <input name="odometer" type="number" required value="{{ $unit->hasOdometer() ? $unit->current_odometer : ($unit->currentCouplingAsTrailer?->tractor?->current_odometer ?? '') }}">
-            </label>
-            <label class="field"><span>Notas</span><input name="notes"></label>
-        </div>
-
-        <h3 class="font-semibold mb-2">Retirar</h3>
-        <div class="space-y-2 mb-6">
-            @forelse($layout->where(fn($s) => $s['tire']) as $i => $slot)
-                <label class="flex flex-wrap items-center gap-3 text-sm py-2 border-b border-slate-100">
-                    <input type="checkbox" name="removals[{{ $i }}][tire_id]" value="{{ $slot['tire']->id }}">
-                    <span class="min-w-48">{{ $slot['position']->name }} — {{ $slot['tire']->displayName() }}</span>
-                    <select name="removals[{{ $i }}][reason_id]" class="inp" style="width:auto;min-width:140px">
-                        <option value="">Motivo</option>
-                        @foreach($reasons as $reason)<option value="{{ $reason->id }}">{{ $reason->name }}</option>@endforeach
-                    </select>
-                    <select name="removals[{{ $i }}][destination]" class="inp" style="width:auto">
-                        @foreach($destinations as $dest)<option value="{{ $dest->value }}">{{ $dest->label() }}</option>@endforeach
-                    </select>
-                </label>
-            @empty
-                <p class="text-sm text-slate-500">No hay cubiertas instaladas para retirar.</p>
-            @endforelse
-        </div>
-
-        <h3 class="font-semibold mb-2">Instalar desde stock</h3>
-        <div class="space-y-2 mb-5">
-            @foreach($unit->configuration->positions as $i => $position)
-                <div class="grid md:grid-cols-2 gap-2 items-center text-sm">
-                    <div>{{ $position->name }}</div>
-                    <select name="installations[{{ $i }}][tire_id]" class="inp">
-                        <option value="">—</option>
-                        @foreach($stockTires as $tire)
-                            <option value="{{ $tire->id }}">{{ $tire->displayName() }} · {{ $tire->size->code }}</option>
-                        @endforeach
-                    </select>
-                    <input type="hidden" name="installations[{{ $i }}][position_id]" value="{{ $position->id }}">
-                </div>
-            @endforeach
-        </div>
-        <button class="btn btn-primary">Confirmar operación</button>
-    </x-panel>
-</form>
-
-<form method="POST" action="{{ route('units.rotate', $unit) }}" class="no-print mb-6">
-    @csrf
-    <x-panel title="Rotación" >
-        <p class="text-sm text-slate-500 mb-4">No cierra kilómetros: la cubierta sigue en la misma vida.</p>
-        <div class="grid md:grid-cols-3 gap-3">
-            <select name="tire_id" class="inp" required>
-                <option value="">Neumático</option>
-                @foreach($layout->where(fn($s) => $s['tire']) as $slot)
-                    <option value="{{ $slot['tire']->id }}">{{ $slot['tire']->displayName() }}</option>
-                @endforeach
-            </select>
-            <select name="position_id" class="inp" required>
-                @foreach($unit->configuration->positions as $position)
-                    <option value="{{ $position->id }}">{{ $position->name }}</option>
-                @endforeach
-            </select>
-            <input name="odometer" type="number" class="inp" placeholder="Odómetro" required>
-        </div>
-        <button class="btn btn-dark mt-4">Rotar</button>
-    </x-panel>
-</form>
-
-<x-panel title="Historial en esta patente" :flush="true" class="no-print">
-    <div class="tbl-wrap">
-        <table class="tbl">
-            <thead><tr><th>Fecha</th><th>Evento</th><th>Cubierta</th><th>Detalle</th></tr></thead>
-            <tbody>
-            @forelse($history as $movement)
-                <tr>
-                    <td class="mono">{{ $movement->occurred_at?->format('d/m/Y H:i') }}</td>
-                    <td>{{ $movement->type->label() }}</td>
-                    <td><a href="{{ route('tires.show', $movement->tire) }}">{{ $movement->tire->displayName() }}</a></td>
-                    <td>{{ $movement->fromPosition?->name }} {{ $movement->toPosition?->name }} @if($movement->km_delta)+{{ number_format($movement->km_delta) }} km @endif</td>
-                </tr>
-            @empty
-                <tr><td colspan="4"><x-empty title="Sin movimientos en esta unidad" /></td></tr>
-            @endforelse
-            </tbody>
-        </table>
-    </div>
+<x-panel title="Historial en esta patente" :flush="true" class="no-print planilla-history">
+    <x-content-table>
+        <thead>
+            <tr>
+                <th scope="col">Fecha</th>
+                <th scope="col">Evento</th>
+                <th scope="col">Cubierta</th>
+                <th scope="col">Detalle</th>
+            </tr>
+        </thead>
+        <tbody>
+        @forelse($history as $movement)
+            <tr>
+                <td class="mono">{{ $movement->occurred_at?->format('d/m/Y H:i') }}</td>
+                <td>{{ $movement->type->label() }}</td>
+                <td><a href="{{ route('tires.show', $movement->tire) }}">{{ $movement->tire->displayName() }}</a></td>
+                <td>{{ $movement->fromPosition?->name }} {{ $movement->toPosition?->name }} @if($movement->km_delta)+{{ number_format($movement->km_delta) }} km @endif</td>
+            </tr>
+        @empty
+            <tr><td colspan="4"><x-empty title="Sin movimientos en esta unidad" /></td></tr>
+        @endforelse
+        </tbody>
+    </x-content-table>
 </x-panel>
 @endsection

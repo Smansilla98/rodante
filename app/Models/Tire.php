@@ -36,6 +36,14 @@ class Tire extends Model
         return $code.' Nº'.$this->individual_number;
     }
 
+    public function auditLabel(): string
+    {
+        $this->loadMissing('model');
+        $label = 'Nº '.$this->individual_number;
+
+        return $this->model?->code ? $label.' ('.$this->model->code.')' : $label;
+    }
+
     public function treadTone(): string
     {
         if ($this->current_tread_min === null) {

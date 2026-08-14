@@ -5,115 +5,184 @@
 @php $s = $stats; @endphp
 
 <x-page-header
-    kicker="Operación"
-    title="Buenos días, {{ auth()->user()->name }}."
-    subtitle="Estado actual de cubiertas, stock y odómetros."
+    kicker="Inicio"
+    title="Tablero"
+    subtitle="Hola, {{ auth()->user()->name }}. Acá ves el estado de las cubiertas, el stock y los odómetros. Tocá una tarjeta para entrar."
 />
 
 <div class="kpi-grid mb-8">
-    <a class="kpi" href="{{ route('tires.index') }}">
-        <div class="kpi__l">Total</div>
-        <div class="kpi__v">{{ $s['total'] }}</div>
+    <a class="kpi kpi--blue" href="{{ route('tires.index') }}">
+        <span class="kpi__ico" aria-hidden="true"><x-icon name="circle" class="w-6 h-6" /></span>
+        <div>
+            <div class="kpi__l">Total de cubiertas</div>
+            <div class="kpi__v">{{ $s['total'] }}</div>
+        </div>
     </a>
-    <a class="kpi" href="{{ route('tires.stock') }}">
-        <div class="kpi__l">Stock</div>
-        <div class="kpi__v">{{ $s['by_status']['STOCK'] ?? 0 }}</div>
+    <a class="kpi kpi--indigo" href="{{ route('tires.stock') }}">
+        <span class="kpi__ico" aria-hidden="true"><x-icon name="boxes" class="w-6 h-6" /></span>
+        <div>
+            <div class="kpi__l">En stock</div>
+            <div class="kpi__v">{{ $s['by_status']['STOCK'] ?? 0 }}</div>
+        </div>
     </a>
-    <a class="kpi" href="{{ route('tires.index', ['status' => 'INSTALADA']) }}">
-        <div class="kpi__l">Instaladas</div>
-        <div class="kpi__v">{{ $s['by_status']['INSTALADA'] ?? 0 }}</div>
+    <a class="kpi kpi--teal" href="{{ route('tires.index', ['status' => 'INSTALADA']) }}">
+        <span class="kpi__ico" aria-hidden="true"><x-icon name="truck" class="w-6 h-6" /></span>
+        <div>
+            <div class="kpi__l">Instaladas</div>
+            <div class="kpi__v">{{ $s['by_status']['INSTALADA'] ?? 0 }}</div>
+        </div>
     </a>
-    <a class="kpi" href="{{ route('tires.index', ['status' => 'RESERVA']) }}">
-        <div class="kpi__l">Reserva</div>
-        <div class="kpi__v">{{ $s['by_status']['RESERVA'] ?? 0 }}</div>
+    <a class="kpi kpi--amber" href="{{ route('tires.index', ['status' => 'RESERVA']) }}">
+        <span class="kpi__ico" aria-hidden="true"><x-icon name="inbox" class="w-6 h-6" /></span>
+        <div>
+            <div class="kpi__l">En reserva</div>
+            <div class="kpi__v">{{ $s['by_status']['RESERVA'] ?? 0 }}</div>
+        </div>
     </a>
-    <a class="kpi" href="{{ route('tires.index', ['status' => 'AUXILIO']) }}">
-        <div class="kpi__l">Auxilio</div>
-        <div class="kpi__v">{{ $s['by_status']['AUXILIO'] ?? 0 }}</div>
+    <a class="kpi kpi--violet" href="{{ route('tires.index', ['status' => 'AUXILIO']) }}">
+        <span class="kpi__ico" aria-hidden="true"><x-icon name="grid" class="w-6 h-6" /></span>
+        <div>
+            <div class="kpi__l">Auxilio</div>
+            <div class="kpi__v">{{ $s['by_status']['AUXILIO'] ?? 0 }}</div>
+        </div>
     </a>
-    <a class="kpi" href="{{ route('tires.index', ['status' => 'EN_REPARACION']) }}">
-        <div class="kpi__l">Reparación</div>
-        <div class="kpi__v">{{ $s['by_status']['EN_REPARACION'] ?? 0 }}</div>
+    <a class="kpi kpi--cyan" href="{{ route('tires.index', ['status' => 'EN_REPARACION']) }}">
+        <span class="kpi__ico" aria-hidden="true"><x-icon name="alert" class="w-6 h-6" /></span>
+        <div>
+            <div class="kpi__l">En reparación</div>
+            <div class="kpi__v">{{ $s['by_status']['EN_REPARACION'] ?? 0 }}</div>
+        </div>
     </a>
-    <a class="kpi" href="{{ route('tires.index', ['status' => 'DE_BAJA']) }}">
-        <div class="kpi__l">De baja</div>
-        <div class="kpi__v">{{ $s['by_status']['DE_BAJA'] ?? 0 }}</div>
+    <a class="kpi kpi--red" href="{{ route('tires.index', ['status' => 'DE_BAJA']) }}">
+        <span class="kpi__ico" aria-hidden="true"><x-icon name="shield" class="w-6 h-6" /></span>
+        <div>
+            <div class="kpi__l">De baja</div>
+            <div class="kpi__v">{{ $s['by_status']['DE_BAJA'] ?? 0 }}</div>
+        </div>
     </a>
-    <a class="kpi" href="{{ route('reports.kilometers') }}">
-        <div class="kpi__l">Km acumulados</div>
-        <div class="kpi__v">{{ number_format($s['km_total']) }}</div>
+    <a class="kpi kpi--slate" href="{{ route('reports.kilometers') }}">
+        <span class="kpi__ico" aria-hidden="true"><x-icon name="chart" class="w-6 h-6" /></span>
+        <div>
+            <div class="kpi__l">Kilómetros acumulados</div>
+            <div class="kpi__v">{{ number_format($s['km_total']) }}</div>
+        </div>
     </a>
 </div>
 
 <div class="hub-grid mb-8">
     <a class="hub" href="{{ route('units.index') }}">
-        <div class="hub__n">01</div>
+        <span class="hub__ico" aria-hidden="true"><x-icon name="truck" class="w-6 h-6" /></span>
         <div class="hub__t">Unidades</div>
         <div class="hub__s">Planilla tractor + tanque, carga y rotación.</div>
     </a>
     <a class="hub" href="{{ route('tires.stock') }}">
-        <div class="hub__n">02</div>
+        <span class="hub__ico" aria-hidden="true"><x-icon name="boxes" class="w-6 h-6" /></span>
         <div class="hub__t">Stock</div>
         <div class="hub__s">Cubiertas listas para instalar.</div>
     </a>
     <a class="hub" href="{{ route('purchases.create') }}">
-        <div class="hub__n">03</div>
+        <span class="hub__ico" aria-hidden="true"><x-icon name="plus" class="w-6 h-6" /></span>
         <div class="hub__t">Nueva compra</div>
         <div class="hub__s">Ingreso por número individual.</div>
     </a>
     <a class="hub" href="{{ route('odometers.index') }}">
-        <div class="hub__n">04</div>
+        <span class="hub__ico" aria-hidden="true"><x-icon name="gauge" class="w-6 h-6" /></span>
         <div class="hub__t">Odómetros</div>
-        <div class="hub__s">Validar lecturas de jefe o logística.</div>
+        <div class="hub__s">Últimas lecturas y corrección de km.</div>
+    </a>
+    <a class="hub" href="{{ route('help.index') }}">
+        <span class="hub__ico" aria-hidden="true"><x-icon name="book" class="w-6 h-6" /></span>
+        <div class="hub__t">Ayuda</div>
+        <div class="hub__s">Qué hace cada parte según tu rol y el manual de uso.</div>
     </a>
 </div>
 
 <div class="grid lg:grid-cols-2 gap-5">
     <x-panel title="Por marca" :flush="true">
-        @forelse($s['by_brand'] as $row)
-            <div class="list-row px-5">
-                <span>{{ $row->name }}</span>
-                <span class="mono">{{ $row->total }}</span>
-            </div>
-        @empty
-            <x-empty title="Sin cubiertas cargadas" />
-        @endforelse
+        <x-content-table :small="true">
+            <thead>
+                <tr>
+                    <th scope="col">Marca</th>
+                    <th scope="col" class="text-right">Cubiertas</th>
+                </tr>
+            </thead>
+            <tbody>
+            @forelse($s['by_brand'] as $row)
+                <tr>
+                    <td>{{ $row->name }}</td>
+                    <td class="text-right mono">{{ $row->total }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="2"><x-empty title="Sin cubiertas cargadas" /></td></tr>
+            @endforelse
+            </tbody>
+        </x-content-table>
     </x-panel>
 
     <x-panel title="Próximas a baja" :flush="true">
-        @forelse($s['near_retirement'] as $tire)
-            <div class="list-row px-5">
-                <a href="{{ route('tires.show', $tire) }}">{{ $tire->displayName() }}</a>
-                <span class="mono text-slate-500">{{ number_format($tire->accumulated_km) }} km · {{ $tire->current_tread_min ? $tire->current_tread_min.' mm' : 's/med' }}</span>
-            </div>
-        @empty
-            <x-empty title="Nada cerca de baja" text="Cuando una cubierta se desgaste, aparece acá." />
-        @endforelse
+        <x-content-table :small="true">
+            <thead>
+                <tr>
+                    <th scope="col">Cubierta</th>
+                    <th scope="col" class="text-right">Km / mm</th>
+                </tr>
+            </thead>
+            <tbody>
+            @forelse($s['near_retirement'] as $tire)
+                <tr>
+                    <td><a href="{{ route('tires.show', $tire) }}">{{ $tire->displayName() }}</a></td>
+                    <td class="text-right mono">{{ number_format($tire->accumulated_km) }} km · {{ $tire->current_tread_min ? $tire->current_tread_min.' mm' : 's/med' }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="2"><x-empty title="Nada cerca de baja" text="Cuando una cubierta se desgaste, aparece acá." /></td></tr>
+            @endforelse
+            </tbody>
+        </x-content-table>
     </x-panel>
 
-    <x-panel title="Odómetros pendientes" :flush="true">
+    <x-panel title="Últimas lecturas" :flush="true">
         <x-slot:toolbar>
             <a class="btn btn-ghost btn-sm" href="{{ route('odometers.index') }}">Ver todos</a>
         </x-slot:toolbar>
-        @forelse($pendingOdometers as $reading)
-            <div class="list-row px-5">
-                <span>{{ $reading->unit->plate }} · {{ number_format($reading->value) }} km</span>
-                <x-status tone="amber">Pendiente</x-status>
-            </div>
-        @empty
-            <x-empty title="No hay lecturas pendientes" />
-        @endforelse
+        <x-content-table :small="true">
+            <thead>
+                <tr>
+                    <th scope="col">Unidad</th>
+                    <th scope="col">Lectura</th>
+                </tr>
+            </thead>
+            <tbody>
+            @forelse($recentOdometers as $reading)
+                <tr>
+                    <td>{{ $reading->unit->plate }}</td>
+                    <td class="mono">{{ number_format($reading->value) }} km</td>
+                </tr>
+            @empty
+                <tr><td colspan="2"><x-empty title="Todavía no hay lecturas" /></td></tr>
+            @endforelse
+            </tbody>
+        </x-content-table>
     </x-panel>
 
     <x-panel title="Unidades con más incidencias" :flush="true">
-        @forelse($s['units_with_incidents'] as $row)
-            <div class="list-row px-5">
-                <span>{{ $row['plate'] }}</span>
-                <span class="mono">{{ $row['total'] }}</span>
-            </div>
-        @empty
-            <x-empty title="Sin incidencias" />
-        @endforelse
+        <x-content-table :small="true">
+            <thead>
+                <tr>
+                    <th scope="col">Patente</th>
+                    <th scope="col" class="text-right">Incidencias</th>
+                </tr>
+            </thead>
+            <tbody>
+            @forelse($s['units_with_incidents'] as $row)
+                <tr>
+                    <td>{{ $row['plate'] }}</td>
+                    <td class="text-right mono">{{ $row['total'] }}</td>
+                </tr>
+            @empty
+                <tr><td colspan="2"><x-empty title="Sin incidencias" /></td></tr>
+            @endforelse
+            </tbody>
+        </x-content-table>
     </x-panel>
 </div>
 @endsection

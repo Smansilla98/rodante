@@ -115,7 +115,10 @@ return new class extends Migration
             $table->string('name');
             $table->string('family_code');
             $table->string('applies_to');
+            $table->json('compatible_types')->nullable();
+            $table->text('description')->nullable();
             $table->unsignedTinyInteger('axle_count');
+            $table->unsignedTinyInteger('drive_axle_count')->default(0);
             $table->unsignedTinyInteger('position_count');
             $table->boolean('is_active')->default(true);
             $table->timestamps();
@@ -127,9 +130,12 @@ return new class extends Migration
             $table->string('code');
             $table->string('name');
             $table->unsignedTinyInteger('axle_number');
+            $table->string('axle_role')->default('ARRASTRE');
             $table->string('side');
             $table->string('dual')->nullable();
             $table->boolean('is_spare')->default(false);
+            $table->boolean('is_liftable')->default(false);
+            $table->boolean('is_self_steer')->default(false);
             $table->unsignedTinyInteger('grid_row')->default(0);
             $table->unsignedTinyInteger('grid_col')->default(0);
             $table->unsignedTinyInteger('sort_order')->default(0);
@@ -156,6 +162,7 @@ return new class extends Migration
             $table->string('model_name')->nullable();
             $table->unsignedInteger('current_odometer')->default(0);
             $table->string('status');
+            $table->json('specs')->nullable();
             $table->text('notes')->nullable();
             $table->timestamps();
             $table->index(['fleet_id', 'base_id']);

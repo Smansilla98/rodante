@@ -56,6 +56,7 @@ class RetirementService
             $this->audit->log('tire.retired', $tire, null, [
                 'reason_id' => $data['reason_id'] ?? null,
                 'km' => $tire->accumulated_km,
+                'tire' => $tire->auditLabel(),
             ]);
 
             return $tire->fresh();

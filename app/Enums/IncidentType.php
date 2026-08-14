@@ -11,6 +11,7 @@ enum IncidentType: string
     case Recapado = 'RECAPADO';
     case Inspeccion = 'INSPECCION';
     case DesgasteIrregular = 'DESGASTE_IRREGULAR';
+    case Cambio = 'CAMBIO';
     case Otra = 'OTRA';
 
     public function label(): string
@@ -23,6 +24,7 @@ enum IncidentType: string
             self::Recapado => 'Recapado',
             self::Inspeccion => 'Inspección',
             self::DesgasteIrregular => 'Desgaste irregular',
+            self::Cambio => 'Cambio',
             self::Otra => 'Otra',
         };
     }

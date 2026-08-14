@@ -74,7 +74,13 @@ class MeasurementService
                 ], $user);
             }
 
-            $this->audit->log('tire.measured', $measurement);
+            $measurement->load('unit');
+            $this->audit->log('tire.measured', $measurement, null, [
+                'tire' => $tire->auditLabel(),
+                'unit' => $measurement->unit?->plate,
+                'odometer' => $measurement->odometer,
+                'min_mm' => min($byCode),
+            ]);
 
             return $measurement->load('readings.zone');
         });

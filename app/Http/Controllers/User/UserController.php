@@ -7,7 +7,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Base;
 use App\Models\Fleet;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
@@ -23,15 +25,7 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
-        $data = $request->validate([
-            'name' => 'required|string|max:80',
-            'username' => 'required|string|max:40|unique:users,username',
-            'email' => 'nullable|email|unique:users,email',
-            'password' => 'required|string|min:6',
-            'role' => 'required|string',
-            'fleet_ids' => 'array',
-            'base_ids' => 'array',
-        ]);
+        $data = $this->validated($request);
         $user = User::create([
             'name' => $data['name'],
             'username' => $data['username'],
@@ -44,5 +38,60 @@ class UserController extends Controller
         $user->bases()->sync($data['base_ids'] ?? []);
 
         return back()->with('success', 'Usuario creado.');
+    }
+
+    public function update(Request $request, User $user)
+    {
+        $data = $this->validated($request, $user);
+        $payload = [
+            'name' => $data['name'],
+            'username' => $data['username'],
+            'email' => $data['email'] ?? null,
+            'role' => $data['role'],
+            'is_active' => $request->boolean('is_active'),
+        ];
+        if (! empty($data['password'])) {
+            $payload['password'] = $data['password'];
+        }
+        $user->update($payload);
+        $user->fleets()->sync($data['fleet_ids'] ?? []);
+        $user->bases()->sync($data['base_ids'] ?? []);
+
+        return back()->with('success', 'Usuario actualizado.');
+    }
+
+    public function destroy(Request $request, User $user)
+    {
+        if ($user->is($request->user())) {
+            return back()->withErrors(['delete' => 'No podés eliminar tu propio usuario.']);
+        }
+        try {
+            $user->fleets()->detach();
+            $user->bases()->detach();
+            $user->delete();
+        } catch (QueryException) {
+            $user->update(['is_active' => false]);
+
+            return back()->with('success', 'El usuario tiene historial: quedó inactivo para conservarlo.');
+        }
+
+        return back()->with('success', 'Usuario eliminado.');
+    }
+
+    private function validated(Request $request, ?User $user = null): array
+    {
+        $password = $user ? 'nullable|string|min:6' : 'required|string|min:6';
+
+        return $request->validate([
+            'name' => 'required|string|max:80',
+            'username' => ['required', 'string', 'max:40', Rule::unique('users', 'username')->ignore($user)],
+            'email' => ['nullable', 'email', Rule::unique('users', 'email')->ignore($user)],
+            'password' => $password,
+            'role' => ['required', Rule::enum(UserRole::class)],
+            'fleet_ids' => 'array',
+            'fleet_ids.*' => 'exists:fleets,id',
+            'base_ids' => 'array',
+            'base_ids.*' => 'exists:bases,id',
+        ]);
     }
 }

@@ -9,28 +9,34 @@
 </x-page-header>
 
 <x-panel :flush="true">
-    <div class="tbl-wrap">
-        <table class="tbl">
-            <thead><tr><th>Número</th><th>Proveedor</th><th>Base</th><th>Fecha</th><th>Estado</th></tr></thead>
-            <tbody>
-            @forelse($purchases as $purchase)
-                <tr>
-                    <td><a href="{{ route('purchases.show', $purchase) }}">{{ $purchase->number }}</a></td>
-                    <td>{{ $purchase->supplier->name }}</td>
-                    <td>{{ $purchase->base->name }}</td>
-                    <td class="mono">{{ $purchase->purchased_at->format('d/m/Y') }}</td>
-                    <td>
-                        <x-status :tone="$purchase->isConfirmed() ? 'green' : 'amber'">
-                            {{ $purchase->isConfirmed() ? 'Confirmada' : 'Borrador' }}
-                        </x-status>
-                    </td>
-                </tr>
-            @empty
-                <tr><td colspan="5"><x-empty title="No hay compras" action="Nueva compra" :href="route('purchases.create')" /></td></tr>
-            @endforelse
-            </tbody>
-        </table>
-    </div>
+    <x-content-table>
+        <thead>
+            <tr>
+                <th scope="col">Número</th>
+                <th scope="col">Proveedor</th>
+                <th scope="col">Base</th>
+                <th scope="col">Fecha</th>
+                <th scope="col">Estado</th>
+            </tr>
+        </thead>
+        <tbody>
+        @forelse($purchases as $purchase)
+            <tr>
+                <td><a href="{{ route('purchases.show', $purchase) }}">{{ $purchase->number }}</a></td>
+                <td>{{ $purchase->supplier->name }}</td>
+                <td>{{ $purchase->base->name }}</td>
+                <td class="mono">{{ $purchase->purchased_at->format('d/m/Y') }}</td>
+                <td>
+                    <x-status :tone="$purchase->isConfirmed() ? 'green' : 'amber'">
+                        {{ $purchase->isConfirmed() ? 'Confirmada' : 'Borrador' }}
+                    </x-status>
+                </td>
+            </tr>
+        @empty
+            <tr><td colspan="5"><x-empty title="No hay compras" action="Nueva compra" :href="route('purchases.create')" /></td></tr>
+        @endforelse
+        </tbody>
+    </x-content-table>
     <div class="pager">{{ $purchases->links() }}</div>
 </x-panel>
 @endsection

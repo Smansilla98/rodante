@@ -2,9 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Services\DashboardService;
 use App\Models\OdometerReading;
-use App\Enums\OdometerStatus;
+use App\Services\DashboardService;
 
 class DashboardController extends Controller
 {
@@ -12,9 +11,8 @@ class DashboardController extends Controller
     {
         return view('dashboard', [
             'stats' => $dashboard->stats(),
-            'pendingOdometers' => OdometerReading::with('unit', 'recorder')
-                ->where('status', OdometerStatus::Pending)
-                ->latest()
+            'recentOdometers' => OdometerReading::with('unit')
+                ->latest('recorded_at')
                 ->limit(8)
                 ->get(),
         ]);

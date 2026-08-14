@@ -9,6 +9,7 @@ use App\Enums\TireStatus;
 use App\Exceptions\DomainException;
 use App\Models\Tire;
 use App\Models\TireLifecycle;
+use App\Models\TireModel;
 use App\Models\TirePurchase;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -34,6 +35,7 @@ class PurchaseService
             ]);
 
             foreach ($data['items'] as $item) {
+                $this->assertItemMatchesCatalog($item);
                 $purchase->items()->create([
                     'tire_brand_id' => $item['tire_brand_id'],
                     'tire_model_id' => $item['tire_model_id'],
@@ -47,6 +49,24 @@ class PurchaseService
 
             return $purchase->load('items');
         });
+    }
+
+    private function assertItemMatchesCatalog(array $item): void
+    {
+        $model = TireModel::with('brand', 'sizes')->find($item['tire_model_id'] ?? null);
+        if (! $model) {
+            throw new DomainException('Elegí un modelo de cubierta.');
+        }
+        if ((int) $model->tire_brand_id !== (int) $item['tire_brand_id']) {
+            throw new DomainException(
+                $model->code.' es de '.$model->brand->name.'. No se puede cargar con otra marca.'
+            );
+        }
+        if (! $model->sizes->contains('id', (int) $item['tire_size_id'])) {
+            throw new DomainException(
+                $model->brand->name.' '.$model->code.' no se fabrica en esa medida.'
+            );
+        }
     }
 
     public function confirm(TirePurchase $purchase, User $user): TirePurchase
@@ -116,6 +136,36 @@ class PurchaseService
             $this->audit->log('purchase.confirmed', $purchase);
 
             return $purchase->fresh(['items.tires']);
+        });
+    }
+
+    public function updateDraft(TirePurchase $purchase, array $data): TirePurchase
+    {
+        if ($purchase->isConfirmed()) {
+            throw new DomainException('Una compra confirmada no se puede editar.');
+        }
+
+        $purchase->update([
+            'supplier_id' => $data['supplier_id'],
+            'base_id' => $data['base_id'],
+            'purchased_at' => $data['purchased_at'],
+            'notes' => $data['notes'] ?? $purchase->notes,
+        ]);
+        $this->audit->log('purchase.updated', $purchase->fresh());
+
+        return $purchase->fresh();
+    }
+
+    public function discard(TirePurchase $purchase): void
+    {
+        if ($purchase->isConfirmed()) {
+            throw new DomainException('Una compra confirmada no se puede borrar.');
+        }
+
+        DB::transaction(function () use ($purchase) {
+            $this->audit->log('purchase.discarded', $purchase, null, ['number' => $purchase->number]);
+            $purchase->items()->delete();
+            $purchase->delete();
         });
     }
 

@@ -5,6 +5,13 @@
 <x-page-header kicker="Cubierta" :title="$tire->displayName()" :subtitle="$tire->fullName().' · '.$tire->size->displayName()">
     <x-slot:actions>
         <a href="{{ route('tires.index') }}" class="btn btn-ghost"><x-icon name="back" class="w-4 h-4" /> Listado</a>
+        @if(auth()->user()->role->canManageAbm())
+            @if(request('edit'))
+                <a href="{{ route('tires.show', $tire) }}" class="btn btn-ghost">Cancelar</a>
+            @else
+                <a href="{{ route('tires.show', [$tire, 'edit' => 1]) }}" class="btn btn-dark">Editar</a>
+            @endif
+        @endif
     </x-slot:actions>
 </x-page-header>
 
@@ -27,6 +34,43 @@
                 @endif
             </div>
         </div>
+        @if(auth()->user()->role->canManageAbm() && request('edit'))
+            <form method="POST" action="{{ route('tires.update', $tire) }}" class="mt-6 space-y-3 border-t border-slate-100 pt-4">
+                @csrf
+                @method('PUT')
+                <h3 class="font-semibold">Editar ficha</h3>
+                <label class="field"><span>Nº individual</span><input name="individual_number" type="number" min="1" value="{{ $tire->individual_number }}" required></label>
+                <label class="field"><span>Marca</span>
+                    <select name="tire_brand_id" required>
+                        @foreach($brands as $brand)
+                            <option value="{{ $brand->id }}" @selected($tire->tire_brand_id === $brand->id)>{{ $brand->name }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label class="field"><span>Modelo</span>
+                    <select name="tire_model_id" required>
+                        @foreach($models as $model)
+                            <option value="{{ $model->id }}" @selected($tire->tire_model_id === $model->id)>{{ $model->brand?->name }} {{ $model->code }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label class="field"><span>Medida</span>
+                    <select name="tire_size_id" required>
+                        @foreach($sizes as $size)
+                            <option value="{{ $size->id }}" @selected($tire->tire_size_id === $size->id)>{{ $size->displayName() }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label class="field"><span>Condición</span>
+                    <select name="condition" required>
+                        @foreach($conditions as $condition)
+                            <option value="{{ $condition->value }}" @selected($tire->condition === $condition)>{{ $condition->label() }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <button class="btn btn-dark btn-sm">Guardar</button>
+            </form>
+        @endif
     </x-panel>
 
     <x-panel title="Nueva incidencia">

@@ -3,23 +3,17 @@
 namespace App\Services;
 
 use App\Enums\OdometerStatus;
-use App\Enums\UserRole;
 use App\Exceptions\DomainException;
 use App\Models\FleetUnit;
 use App\Models\OdometerReading;
+use App\Models\TireOperation;
 use App\Models\User;
 
 class OdometerService
 {
-    public function lastValidatedValue(FleetUnit $unit): ?int
-    {
-        return OdometerReading::query()
-            ->where('unit_id', $unit->id)
-            ->where('status', OdometerStatus::Validated)
-            ->orderByDesc('recorded_at')
-            ->orderByDesc('id')
-            ->value('value');
-    }
+    public function __construct(
+        private AuditService $audit,
+    ) {}
 
     public function lastRecordedValue(FleetUnit $unit): ?int
     {
@@ -52,12 +46,28 @@ class OdometerService
 
         $this->assertNotDecreasing($unit, $odometer);
 
+        $last = OdometerReading::query()
+            ->where('unit_id', $unit->id)
+            ->where('status', '!=', OdometerStatus::Rejected)
+            ->orderByDesc('recorded_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if ($last && (int) $last->value === $odometer) {
+            $unit->update(['current_odometer' => $odometer]);
+
+            return $last;
+        }
+
         $reading = OdometerReading::create([
             'unit_id' => $unit->id,
             'value' => $odometer,
-            'status' => OdometerStatus::Pending,
+            'status' => OdometerStatus::Validated,
             'recorded_by' => $user->id,
             'recorded_at' => now(),
+            'validated_by' => $user->id,
+            'validated_at' => now(),
+            'validation_source' => 'OPERACION',
             'tire_operation_id' => $operationId,
             'notes' => $notes,
         ]);
@@ -67,47 +77,74 @@ class OdometerService
         return $reading;
     }
 
-    public function validate(OdometerReading $reading, User $user): OdometerReading
+    public function update(OdometerReading $reading, int $value, User $user, ?string $notes = null): OdometerReading
     {
         if (! $user->role->canValidateOdometer()) {
-            throw new DomainException('No tiene permiso para validar odómetros.');
+            throw new DomainException('No tiene permiso para corregir odómetros.');
         }
-        if ($reading->status !== OdometerStatus::Pending) {
-            throw new DomainException('La lectura ya no está pendiente.');
-        }
-
-        $source = $user->role === UserRole::Logistica ? 'LOGISTICA' : 'JEFE_SECTOR';
-        if ($user->role === UserRole::Administrador) {
-            $source = 'JEFE_SECTOR';
+        if ($reading->status === OdometerStatus::Rejected) {
+            throw new DomainException('Una lectura rechazada no se edita: cargá una nueva.');
         }
 
+        $previous = $this->neighborValue($reading, 'previous');
+        $next = $this->neighborValue($reading, 'next');
+        if ($previous !== null && $value < $previous) {
+            throw new DomainException("No puede ser menor a la lectura anterior ({$previous} km).");
+        }
+        if ($next !== null && $value > $next) {
+            throw new DomainException("No puede ser mayor a la lectura siguiente ({$next} km).");
+        }
+
+        $old = $reading->value;
         $reading->update([
+            'value' => $value,
             'status' => OdometerStatus::Validated,
             'validated_by' => $user->id,
-            'validation_source' => $source,
             'validated_at' => now(),
+            'notes' => $notes ?? $reading->notes,
         ]);
 
-        return $reading->refresh();
+        if ($reading->tire_operation_id) {
+            TireOperation::whereKey($reading->tire_operation_id)->update(['odometer' => $value]);
+        }
+
+        $this->refreshCurrentOdometer($reading->unit()->first());
+        $this->audit->log('odometer.updated', $reading->fresh(['unit']), ['value' => $old], [
+            'unit' => $reading->unit?->plate,
+            'odometer' => $value,
+        ]);
+
+        return $reading->fresh();
     }
 
-    public function reject(OdometerReading $reading, User $user, string $notes): OdometerReading
+    private function neighborValue(OdometerReading $reading, string $direction): ?int
     {
-        if (! $user->role->canValidateOdometer()) {
-            throw new DomainException('No tiene permiso para rechazar odómetros.');
-        }
-        if ($reading->status !== OdometerStatus::Pending) {
-            throw new DomainException('La lectura ya no está pendiente.');
+        $query = OdometerReading::query()
+            ->where('unit_id', $reading->unit_id)
+            ->where('id', '!=', $reading->id)
+            ->where('status', '!=', OdometerStatus::Rejected);
+
+        if ($direction === 'previous') {
+            $query->where(function ($inner) use ($reading) {
+                $inner->where('recorded_at', '<', $reading->recorded_at)
+                    ->orWhere(function ($same) use ($reading) {
+                        $same->where('recorded_at', $reading->recorded_at)->where('id', '<', $reading->id);
+                    });
+            })->orderByDesc('recorded_at')->orderByDesc('id');
+        } else {
+            $query->where(function ($inner) use ($reading) {
+                $inner->where('recorded_at', '>', $reading->recorded_at)
+                    ->orWhere(function ($same) use ($reading) {
+                        $same->where('recorded_at', $reading->recorded_at)->where('id', '>', $reading->id);
+                    });
+            })->orderBy('recorded_at')->orderBy('id');
         }
 
-        $reading->update([
-            'status' => OdometerStatus::Rejected,
-            'validated_by' => $user->id,
-            'validation_source' => $user->role === UserRole::Logistica ? 'LOGISTICA' : 'JEFE_SECTOR',
-            'validated_at' => now(),
-            'notes' => trim(($reading->notes ? $reading->notes.' | ' : '').'Rechazo: '.$notes),
-        ]);
+        return $query->value('value');
+    }
 
-        return $reading->refresh();
+    private function refreshCurrentOdometer(FleetUnit $unit): void
+    {
+        $unit->update(['current_odometer' => $this->lastRecordedValue($unit) ?? 0]);
     }
 }

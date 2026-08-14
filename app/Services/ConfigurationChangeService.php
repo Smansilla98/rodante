@@ -29,6 +29,10 @@ class ConfigurationChangeService
         if ((int) $unit->unit_configuration_id === $to->id) {
             throw new DomainException('La unidad ya tiene esa configuración.');
         }
+        $unit->loadMissing('type');
+        if (! $to->isCompatibleWith($unit->type)) {
+            throw new DomainException('Esa configuración no aplica al tipo '.$unit->type->name.'.');
+        }
 
         return DB::transaction(function () use ($unit, $to, $reason, $user, $notes) {
             $unit = FleetUnit::lockForUpdate()->findOrFail($unit->id);
@@ -86,7 +90,13 @@ class ConfigurationChangeService
                 'notes' => $notes,
             ]);
 
-            $this->audit->log('unit.configuration_changed', $change);
+            $from = $fromId ? UnitConfiguration::find($fromId) : null;
+            $this->audit->log('unit.configuration_changed', $change, null, [
+                'unit' => $unit->plate,
+                'from' => $from?->name,
+                'to' => $to->name,
+                'reason' => $reason,
+            ]);
 
             return $change;
         });

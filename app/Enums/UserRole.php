@@ -36,6 +36,11 @@ enum UserRole: string
         return $this === self::Administrador;
     }
 
+    public function canManageAbm(): bool
+    {
+        return $this === self::Administrador;
+    }
+
     public function canRetireOrRecap(): bool
     {
         return in_array($this, [self::Administrador, self::JefeSector], true);

@@ -13,7 +13,7 @@ class FleetUnit extends Model
 {
     protected $fillable = [
         'fleet_id', 'base_id', 'unit_type_id', 'unit_configuration_id',
-        'plate', 'brand', 'model_name', 'current_odometer', 'status', 'notes',
+        'plate', 'brand', 'model_name', 'current_odometer', 'status', 'notes', 'specs',
     ];
 
     protected function casts(): array
@@ -21,6 +21,7 @@ class FleetUnit extends Model
         return [
             'status' => UnitStatus::class,
             'current_odometer' => 'integer',
+            'specs' => 'array',
         ];
     }
 
@@ -62,6 +63,43 @@ class FleetUnit extends Model
     public function hasOdometer(): bool
     {
         return (bool) $this->type?->has_odometer;
+    }
+
+    public function specSummary(): ?string
+    {
+        $specs = $this->specs ?? [];
+        $parts = [];
+        if (! empty($specs['capacity_l'])) {
+            $parts[] = number_format((int) $specs['capacity_l']).' L';
+        }
+        if (! empty($specs['compartments'])) {
+            $parts[] = $specs['compartments'].' comp.';
+        }
+        if (! empty($specs['material'])) {
+            $parts[] = $specs['material'];
+        }
+        if (! empty($specs['product'])) {
+            $parts[] = $specs['product'];
+        }
+        if (! empty($specs['suspension'])) {
+            $parts[] = 'susp. '.$specs['suspension'];
+        }
+        if (! empty($specs['tire_width'])) {
+            $parts[] = 'lineal '.(int) $specs['tire_width'];
+        }
+
+        return $parts ? implode(' · ', $parts) : null;
+    }
+
+    public function allowedTireWidth(): ?int
+    {
+        if ($this->hasOdometer()) {
+            return null;
+        }
+
+        $width = (int) ($this->specs['tire_width'] ?? 0);
+
+        return in_array($width, [295, 385], true) ? $width : null;
     }
 
     public function coupledPartner(): ?self

@@ -24,6 +24,7 @@ class TireOperationService
         private OdometerService $odometers,
         private LocationService $locations,
         private AuditService $audit,
+        private PositionFitService $fit,
     ) {}
 
     /**
@@ -37,8 +38,6 @@ class TireOperationService
             $odometerUnit = FleetUnit::lockForUpdate()->findOrFail($odometerUnit->id);
             $odometer = (int) $data['odometer'];
             $occurredAt = $data['occurred_at'] ?? now();
-
-            $this->odometers->assertNotDecreasing($odometerUnit, $odometer);
 
             $removals = $data['removals'] ?? [];
             $installations = $data['installations'] ?? [];
@@ -84,59 +83,129 @@ class TireOperationService
         });
     }
 
-    public function rotate(FleetUnit $unit, int $tireId, int $toPositionId, int $odometer, User $user): TireAssignment
+    public function rotate(FleetUnit $unit, int $tireId, int $toPositionId, int $odometer, User $user, ?string $notes = null): TireAssignment
     {
-        return DB::transaction(function () use ($unit, $tireId, $toPositionId, $odometer, $user) {
+        $this->relocateMounted($unit, [$tireId => $toPositionId], $odometer, $user, $notes);
+
+        return TireAssignment::where('tire_id', $tireId)->whereNull('ended_at')->firstOrFail();
+    }
+
+    /**
+     * Aplica un esquema de rotación (pares de ubicaciones) sin cerrar km.
+     *
+     * @param  list<array{0:int,1:int}>  $pairs
+     */
+    public function applyPattern(FleetUnit $unit, array $pairs, int $odometer, User $user, ?string $notes = null): void
+    {
+        $moves = [];
+        foreach ($pairs as [$fromId, $toId]) {
+            $from = TireCurrentLocation::where('unit_id', $unit->id)->where('position_id', $fromId)->first();
+            $to = TireCurrentLocation::where('unit_id', $unit->id)->where('position_id', $toId)->first();
+            if (! $from?->tire_id || ! $to?->tire_id) {
+                throw new DomainException('El esquema necesita cubiertas en todas las ubicaciones.');
+            }
+            $moves[$from->tire_id] = $toId;
+            $moves[$to->tire_id] = $fromId;
+        }
+
+        $this->relocateMounted($unit, $moves, $odometer, $user, $notes);
+    }
+
+    /**
+     * Mueve cubiertas ya montadas entre ubicaciones de la misma unidad.
+     * Si el destino está ocupado, intercambia. Los kilómetros del periodo siguen abiertos.
+     *
+     * @param  array<int, int>  $tireToPosition  tire_id => position_id destino
+     */
+    public function relocateMounted(FleetUnit $unit, array $tireToPosition, int $odometer, User $user, ?string $notes = null): void
+    {
+        DB::transaction(function () use ($unit, $tireToPosition, $odometer, $user, $notes) {
             $unit = FleetUnit::lockForUpdate()->findOrFail($unit->id);
-            $tire = Tire::lockForUpdate()->findOrFail($tireId);
             $odometerUnit = $this->couplings->resolveOdometerUnit($unit);
-            $this->odometers->assertNotDecreasing($odometerUnit, $odometer);
 
-            $location = TireCurrentLocation::where('tire_id', $tire->id)->lockForUpdate()->first();
-            if (! $location || $location->unit_id !== $unit->id) {
-                throw new DomainException('El neumático no está instalado en esta unidad.');
+            $tireIds = array_map('intval', array_keys($tireToPosition));
+            Tire::whereIn('id', $tireIds)->lockForUpdate()->get();
+            $locations = TireCurrentLocation::where('unit_id', $unit->id)->lockForUpdate()->get()->keyBy('tire_id');
+
+            $resolved = [];
+            foreach ($tireToPosition as $tireId => $toPositionId) {
+                $tireId = (int) $tireId;
+                $toPositionId = (int) $toPositionId;
+                $location = $locations->get($tireId);
+                if (! $location || $location->unit_id !== $unit->id) {
+                    throw new DomainException('El neumático no está instalado en esta unidad.');
+                }
+
+                $fromPositionId = (int) $location->position_id;
+                if ($fromPositionId === $toPositionId) {
+                    continue;
+                }
+
+                $toPosition = UnitPosition::where('unit_configuration_id', $unit->unit_configuration_id)
+                    ->where('id', $toPositionId)
+                    ->firstOrFail();
+
+                $tire = Tire::findOrFail($tireId);
+                $this->fit->assertCanMount($tire, $toPosition, $unit);
+
+                $assignment = TireAssignment::where('tire_id', $tireId)->whereNull('ended_at')->lockForUpdate()->first();
+                if (! $assignment) {
+                    throw new DomainException('No hay un periodo de uso abierto para rotar.');
+                }
+
+                $occupant = $locations->first(fn ($row) => (int) $row->position_id === $toPositionId && (int) $row->tire_id !== $tireId);
+                if ($occupant && ! array_key_exists($occupant->tire_id, $tireToPosition)) {
+                    $other = Tire::findOrFail($occupant->tire_id);
+                    $fromPosition = UnitPosition::findOrFail($fromPositionId);
+                    $this->fit->assertCanMount($other, $fromPosition, $unit);
+                    $resolved[$occupant->tire_id] = [
+                        'from' => (int) $occupant->position_id,
+                        'to' => $fromPositionId,
+                        'position' => $fromPosition,
+                    ];
+                }
+
+                $resolved[$tireId] = [
+                    'from' => $fromPositionId,
+                    'to' => $toPositionId,
+                    'position' => $toPosition,
+                ];
             }
 
-            $toPosition = UnitPosition::where('unit_configuration_id', $unit->unit_configuration_id)
-                ->where('id', $toPositionId)
-                ->firstOrFail();
-
-            $occupied = TireCurrentLocation::where('unit_id', $unit->id)
-                ->where('position_id', $toPosition->id)
-                ->lockForUpdate()
-                ->first();
-            if ($occupied && $occupied->tire_id !== $tire->id) {
-                throw new DomainException('La posición destino ya está ocupada.');
+            if ($resolved === []) {
+                throw new DomainException('No hay cubiertas para mover.');
             }
 
-            $assignment = TireAssignment::where('tire_id', $tire->id)->whereNull('ended_at')->lockForUpdate()->first();
-            if (! $assignment) {
-                throw new DomainException('No hay un periodo de uso abierto para rotar.');
+            $locationIds = TireCurrentLocation::whereIn('tire_id', array_keys($resolved))->pluck('id');
+            TireCurrentLocation::whereIn('id', $locationIds)->update(['position_id' => null]);
+
+            $occurredAt = now();
+            foreach ($resolved as $tireId => $move) {
+                $tire = Tire::findOrFail($tireId);
+                $kind = $move['position']->is_spare ? LocationKind::Auxilio : LocationKind::Instalada;
+                $this->locations->place($tire, $kind, $unit->base_id, $unit->id, $move['to']);
+                $tire->movements()->create([
+                    'type' => MovementType::Rotate,
+                    'occurred_at' => $occurredAt,
+                    'from_unit_id' => $unit->id,
+                    'from_position_id' => $move['from'],
+                    'from_odometer' => $odometer,
+                    'to_unit_id' => $unit->id,
+                    'to_position_id' => $move['to'],
+                    'to_odometer' => $odometer,
+                    'km_delta' => 0,
+                    'counts_km' => false,
+                    'user_id' => $user->id,
+                    'notes' => $notes,
+                    'created_at' => now(),
+                ]);
             }
-
-            $fromPositionId = $location->position_id;
-            $kind = $toPosition->is_spare ? LocationKind::Auxilio : LocationKind::Instalada;
-            $this->locations->place($tire, $kind, $unit->base_id, $unit->id, $toPosition->id);
-
-            $tire->movements()->create([
-                'type' => MovementType::Rotate,
-                'occurred_at' => now(),
-                'from_unit_id' => $unit->id,
-                'from_position_id' => $fromPositionId,
-                'from_odometer' => $odometer,
-                'to_unit_id' => $unit->id,
-                'to_position_id' => $toPosition->id,
-                'to_odometer' => $odometer,
-                'km_delta' => 0,
-                'counts_km' => false,
-                'user_id' => $user->id,
-                'created_at' => now(),
-            ]);
 
             $this->odometers->record($odometerUnit, $odometer, $user);
-            $this->audit->log('tire.rotated', $tire);
-
-            return $assignment;
+            $this->audit->log('tire.rotated', $unit, null, [
+                'moves' => count($resolved),
+                'unit' => $unit->plate,
+            ]);
         });
     }
 
@@ -246,6 +315,8 @@ class TireOperationService
         if (TireAssignment::where('tire_id', $tire->id)->whereNull('ended_at')->exists()) {
             throw new DomainException($tire->displayName().' ya tiene un periodo de uso abierto.');
         }
+
+        $this->fit->assertCanMount($tire, $position, $unit);
 
         $fromBase = $tire->currentLocation?->base_id;
         $countsKm = ! $position->is_spare;

@@ -8,7 +8,6 @@ use App\Models\Fleet;
 use App\Models\FleetUnit;
 use App\Models\Supplier;
 use App\Models\Tire;
-use App\Models\TireBrand;
 use App\Models\TireModel;
 use App\Models\TireSize;
 use App\Models\UnitConfiguration;
@@ -38,8 +37,8 @@ trait CreatesDomain
         return FleetUnit::create([
             'fleet_id' => Fleet::first()->id,
             'base_id' => Base::first()->id,
-            'unit_type_id' => UnitType::where('has_odometer', true)->first()->id,
-            'unit_configuration_id' => UnitConfiguration::where('code', '6X24-T')->first()->id,
+            'unit_type_id' => UnitType::where('code', 'TRACTOR')->first()->id,
+            'unit_configuration_id' => UnitConfiguration::where('code', '6X4')->first()->id,
             'plate' => 'TST'.rand(100, 999),
             'current_odometer' => $odometer,
             'status' => 'ACTIVA',
@@ -51,24 +50,45 @@ trait CreatesDomain
         return FleetUnit::create([
             'fleet_id' => Fleet::first()->id,
             'base_id' => Base::first()->id,
-            'unit_type_id' => UnitType::where('has_odometer', false)->first()->id,
-            'unit_configuration_id' => UnitConfiguration::where('code', '6X24-A')->first()->id,
+            'unit_type_id' => UnitType::where('code', 'SEMIRREMOLQUE')->first()->id,
+            'unit_configuration_id' => UnitConfiguration::where('code', '3E-D')->first()->id,
             'plate' => 'TRL'.rand(100, 999),
             'current_odometer' => 0,
             'status' => 'ACTIVA',
         ]);
     }
 
-    protected function purchaseTires(int $quantity = 4, int $first = 40000): array
+    protected function createLinealTrailer(int $tireWidth = 385, string $config = '3E-S'): FleetUnit
     {
+        return FleetUnit::create([
+            'fleet_id' => Fleet::first()->id,
+            'base_id' => Base::first()->id,
+            'unit_type_id' => UnitType::where('code', 'TANQUE')->first()->id,
+            'unit_configuration_id' => UnitConfiguration::where('code', $config)->first()->id,
+            'plate' => 'TNK'.rand(100, 999),
+            'current_odometer' => 0,
+            'status' => 'ACTIVA',
+            'specs' => ['tire_width' => $tireWidth],
+        ]);
+    }
+
+    protected function purchaseTires(int $quantity = 4, int $first = 40000, ?string $modelCode = null, ?string $sizeCode = null): array
+    {
+        $model = $modelCode
+            ? TireModel::where('code', $modelCode)->firstOrFail()
+            : TireModel::first();
+        $size = $sizeCode
+            ? TireSize::where('code', $sizeCode)->firstOrFail()
+            : ($model->sizes()->orderBy('code')->first() ?: TireSize::first());
+
         $purchase = app(PurchaseService::class)->create([
             'supplier_id' => Supplier::first()->id,
             'base_id' => Base::first()->id,
             'purchased_at' => now()->toDateString(),
             'items' => [[
-                'tire_brand_id' => TireBrand::first()->id,
-                'tire_model_id' => TireModel::first()->id,
-                'tire_size_id' => TireSize::first()->id,
+                'tire_brand_id' => $model->tire_brand_id,
+                'tire_model_id' => $model->id,
+                'tire_size_id' => $size->id,
                 'quantity' => $quantity,
                 'first_number' => $first,
             ]],

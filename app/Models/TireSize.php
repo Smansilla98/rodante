@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TireSize extends Model
@@ -28,5 +29,15 @@ class TireSize extends Model
     public function zones(): HasMany
     {
         return $this->hasMany(MeasurementZone::class)->orderBy('sort_order');
+    }
+
+    public function models(): BelongsToMany
+    {
+        return $this->belongsToMany(TireModel::class, 'tire_model_sizes');
+    }
+
+    public function tires(): HasMany
+    {
+        return $this->hasMany(Tire::class);
     }
 }

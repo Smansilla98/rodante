@@ -25,10 +25,19 @@ class BrandController extends Controller
     {
         $data = $request->validate([
             'name' => 'required|string|max:80|unique:tire_brands,name,'.$brand->id,
-            'is_active' => 'sometimes|boolean',
         ]);
-        $brand->update($data);
+        $brand->update($data + ['is_active' => $request->boolean('is_active')]);
 
         return back()->with('success', 'Marca actualizada.');
+    }
+
+    public function destroy(TireBrand $brand)
+    {
+        if ($brand->models()->exists()) {
+            return back()->withErrors(['delete' => 'No se puede eliminar: tiene modelos. Desactivala o borralos antes.']);
+        }
+        $brand->delete();
+
+        return back()->with('success', 'Marca eliminada.');
     }
 }
