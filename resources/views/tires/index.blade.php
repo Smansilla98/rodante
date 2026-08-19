@@ -8,6 +8,7 @@
     :subtitle="request()->routeIs('tires.stock') ? 'Cubiertas disponibles para instalar.' : 'Buscá por modelo o número individual.'"
 >
     <x-slot:actions>
+            <a href="{{ route('exports.tires') }}" class="btn btn-ghost">Exportar CSV</a>
         @if(auth()->user()->role->canWrite())
             <a href="{{ route('purchases.create') }}" class="btn btn-primary"><x-icon name="plus" class="w-4 h-4" /> Nueva compra</a>
         @endif
@@ -36,8 +37,15 @@
                     <option value="">Estado</option>
                     @foreach($statuses as $status)<option value="{{ $status->value }}" @selected(request('status')==$status->value)>{{ $status->label() }}</option>@endforeach
                 </select>
-            @endunless
-            <button class="btn btn-dark btn-sm">Filtrar</button>
+                    @endunless
+                    <select name="condition" aria-label="Condición">
+                        <option value="">Condición</option>
+                        @foreach($conditions as $condition)<option value="{{ $condition->value }}" @selected(request('condition')==$condition->value)>{{ $condition->label() }}</option>@endforeach
+                    </select>
+                    @if(request('queue'))
+                        <input type="hidden" name="queue" value="{{ request('queue') }}">
+                    @endif
+                    <button class="btn btn-dark btn-sm">Filtrar</button>
         </form>
     </x-slot:toolbar>
     <x-content-table>
@@ -60,7 +68,7 @@
                 </td>
                 <td>{{ $tire->size->displayName() }}</td>
                 <td><x-status :tone="$tire->status->tone()">{{ $tire->status->label() }}</x-status></td>
-                <td>{{ $tire->condition->label() }}</td>
+                <td><x-status :tone="$tire->condition->tone()">{{ $tire->condition->label() }}</x-status></td>
                 <td>
                     @if($tire->currentLocation?->unit)
                         <a href="{{ route('units.show', $tire->currentLocation->unit) }}">{{ $tire->currentLocation->unit->plate }}</a>
@@ -72,7 +80,11 @@
                 <td class="text-right mono">{{ number_format($tire->accumulated_km) }}</td>
             </tr>
         @empty
-            <tr><td colspan="6"><x-empty title="No hay cubiertas con ese filtro" /></td></tr>
+            <tr><td colspan="6"><x-empty
+                title="No hay cubiertas con ese filtro"
+                :action="auth()->user()->role->canWrite() ? 'Nueva compra' : null"
+                :href="route('purchases.create')"
+            /></td></tr>
         @endforelse
         </tbody>
     </x-content-table>

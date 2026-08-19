@@ -35,6 +35,7 @@
                 <x-nav-link :href="route('tires.stock')" icon="boxes" label="Stock" match="tires.stock" />
                 <x-nav-link :href="route('tires.index')" icon="circle" label="Neumáticos" :match="['tires.index', 'tires.show']" />
                 <x-nav-link :href="route('purchases.index')" icon="cart" label="Compras" match="purchases.*" />
+                <x-nav-link :href="route('work-orders.index')" icon="grid" label="Órdenes" match="work-orders.*" />
                 <x-nav-link :href="route('odometers.index')" icon="gauge" label="Odómetros" match="odometers.*" />
             </div>
             <div class="sb-group">
@@ -43,6 +44,8 @@
                 <x-nav-link :href="route('reports.consumption')" icon="grid" label="Consumo" match="reports.consumption" />
                 <x-nav-link :href="route('reports.incidents')" icon="alert" label="Incidencias" match="reports.incidents" />
                 <x-nav-link :href="route('reports.audit')" icon="shield" label="Movimientos" match="reports.audit" />
+                <x-nav-link :href="route('costs.index')" icon="chart" label="Costos" match="costs.*" />
+                <x-nav-link :href="route('notifications.index')" icon="alert" label="Avisos" match="notifications.*" />
                 <x-nav-link :href="route('help.index')" icon="book" label="Ayuda" match="help.*" />
             </div>
             @if(auth()->user()->role->canManageCatalogs())
@@ -55,6 +58,7 @@
                     <x-nav-link :href="route('bases.index')" icon="pin" label="Bases" match="bases.*" />
                     <x-nav-link :href="route('suppliers.index')" icon="cart" label="Proveedores" match="suppliers.*" />
                     <x-nav-link :href="route('types.index')" icon="grid" label="Tipos y motivos" match="types.*" />
+                    <x-nav-link :href="route('shops.index')" icon="pin" label="Recapadoras" match="shops.*" />
                     <x-nav-link :href="route('users.index')" icon="users" label="Usuarios" match="users.*" />
                 </div>
             @endif
@@ -67,10 +71,11 @@
                 <x-icon name="menu" class="w-6 h-6" />
             </button>
 
-            <form class="top-search" method="GET" action="{{ route('tires.index') }}" role="search">
-                <label class="sr-only" for="topSearch">Buscar cubierta</label>
+            <form class="top-search" method="GET" action="{{ route('search') }}" role="search" data-suggest="{{ route('search.suggest') }}">
+                <label class="sr-only" for="topSearch">Buscar patente o número de cubierta</label>
                 <x-icon name="search" class="top-search__ico" />
-                <input id="topSearch" name="q" value="{{ request('q') }}" type="search" placeholder="Escribí para buscar una cubierta…" autocomplete="off">
+                <input id="topSearch" name="q" value="{{ request('q') }}" type="search" placeholder="Patente o Nº de cubierta…" autocomplete="off" aria-autocomplete="list" aria-controls="searchSuggest" aria-expanded="false">
+                <div id="searchSuggest" class="search-suggest" hidden role="listbox" aria-label="Sugerencias"></div>
             </form>
 
             <div class="top-right">
@@ -99,11 +104,16 @@
         </header>
 
         <main class="app-page @yield('page_class')" id="contenido" tabindex="-1">
+            @hasSection('kicker')
+                <p class="sr-only">@yield('kicker')</p>
+            @endif
+            <div class="toast-host" aria-live="polite" aria-relevant="additions"></div>
             @if(session('success'))
-                <div class="flash flash--ok" role="status">{{ session('success') }}</div>
+                <div class="flash flash--ok toast" role="status">{{ session('success') }}</div>
             @endif
             @if($errors->any())
-                <div class="flash flash--err" role="alert">{{ $errors->first() }}</div>
+                <div class="flash flash--err toast" role="alert">{{ $errors->first() }}</div>
+                <script>window.__rodanteFieldErrors = @json(array_keys($errors->getMessages()));</script>
             @endif
             @yield('content')
         </main>

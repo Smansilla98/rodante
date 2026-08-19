@@ -18,6 +18,10 @@ class MeasurementService
 
     public function record(Tire $tire, array $data, User $user): TireMeasurement
     {
+        if (! $user->role->canWrite()) {
+            throw new DomainException('No tiene permiso para cargar mediciones.');
+        }
+
         $tire->load('size.zones');
         $zones = $tire->size->zones;
         if ($zones->isEmpty()) {

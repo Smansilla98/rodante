@@ -8,8 +8,8 @@
     if ($striped) {
         $classes[] = 'table-striped';
     }
-    if ($hover) {
-        $classes[] = 'table-hover';
+    if ($small) {
+        $classes[] = 'table-sm';
     }
 @endphp
 <div {{ $attributes->class('table-responsive') }}>

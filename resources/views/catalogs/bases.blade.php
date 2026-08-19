@@ -8,9 +8,17 @@
     <form method="POST" action="{{ $editing ? route('bases.update', $editing) : route('bases.store') }}" class="toolbar">
         @csrf
         @if($editing) @method('PUT') @endif
-        <input name="name" value="{{ old('name', $editing?->name) }}" placeholder="Nombre" required>
-        <input name="code" value="{{ old('code', $editing?->code) }}" placeholder="Código" required>
-        <input name="location" value="{{ old('location', $editing?->location) }}" placeholder="Ubicación">
+        <label class="field"><span>Nombre</span>
+            <input name="name" class="inp" value="{{ old('name', $editing?->name) }}" required>
+            <x-field-error name="name" />
+        </label>
+        <label class="field"><span>Código</span>
+            <input name="code" class="inp" value="{{ old('code', $editing?->code) }}" required>
+            <x-field-error name="code" />
+        </label>
+        <label class="field"><span>Ubicación</span>
+            <input name="location" class="inp" value="{{ old('location', $editing?->location) }}">
+        </label>
         @if($editing)
             <label class="abm-check"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $editing->is_active))> Activa</label>
         @endif
@@ -39,7 +47,7 @@
                 <td class="text-right"><a class="abm-link" href="{{ route('bases.index', ['edit' => $base->id]) }}">Editar</a></td>
             </tr>
         @empty
-            <tr><td colspan="3"><x-empty title="No hay bases" /></td></tr>
+            <tr><td colspan="3"><x-empty title="No hay bases" action="Nueva base" :href="route('bases.index')" /></td></tr>
         @endforelse
         </tbody>
     </x-content-table>

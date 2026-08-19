@@ -8,6 +8,13 @@
 <div class="planilla-bar">
     <div class="planilla-bar__id">
         <span class="planilla-bar__k">Planilla</span>
+        <nav class="crumbs crumbs--lite" aria-label="Migas de pan">
+            <a href="{{ route('dashboard') }}">Tablero</a>
+            <span class="crumbs__sep" aria-hidden="true">/</span>
+            <a href="{{ route('units.index') }}">Unidades</a>
+            <span class="crumbs__sep" aria-hidden="true">/</span>
+            <span>{{ $unit->plate }}</span>
+        </nav>
         <h1>{{ $sheetUnits->pluck('plate')->join(' + ') }}</h1>
         <p>{{ $unit->type->name }} · {{ $unit->configuration->label() }}{{ $unit->specSummary() ? ' · '.$unit->specSummary() : '' }} · {{ $unit->fleet->name }}</p>
     </div>
@@ -31,7 +38,12 @@
     @if($canOperate)
         <aside class="stock-rail no-print">
             <h2 class="stock-rail__title">Disponibles</h2>
-            <div class="stock-rail__list" id="stockPool">
+            <label class="field">
+                <span class="sr-only">Buscar en stock</span>
+                <input type="search" id="stockSearch" class="inp" placeholder="Nº, marca o modelo…" autocomplete="off" data-url="{{ route('units.stock', $unit) }}">
+            </label>
+            <p class="stock-rail__hint">Escribí para buscar en todo el depósito. No hace falta ver las 80 primeras.</p>
+            <div class="stock-rail__list" id="stockPool" data-url="{{ route('units.stock', $unit) }}">
                 @forelse($stockTires as $stockTire)
                     <button type="button" class="stock-chip" draggable="true"
                         data-tire-id="{{ $stockTire->id }}"
@@ -40,7 +52,7 @@
                         <span>{{ $stockTire->brand?->name }} {{ $stockTire->size?->code }}</span>
                     </button>
                 @empty
-                    <p class="stock-rail__empty">No hay cubiertas en stock.</p>
+                    <p class="stock-rail__empty">No hay cubiertas en stock. <a href="{{ route('purchases.create') }}">Cargar compra</a></p>
                 @endforelse
             </div>
 
@@ -76,7 +88,7 @@
     @if($canOperate)
         <aside class="recambio-dock no-print" id="recambioDock">
             <h2 class="recambio-dock__title">Ubicación</h2>
-            <p class="recambio-dock__idle" id="recambioIdle">Tocá una cubierta del mapa o arrastrá una de stock.</p>
+            <p class="recambio-dock__idle" id="recambioIdle">Tocá una cubierta del mapa o una de stock. En tablet no hace falta arrastrar ni el menú derecho.</p>
 
             <div id="recambioPanel" hidden>
                 <p class="recambio-dock__slot" id="recambioSlot"></p>
@@ -308,20 +320,26 @@
     </x-panel>
     @endif
 
-    @if(auth()->user()->role->canChangeConfiguration())
+        @if(auth()->user()->role->canChangeConfiguration())
         <x-panel title="Cambio de configuración">
-            <form method="POST" action="{{ route('units.configuration', $unit) }}" class="space-y-3">
+            <form method="POST" action="{{ route('units.configuration', $unit) }}" class="space-y-3" data-confirm="Las cubiertas instaladas pasan a stock. El historial se conserva. ¿Cambiar la configuración?">
                 @csrf
+                <p class="hint">Al cambiar el layout, todo lo montado se retira a stock. No se puede dejar una cubierta en el aire.</p>
                 <select name="unit_configuration_id" class="inp">
                     @foreach($configurations as $cfg)
                         <option value="{{ $cfg->id }}" @selected($cfg->id===$unit->unit_configuration_id)>{{ $cfg->label() }}</option>
                     @endforeach
                 </select>
+                @if($unit->hasOdometer())
+                    <label class="field"><span>Odómetro al cambiar</span>
+                        <input name="odometer" type="number" min="0" class="inp" required value="{{ $unit->current_odometer }}">
+                    </label>
+                @endif
                 <input name="reason" class="inp" placeholder="Motivo (urbana → ripio)" required>
                 <button class="btn btn-ghost btn-sm">Cambiar</button>
             </form>
         </x-panel>
-    @endif
+        @endif
 </div>
 
 <x-panel title="Historial en esta patente" :flush="true" class="no-print planilla-history">

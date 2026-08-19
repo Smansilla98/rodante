@@ -25,14 +25,18 @@ use App\Services\PositionFitService;
 use App\Services\ReportService;
 use App\Services\RotationPatternService;
 use App\Services\TireOperationService;
+use App\Support\AccessScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class UnitController extends Controller
 {
     public function index(Request $request)
     {
-        $units = FleetUnit::with('fleet', 'base', 'type', 'configuration', 'currentCouplingAsTractor.trailer', 'currentCouplingAsTrailer.tractor')
+        $units = FleetUnit::with('fleet', 'base', 'type', 'configuration', 'currentCouplingAsTractor.trailer', 'currentCouplingAsTrailer.tractor');
+        AccessScope::units($units, $request->user());
+        $units = $units
             ->when($request->fleet_id, fn ($q, $id) => $q->where('fleet_id', $id))
             ->when($request->q, fn ($q, $term) => $q->where('plate', 'like', "%{$term}%"))
             ->orderBy('plate')
@@ -41,7 +45,7 @@ class UnitController extends Controller
 
         return view('units.index', [
             'units' => $units,
-            'fleets' => Fleet::orderBy('name')->get(),
+            'fleets' => tap(Fleet::orderBy('name'), fn ($q) => AccessScope::applyCompany($q, $request->user()))->get(),
         ]);
     }
 
@@ -94,6 +98,7 @@ class UnitController extends Controller
 
     public function show(FleetUnit $unit, ReportService $reports, PositionFitService $fit, RotationPatternService $patterns, Request $request)
     {
+        AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $unit->load([
             'fleet', 'base', 'type', 'configuration.positions',
             'currentCouplingAsTractor.trailer.type',
@@ -117,7 +122,12 @@ class UnitController extends Controller
         ]);
 
         $layout = $unit->tireLayout();
-        $stockTires = Tire::with('brand', 'model', 'size', 'currentLifecycle')->installable()->orderBy('individual_number')->get();
+        $stockQuery = Tire::with('brand', 'model', 'size', 'currentLifecycle')->installable()->orderBy('individual_number');
+        AccessScope::tires($stockQuery, $request->user());
+        if ($width = $unit->allowedTireWidth()) {
+            $stockQuery->whereHas('size', fn ($q) => $q->where('width_mm', $width));
+        }
+        $stockTires = (clone $stockQuery)->limit(24)->get();
         $canOperate = $request->user()->role->canWrite();
 
         return view('units.show', [
@@ -143,8 +153,8 @@ class UnitController extends Controller
                 ->values(),
             'reasons' => MovementReason::where('applies_to', 'RETIRO')->orderBy('name')->get(),
             'destinations' => [TireStatus::Stock, TireStatus::Reserva, TireStatus::EnReparacion],
-            'tractors' => FleetUnit::whereHas('type', fn ($q) => $q->where('has_odometer', true))->orderBy('plate')->get(),
-            'trailers' => FleetUnit::whereHas('type', fn ($q) => $q->where('has_odometer', false))->orderBy('plate')->get(),
+            'tractors' => tap(FleetUnit::whereHas('type', fn ($q) => $q->where('has_odometer', true))->orderBy('plate'), fn ($q) => AccessScope::units($q, $request->user()))->get(),
+            'trailers' => tap(FleetUnit::whereHas('type', fn ($q) => $q->where('has_odometer', false))->orderBy('plate'), fn ($q) => AccessScope::units($q, $request->user()))->get(),
             'configurations' => UnitConfiguration::where('is_active', true)->orderBy('code')->get()
                 ->filter(fn ($cfg) => $cfg->isCompatibleWith($unit->type))
                 ->values(),
@@ -153,6 +163,7 @@ class UnitController extends Controller
 
     public function operate(Request $request, FleetUnit $unit, TireOperationService $operations)
     {
+        AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $data = $request->validate([
             'odometer' => 'required|integer|min:0',
             'notes' => 'nullable|string',
@@ -176,21 +187,62 @@ class UnitController extends Controller
         return back()->with('success', 'Operación registrada. El historial quedó asentado.');
     }
 
-    public function rotate(Request $request, FleetUnit $unit, TireOperationService $operations)
+    public function stockSearch(Request $request, FleetUnit $unit, PositionFitService $fit)
     {
+        AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $data = $request->validate([
-            'tire_id' => 'required|exists:tires,id',
-            'position_id' => 'required|exists:unit_positions,id',
-            'odometer' => 'required|integer|min:0',
+            'q' => 'nullable|string|max:40',
+            'position_id' => 'nullable|exists:unit_positions,id',
+            'tire_id' => 'nullable|exists:tires,id',
         ]);
 
-        try {
-            $operations->rotate($unit, (int) $data['tire_id'], (int) $data['position_id'], (int) $data['odometer'], $request->user());
-        } catch (DomainException $e) {
-            return back()->withErrors(['rotate' => $e->getMessage()]);
+        $layout = $unit->tireLayout();
+        if (! empty($data['tire_id'])) {
+            AccessScope::abortUnlessTire($request->user(), (int) $data['tire_id']);
+            $tire = Tire::with('brand', 'model', 'size', 'currentLifecycle')->findOrFail($data['tire_id']);
+            $positions = $layout
+                ->filter(fn (array $slot) => $fit->canMount($tire, $slot['position'], $unit))
+                ->map(fn (array $slot) => $slot['position']->id)
+                ->values()
+                ->all();
+
+            return response()->json(['positions' => $positions]);
         }
 
-        return back()->with('success', 'Rotación registrada. Los kilómetros del periodo siguen abiertos.');
+        $query = Tire::with('brand', 'model', 'size')->installable()->orderBy('individual_number');
+        AccessScope::tires($query, $request->user());
+        if ($width = $unit->allowedTireWidth()) {
+            $query->whereHas('size', fn ($q) => $q->where('width_mm', $width));
+        }
+        if ($term = trim((string) ($data['q'] ?? ''))) {
+            $digits = preg_replace('/\D+/', '', $term);
+            $query->where(function ($inner) use ($term, $digits) {
+                $inner->where('individual_number', 'like', "%{$term}%")
+                    ->orWhereHas('brand', fn ($b) => $b->where('name', 'like', "%{$term}%"))
+                    ->orWhereHas('model', fn ($m) => $m->where('code', 'like', "%{$term}%"));
+                if ($digits !== '') {
+                    $inner->orWhere('individual_number', $digits);
+                }
+            });
+        }
+
+        $position = null;
+        if (! empty($data['position_id'])) {
+            $position = $layout->firstWhere(fn (array $slot) => (int) $slot['position']->id === (int) $data['position_id'])['position'] ?? null;
+            abort_unless($position, 404);
+        }
+
+        $items = $query->limit(40)->get()
+            ->when($position, fn ($col) => $col->filter(fn (Tire $tire) => $fit->canMount($tire, $position, $unit)))
+            ->map(fn (Tire $tire) => [
+                'id' => $tire->id,
+                'label' => $tire->displayName().' · '.$tire->size?->code,
+                'name' => $tire->displayName(),
+                'meta' => ($tire->brand?->name ?? '').' '.($tire->size?->code ?? ''),
+            ])
+            ->values();
+
+        return response()->json(['data' => $items]);
     }
 
     public function slotAction(
@@ -202,6 +254,7 @@ class UnitController extends Controller
         RotationPatternService $patterns,
         PositionFitService $fit,
     ) {
+        AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $data = $request->validate([
             'action' => 'required|in:install,cambio,pinchadura,rotacion,retirar,incidencia,medicion,patron',
             'odometer' => 'required|integer|min:0',
@@ -260,6 +313,7 @@ class UnitController extends Controller
 
     public function couple(Request $request, FleetUnit $unit, CouplingService $couplings)
     {
+        AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $data = $request->validate([
             'other_unit_id' => 'required|exists:fleet_units,id',
             'odometer' => 'required|integer|min:0',
@@ -281,6 +335,7 @@ class UnitController extends Controller
 
     public function uncouple(Request $request, FleetUnit $unit, CouplingService $couplings)
     {
+        AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $data = $request->validate([
             'odometer' => 'required|integer|min:0',
         ]);
@@ -300,14 +355,23 @@ class UnitController extends Controller
 
     public function changeConfiguration(Request $request, FleetUnit $unit, ConfigurationChangeService $changes)
     {
+        AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $data = $request->validate([
             'unit_configuration_id' => 'required|exists:unit_configurations,id',
             'reason' => 'required|string|max:160',
             'notes' => 'nullable|string',
+            'odometer' => $unit->hasOdometer() ? 'required|integer|min:0' : 'nullable|integer|min:0',
         ]);
 
         try {
-            $changes->change($unit, (int) $data['unit_configuration_id'], $data['reason'], $request->user(), $data['notes'] ?? null);
+            $changes->change(
+                $unit,
+                (int) $data['unit_configuration_id'],
+                $data['reason'],
+                $request->user(),
+                $data['notes'] ?? null,
+                isset($data['odometer']) ? (int) $data['odometer'] : null,
+            );
         } catch (DomainException $e) {
             return back()->withErrors(['config' => $e->getMessage()]);
         }
@@ -317,6 +381,7 @@ class UnitController extends Controller
 
     public function updateSpecs(Request $request, FleetUnit $unit)
     {
+        AccessScope::abortUnlessUnit($request->user(), $unit->id);
         if ($unit->hasOdometer()) {
             return back()->withErrors(['specs' => 'La medida lineal aplica a tanque, semi o batea.']);
         }
@@ -331,8 +396,10 @@ class UnitController extends Controller
         return back()->with('success', 'La unidad quedó en lineal '.$data['tire_width'].'.');
     }
 
-    public function edit(FleetUnit $unit)
+    public function edit(Request $request, FleetUnit $unit)
     {
+        AccessScope::abortUnlessUnit($request->user(), $unit->id);
+
         return view('units.edit', $this->formData() + [
             'unit' => $unit->load('type', 'configuration'),
         ]);
@@ -340,6 +407,7 @@ class UnitController extends Controller
 
     public function update(Request $request, FleetUnit $unit)
     {
+        AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $data = $request->validate([
             'fleet_id' => 'required|exists:fleets,id',
             'base_id' => 'required|exists:bases,id',
@@ -371,8 +439,9 @@ class UnitController extends Controller
         return redirect()->route('units.show', $unit)->with('success', 'Unidad actualizada.');
     }
 
-    public function destroy(FleetUnit $unit)
+    public function destroy(Request $request, FleetUnit $unit)
     {
+        AccessScope::abortUnlessUnit($request->user(), $unit->id);
         if ($unit->locations()->exists()) {
             return back()->withErrors(['delete' => 'Retirá las cubiertas antes de eliminar la unidad.']);
         }
@@ -501,24 +570,26 @@ class UnitController extends Controller
         $current = $this->mountedTire($unit, $position);
         $reasonId = MovementReason::where('code', 'RECAMBIO')->value('id');
 
-        $incidents->register($current, [
-            'type' => IncidentType::Cambio->value,
-            'odometer' => (int) $data['odometer'],
-            'unit_id' => $unit->id,
-            'position_id' => $position->id,
-            'notes' => $data['notes'] ?? null,
-        ], $user);
+        DB::transaction(function () use ($unit, $position, $data, $operations, $incidents, $user, $current, $reasonId) {
+            $incidents->register($current, [
+                'type' => IncidentType::Cambio->value,
+                'odometer' => (int) $data['odometer'],
+                'unit_id' => $unit->id,
+                'position_id' => $position->id,
+                'notes' => $data['notes'] ?? null,
+            ], $user);
 
-        $operations->execute($unit, [
-            'odometer' => (int) $data['odometer'],
-            'notes' => $data['notes'] ?? 'Cambio',
-            'removals' => [[
-                'tire_id' => $current->id,
-                'reason_id' => $reasonId,
-                'destination' => TireStatus::Stock->value,
-            ]],
-            'installations' => [['tire_id' => (int) $data['tire_id'], 'position_id' => $position->id]],
-        ], $user);
+            $operations->execute($unit, [
+                'odometer' => (int) $data['odometer'],
+                'notes' => $data['notes'] ?? 'Cambio',
+                'removals' => [[
+                    'tire_id' => $current->id,
+                    'reason_id' => $reasonId,
+                    'destination' => TireStatus::Stock->value,
+                ]],
+                'installations' => [['tire_id' => (int) $data['tire_id'], 'position_id' => $position->id]],
+            ], $user);
+        });
     }
 
     private function slotPinchadura(
@@ -532,23 +603,25 @@ class UnitController extends Controller
         $current = $this->mountedTire($unit, $position);
         $reasonId = MovementReason::where('code', 'PINCHADURA')->value('id');
 
-        $incidents->register($current, [
-            'type' => IncidentType::Pinchadura->value,
-            'odometer' => (int) $data['odometer'],
-            'unit_id' => $unit->id,
-            'position_id' => $position->id,
-            'notes' => $data['notes'] ?? null,
-        ], $user);
+        DB::transaction(function () use ($unit, $position, $data, $operations, $incidents, $user, $current, $reasonId) {
+            $incidents->register($current, [
+                'type' => IncidentType::Pinchadura->value,
+                'odometer' => (int) $data['odometer'],
+                'unit_id' => $unit->id,
+                'position_id' => $position->id,
+                'notes' => $data['notes'] ?? null,
+            ], $user);
 
-        $operations->execute($unit, [
-            'odometer' => (int) $data['odometer'],
-            'notes' => $data['notes'] ?? 'Pinchadura',
-            'removals' => [[
-                'tire_id' => $current->id,
-                'reason_id' => $reasonId,
-                'destination' => TireStatus::EnReparacion->value,
-            ]],
-        ], $user);
+            $operations->execute($unit, [
+                'odometer' => (int) $data['odometer'],
+                'notes' => $data['notes'] ?? 'Pinchadura',
+                'removals' => [[
+                    'tire_id' => $current->id,
+                    'reason_id' => $reasonId,
+                    'destination' => TireStatus::EnReparacion->value,
+                ]],
+            ], $user);
+        });
     }
 
     private function slotRotacion(FleetUnit $unit, UnitPosition $position, array $data, TireOperationService $operations, $user): void
@@ -639,9 +712,19 @@ class UnitController extends Controller
 
     private function formData(): array
     {
+        $user = auth()->user();
+        $fleets = Fleet::where('is_active', true)->orderBy('name');
+        $bases = Base::where('is_active', true)->orderBy('name');
+        if ($user && ! AccessScope::seesEverything($user)) {
+            $fleetIds = AccessScope::fleetIds($user);
+            $baseIds = AccessScope::visibleBaseIds($user);
+            $fleets->whereIn('id', $fleetIds ?: [0]);
+            $bases->whereIn('id', $baseIds ?: [0]);
+        }
+
         return [
-            'fleets' => Fleet::where('is_active', true)->orderBy('name')->get(),
-            'bases' => Base::where('is_active', true)->orderBy('name')->get(),
+            'fleets' => $fleets->get(),
+            'bases' => $bases->get(),
             'types' => UnitType::where('is_active', true)->orderBy('id')->get(),
             'configurations' => UnitConfiguration::where('is_active', true)->orderBy('id')->get(),
         ];

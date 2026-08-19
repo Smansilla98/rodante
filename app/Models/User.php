@@ -5,16 +5,19 @@ namespace App\Models;
 use App\Enums\UserRole;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
 
     protected $fillable = [
+        'company_id',
         'name',
         'username',
         'email',
@@ -40,6 +43,11 @@ class User extends Authenticatable
         ];
     }
 
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+
     public function fleets(): BelongsToMany
     {
         return $this->belongsToMany(Fleet::class, 'user_fleet_access');
@@ -52,19 +60,33 @@ class User extends Authenticatable
 
     public function canAccessFleet(?int $fleetId): bool
     {
+        if ($fleetId === null) {
+            return false;
+        }
+        $fleet = Fleet::query()->find($fleetId);
+        if (! $fleet || (int) $fleet->company_id !== (int) $this->company_id) {
+            return false;
+        }
         if ($this->role === UserRole::Administrador) {
             return true;
         }
 
-        return $fleetId !== null && $this->fleets()->where('fleets.id', $fleetId)->exists();
+        return $this->fleets()->where('fleets.id', $fleetId)->exists();
     }
 
     public function canAccessBase(?int $baseId): bool
     {
+        if ($baseId === null) {
+            return false;
+        }
+        $base = Base::query()->find($baseId);
+        if (! $base || (int) $base->company_id !== (int) $this->company_id) {
+            return false;
+        }
         if ($this->role === UserRole::Administrador) {
             return true;
         }
 
-        return $baseId !== null && $this->bases()->where('bases.id', $baseId)->exists();
+        return $this->bases()->where('bases.id', $baseId)->exists();
     }
 }

@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Fleet extends Model
 {
-    protected $fillable = ['name', 'code', 'is_active'];
+    use Concerns\BelongsToCompany;
+
+    protected $fillable = ['company_id', 'name', 'code', 'is_active'];
 
     protected function casts(): array
     {

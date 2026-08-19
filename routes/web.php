@@ -5,30 +5,52 @@ use App\Http\Controllers\Catalog\BrandController;
 use App\Http\Controllers\Catalog\ModelController;
 use App\Http\Controllers\Catalog\SimpleCatalogController;
 use App\Http\Controllers\Catalog\SizeController;
+use App\Http\Controllers\CostController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExportController;
 use App\Http\Controllers\HelpController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Odometer\OdometerController;
+use App\Http\Controllers\PrintController;
 use App\Http\Controllers\Purchase\PurchaseController;
+use App\Http\Controllers\QrController;
 use App\Http\Controllers\Report\ReportController;
+use App\Http\Controllers\RetreadShopController;
+use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Tire\TireController;
 use App\Http\Controllers\Unit\UnitController;
 use App\Http\Controllers\User\UserController;
+use App\Http\Controllers\WorkOrderController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => redirect()->route('login'));
+Route::get('/qr/{token}', [QrController::class, 'show'])->name('qr.resolve');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 });
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+    Route::get('/buscar/sugerencias', [SearchController::class, 'suggest'])->name('search.suggest');
+    Route::get('/buscar', [SearchController::class, '__invoke'])->name('search');
 
     Route::get('/neumaticos', [TireController::class, 'index'])->name('tires.index');
     Route::get('/stock', [TireController::class, 'stock'])->name('tires.stock');
+    Route::get('/neumaticos/{tire}/qr.svg', [QrController::class, 'image'])->name('tires.qr');
+    Route::get('/neumaticos/{tire}/imprimir', [PrintController::class, 'tire'])->name('tires.print');
     Route::get('/neumaticos/{tire}', [TireController::class, 'show'])->name('tires.show');
+    Route::get('/exportar/cubiertas.csv', [ExportController::class, 'tiresCsv'])->name('exports.tires');
+
+    Route::get('/ordenes', [WorkOrderController::class, 'index'])->name('work-orders.index');
+    Route::get('/ordenes/{workOrder}', [WorkOrderController::class, 'show'])->whereNumber('workOrder')->name('work-orders.show');
+    Route::get('/ordenes/{workOrder}/imprimir', [PrintController::class, 'workOrder'])->whereNumber('workOrder')->name('work-orders.print');
+    Route::get('/recapadoras', [RetreadShopController::class, 'index'])->name('shops.index');
+    Route::get('/costos', [CostController::class, 'index'])->name('costs.index');
+    Route::get('/avisos', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::post('/avisos/{id}/leer', [NotificationController::class, 'read'])->name('notifications.read');
 
     Route::get('/compras', [PurchaseController::class, 'index'])->name('purchases.index');
     Route::get('/unidades', [UnitController::class, 'index'])->name('units.index');
@@ -45,16 +67,28 @@ Route::middleware('auth')->group(function () {
     Route::middleware('capability:write')->group(function () {
         Route::post('/neumaticos/{tire}/incidencias', [TireController::class, 'storeIncident'])->name('tires.incidents.store');
         Route::post('/neumaticos/{tire}/mediciones', [TireController::class, 'storeMeasurement'])->name('tires.measurements.store');
+        Route::post('/neumaticos/{tire}/stock', [TireController::class, 'returnToStock'])->name('tires.return-stock');
 
         Route::get('/compras/nueva', [PurchaseController::class, 'create'])->name('purchases.create');
         Route::post('/compras', [PurchaseController::class, 'store'])->name('purchases.store');
+        Route::post('/compras/importar', [ExportController::class, 'importPurchases'])->name('purchases.import');
         Route::post('/compras/{purchase}/confirmar', [PurchaseController::class, 'confirm'])->name('purchases.confirm');
 
         Route::get('/unidades/nueva', [UnitController::class, 'create'])->name('units.create');
         Route::post('/unidades', [UnitController::class, 'store'])->name('units.store');
+        Route::get('/unidades/{unit}/stock', [UnitController::class, 'stockSearch'])->name('units.stock');
         Route::post('/unidades/{unit}/operacion', [UnitController::class, 'operate'])->name('units.operate');
         Route::post('/unidades/{unit}/posicion', [UnitController::class, 'slotAction'])->name('units.slot');
         Route::post('/unidades/{unit}/datos', [UnitController::class, 'updateSpecs'])->name('units.specs');
+
+        Route::get('/ordenes/nueva', [WorkOrderController::class, 'create'])->name('work-orders.create');
+        Route::post('/ordenes', [WorkOrderController::class, 'store'])->name('work-orders.store');
+        Route::post('/ordenes/{workOrder}/enviar', [WorkOrderController::class, 'send'])->name('work-orders.send');
+        Route::post('/ordenes/{workOrder}/cerrar', [WorkOrderController::class, 'close'])->name('work-orders.close');
+        Route::post('/ordenes/{workOrder}/cancelar', [WorkOrderController::class, 'cancel'])->name('work-orders.cancel');
+
+        Route::post('/recapadoras', [RetreadShopController::class, 'store'])->name('shops.store');
+        Route::put('/recapadoras/{shop}', [RetreadShopController::class, 'update'])->name('shops.update');
     });
 
     Route::get('/compras/{purchase}', [PurchaseController::class, 'show'])->name('purchases.show');
@@ -77,7 +111,7 @@ Route::middleware('auth')->group(function () {
         Route::put('/odometros/{reading}', [OdometerController::class, 'update'])->name('odometers.update');
     });
 
-    Route::middleware('role:ADMINISTRADOR')->group(function () {
+    Route::middleware('capability:abm')->group(function () {
         Route::put('/neumaticos/{tire}', [TireController::class, 'update'])->name('tires.update');
 
         Route::put('/compras/{purchase}', [PurchaseController::class, 'update'])->name('purchases.update');

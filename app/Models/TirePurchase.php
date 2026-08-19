@@ -8,12 +8,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TirePurchase extends Model
 {
+    use Concerns\BelongsToCompany;
+
     public const STATUS_DRAFT = 'DRAFT';
 
     public const STATUS_CONFIRMED = 'CONFIRMED';
 
     protected $fillable = [
-        'number', 'supplier_id', 'base_id', 'user_id',
+        'company_id', 'number', 'supplier_id', 'base_id', 'user_id',
         'purchased_at', 'status', 'notes', 'confirmed_at',
     ];
 

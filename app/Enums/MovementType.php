@@ -16,6 +16,7 @@ enum MovementType: string
     case FromRepair = 'FROM_REPAIR';
     case Retire = 'RETIRE';
     case TransferBase = 'TRANSFER_BASE';
+    case Correction = 'CORRECTION';
 
     public function label(): string
     {
@@ -32,6 +33,7 @@ enum MovementType: string
             self::FromRepair => 'Salida de reparación',
             self::Retire => 'Baja',
             self::TransferBase => 'Cambio de base',
+            self::Correction => 'Corrección',
         };
     }
 }

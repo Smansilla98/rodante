@@ -17,7 +17,17 @@ enum TireCondition: string
             self::NuevaUsada => 'Nueva usada',
             self::Usada => 'Usada',
             self::Recapada => 'Recapada',
-            self::Reparada => 'Reparada',
+            self::Reparada => 'Reparada (parche)',
+        };
+    }
+
+    public function tone(): string
+    {
+        return match ($this) {
+            self::Nueva, self::NuevaUsada => 'green',
+            self::Usada => 'amber',
+            self::Recapada => 'blue',
+            self::Reparada => 'orange',
         };
     }
 }

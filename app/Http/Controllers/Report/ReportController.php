@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Report;
 use App\Http\Controllers\Controller;
 use App\Models\AuditLog;
 use App\Models\FleetUnit;
+use App\Models\OdometerReading;
 use App\Models\Tire;
 use App\Models\TireIncident;
 use App\Models\TireMeasurement;
@@ -14,22 +15,23 @@ use App\Models\UnitConfigurationChange;
 use App\Models\UnitCoupling;
 use App\Services\ReportService;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Http\Request;
 
 class ReportController extends Controller
 {
-    public function kilometers(ReportService $reports)
+    public function kilometers(Request $request, ReportService $reports)
     {
-        return view('reports.kilometers', ['tires' => $reports->kilometersByTire()]);
+        return view('reports.kilometers', ['tires' => $reports->kilometersByTire($request->user())]);
     }
 
-    public function consumption(ReportService $reports)
+    public function consumption(Request $request, ReportService $reports)
     {
-        return view('reports.consumption', ['rows' => $reports->consumptionByModel()]);
+        return view('reports.consumption', ['rows' => $reports->consumptionByModel($request->user())]);
     }
 
-    public function incidents(ReportService $reports)
+    public function incidents(Request $request, ReportService $reports)
     {
-        return view('reports.incidents', ['rows' => $reports->incidents()]);
+        return view('reports.incidents', ['rows' => $reports->incidents($request->user())]);
     }
 
     public function audit()
@@ -48,7 +50,7 @@ class ReportController extends Controller
                             TireIncident::class => ['tire.model', 'unit'],
                             TirePurchase::class => ['supplier', 'base'],
                             FleetUnit::class => [],
-                            \App\Models\OdometerReading::class => ['unit'],
+                            OdometerReading::class => ['unit'],
                         ]);
                     },
                 ])

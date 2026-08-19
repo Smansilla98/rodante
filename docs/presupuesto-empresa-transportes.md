@@ -34,7 +34,6 @@ El dato vive en la cubierta, no en la patente. El acoplado usa el odómetro del 
 - App nativa para celular
 - Integración con GPS, ERP o taller externo
 - Facturación de proveedores o stock valorado
-- Configuraciones de ejes no parametrizadas hoy (por ejemplo 7X24)
 
 ---
 

@@ -25,7 +25,8 @@ class PurchaseService
     {
         return DB::transaction(function () use ($data, $user) {
             $purchase = TirePurchase::create([
-                'number' => $this->nextNumber(),
+                'company_id' => $user->company_id,
+                'number' => app(DocumentNumberService::class)->next((int) $user->company_id, 'purchase', 'OC-'),
                 'supplier_id' => $data['supplier_id'],
                 'base_id' => $data['base_id'],
                 'user_id' => $user->id,
@@ -42,6 +43,7 @@ class PurchaseService
                     'tire_size_id' => $item['tire_size_id'],
                     'quantity' => $item['quantity'],
                     'first_number' => $item['first_number'] ?? null,
+                    'unit_cost' => $item['unit_cost'] ?? null,
                 ]);
             }
 
@@ -77,18 +79,19 @@ class PurchaseService
 
         return DB::transaction(function () use ($purchase, $user) {
             $purchase->load('items');
-            $next = $this->nextIndividualNumber();
+            $next = $this->nextIndividualNumber((int) ($purchase->company_id ?: $user->company_id));
 
             foreach ($purchase->items as $item) {
                 $start = $item->first_number ?: $next;
                 $end = $start + $item->quantity - 1;
 
                 for ($number = $start; $number <= $end; $number++) {
-                    if (Tire::where('individual_number', $number)->exists()) {
-                        throw new DomainException("El número individual {$number} ya existe.");
+                    if (Tire::where('company_id', $purchase->company_id)->where('individual_number', $number)->exists()) {
+                        throw new DomainException("El número individual {$number} ya existe en la empresa.");
                     }
 
                     $tire = Tire::create([
+                        'company_id' => $purchase->company_id ?? $user->company_id,
                         'individual_number' => $number,
                         'tire_brand_id' => $item->tire_brand_id,
                         'tire_model_id' => $item->tire_model_id,
@@ -133,6 +136,16 @@ class PurchaseService
                 'confirmed_at' => now(),
             ]);
 
+            $totalCost = 0;
+            foreach ($purchase->items as $item) {
+                if ($item->unit_cost) {
+                    $totalCost += (float) $item->unit_cost * (int) $item->quantity;
+                }
+            }
+            if ($totalCost > 0) {
+                app(CostService::class)->record($user, 'PURCHASE', $totalCost, $purchase, null, $purchase->number);
+            }
+
             $this->audit->log('purchase.confirmed', $purchase);
 
             return $purchase->fresh(['items.tires']);
@@ -169,15 +182,10 @@ class PurchaseService
         });
     }
 
-    private function nextNumber(): string
+    private function nextIndividualNumber(int $companyId): int
     {
-        $count = TirePurchase::count() + 1;
+        $max = (int) Tire::query()->where('company_id', $companyId)->lockForUpdate()->max('individual_number');
 
-        return 'OC-'.str_pad((string) $count, 5, '0', STR_PAD_LEFT);
-    }
-
-    private function nextIndividualNumber(): int
-    {
-        return ((int) Tire::max('individual_number')) + 1 ?: 1;
+        return $max + 1 ?: 1;
     }
 }

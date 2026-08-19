@@ -11,12 +11,14 @@
 <form method="POST" action="{{ route('units.store') }}" class="panel max-w-xl" id="unit-form">
     @csrf
     <div class="panel__body space-y-4">
-        <label class="field"><span>Patente</span><input name="plate" value="{{ old('plate') }}" required></label>
+        <label class="field"><span>Patente</span><input name="plate" class="inp" value="{{ old('plate') }}" required @error('plate') aria-invalid="true" @enderror><x-field-error name="plate" /></label>
         <label class="field"><span>Flota</span>
-            <select name="fleet_id" required>@foreach($fleets as $fleet)<option value="{{ $fleet->id }}" @selected(old('fleet_id')==$fleet->id)>{{ $fleet->name }}</option>@endforeach</select>
+            <select name="fleet_id" class="inp" required>@foreach($fleets as $fleet)<option value="{{ $fleet->id }}" @selected(old('fleet_id')==$fleet->id)>{{ $fleet->name }}</option>@endforeach</select>
+            <x-field-error name="fleet_id" />
         </label>
         <label class="field"><span>Base</span>
-            <select name="base_id" required>@foreach($bases as $base)<option value="{{ $base->id }}" @selected(old('base_id')==$base->id)>{{ $base->name }}</option>@endforeach</select>
+            <select name="base_id" class="inp" required>@foreach($bases as $base)<option value="{{ $base->id }}" @selected(old('base_id')==$base->id)>{{ $base->name }}</option>@endforeach</select>
+            <x-field-error name="base_id" />
         </label>
         <label class="field"><span>Tipo</span>
             <select name="unit_type_id" id="unitType" required>

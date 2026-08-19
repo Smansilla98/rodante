@@ -4,18 +4,19 @@ namespace Tests\Feature;
 
 use App\Enums\IncidentType;
 use App\Enums\TireStatus;
+use App\Enums\UserRole;
 use App\Exceptions\DomainException;
 use App\Models\Base;
 use App\Models\FleetUnit;
 use App\Models\MovementReason;
 use App\Models\Supplier;
-use App\Models\Tire;
 use App\Models\TireBrand;
 use App\Models\TireCurrentLocation;
 use App\Models\TireModel;
 use App\Models\TireSize;
 use App\Models\UnitConfiguration;
 use App\Models\UnitType;
+use App\Models\User;
 use App\Services\CouplingService;
 use App\Services\IncidentService;
 use App\Services\MeasurementService;
@@ -147,6 +148,51 @@ class TireTraceabilityTest extends TestCase
         $this->assertEquals(1, $tire->assignments()->count());
     }
 
+    public function test_rotation_to_spare_stops_counting_kilometers_without_closing_assignment(): void
+    {
+        $unit = $this->createTractor(100000);
+        [$tire] = $this->purchaseTires(1, 50071);
+        $rolling = $unit->configuration->positions()->where('is_spare', false)->orderBy('sort_order')->first();
+        $spare = $unit->configuration->positions()->where('is_spare', true)->first();
+        $ops = app(TireOperationService::class);
+
+        $ops->execute($unit, ['odometer' => 100000, 'installations' => [['tire_id' => $tire->id, 'position_id' => $rolling->id]]], $this->admin);
+        $ops->rotate($unit, $tire->id, $spare->id, 110000, $this->admin);
+
+        $this->assertEquals(TireStatus::Auxilio, $tire->fresh()->status);
+        $this->assertEquals(1, $tire->assignments()->whereNull('ended_at')->count());
+        $this->assertEquals(10000, $tire->fresh()->accumulated_km);
+
+        $ops->execute($unit, ['odometer' => 130000, 'removals' => [['tire_id' => $tire->id]]], $this->admin);
+
+        $this->assertEquals(10000, $tire->fresh()->accumulated_km);
+        $this->assertEquals(1, $tire->assignments()->count());
+        $this->assertEquals(2, $tire->assignments()->first()->segments()->count());
+    }
+
+    public function test_mounted_tire_has_single_current_location_and_open_assignment(): void
+    {
+        $unit = $this->createTractor();
+        [$tire] = $this->purchaseTires(1, 50072);
+        $position = $unit->configuration->positions()->where('is_spare', false)->first();
+        app(TireOperationService::class)->execute($unit, [
+            'odometer' => 100000,
+            'installations' => [['tire_id' => $tire->id, 'position_id' => $position->id]],
+        ], $this->admin);
+
+        $this->assertEquals(1, TireCurrentLocation::where('tire_id', $tire->id)->count());
+        $this->assertEquals(1, $tire->assignments()->whereNull('ended_at')->count());
+    }
+
+    public function test_operario_cannot_register_recap(): void
+    {
+        [$tire] = $this->purchaseTires(1, 50073);
+        $operario = User::factory()->create(['role' => UserRole::Operario]);
+
+        $this->expectException(DomainException::class);
+        app(IncidentService::class)->register($tire, ['type' => IncidentType::Recapado->value], $operario);
+    }
+
     public function test_unit_change_keeps_full_history_via_stock(): void
     {
         $unitA = $this->createTractor(200000);
@@ -179,6 +225,7 @@ class TireTraceabilityTest extends TestCase
         $incidents = app(IncidentService::class);
         $incidents->register($tire, ['type' => IncidentType::Reparacion->value], $this->admin);
         $this->assertEquals(1, $tire->fresh()->lifecycles()->count());
+        $this->assertEquals('REPARADA', $tire->fresh()->condition->value);
         $incidents->register($tire, ['type' => IncidentType::Recapado->value], $this->admin);
         $this->assertEquals(2, $tire->fresh()->lifecycles()->count());
         $this->assertEquals('RECAPADA', $tire->fresh()->condition->value);
@@ -523,6 +570,7 @@ class TireTraceabilityTest extends TestCase
 
         $this->assertEquals(TireStatus::EnReparacion, $tire->fresh()->status);
         $this->assertEquals(IncidentType::Pinchadura, $tire->fresh()->incidents()->first()->type);
+        $this->assertEquals('REPARADA', $tire->fresh()->condition->value);
         $this->assertNull($tire->fresh()->currentLocation->unit_id);
     }
 

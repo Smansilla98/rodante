@@ -47,4 +47,23 @@ class AuthLoginTest extends TestCase
 
         $this->assertGuest();
     }
+
+    public function test_inactive_account_cannot_login(): void
+    {
+        User::factory()->create([
+            'username' => 'baja',
+            'password' => 'password',
+            'role' => UserRole::Operario,
+            'is_active' => false,
+        ]);
+
+        $this->get('/login');
+        $this->from('/login')->post('/login', [
+            'username' => 'baja',
+            'password' => 'password',
+            '_token' => csrf_token(),
+        ])->assertRedirect('/login')->assertSessionHasErrors('username');
+
+        $this->assertGuest();
+    }
 }

@@ -5,15 +5,17 @@ namespace Database\Seeders;
 use App\Enums\UnitStatus;
 use App\Enums\UserRole;
 use App\Models\Base;
+use App\Models\Company;
 use App\Models\Fleet;
 use App\Models\FleetUnit;
+use App\Models\RetreadShop;
 use App\Models\Supplier;
+use App\Models\Tire;
 use App\Models\TireBrand;
 use App\Models\TireModel;
 use App\Models\TireSize;
 use App\Models\UnitConfiguration;
 use App\Models\UnitType;
-use App\Models\Tire;
 use App\Models\User;
 use App\Services\ConfigurationChangeService;
 use App\Services\CouplingService;
@@ -25,6 +27,7 @@ class DemoSeeder extends Seeder
 {
     public function run(): void
     {
+        $company = Company::demo();
         $fleets = Fleet::all();
         $bases = Base::all();
 
@@ -44,12 +47,18 @@ class DemoSeeder extends Seeder
                     'email' => $username.'@flota.test',
                     'password' => 'password',
                     'role' => $role,
+                    'company_id' => $company->id,
                     'is_active' => true,
                 ]
             );
             $user->fleets()->sync($fleets->pluck('id'));
             $user->bases()->sync($bases->pluck('id'));
         }
+
+        RetreadShop::query()->firstOrCreate(
+            ['company_id' => $company->id, 'name' => 'Recapadora San Lorenzo'],
+            ['tax_id' => '30-60000001-8', 'phone' => '0341-4000000', 'address' => 'Predio MRT', 'is_active' => true],
+        );
 
         if (FleetUnit::query()->where('plate', 'HKH 448')->exists()) {
             $this->upgradeDemoTrailersToLineal();

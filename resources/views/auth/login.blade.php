@@ -32,19 +32,19 @@
 
                 <div class="field">
                     <label for="username">Usuario</label>
-                    <input id="username" class="inp" name="username" value="{{ old('username', 'admin') }}" autocomplete="username" required>
+                    <input id="username" class="inp" name="username" value="{{ old('username', app()->environment('local') ? 'admin' : '') }}" autocomplete="username" required @error('username') aria-invalid="true" aria-describedby="err-username" @enderror>
+                    <x-field-error name="username" />
                 </div>
                 <div class="field">
                     <label for="password">Contraseña</label>
-                    <input id="password" class="inp" type="password" name="password" value="password" autocomplete="current-password" required>
+                    <input id="password" class="inp" type="password" name="password" value="{{ app()->environment('local') ? 'password' : '' }}" autocomplete="current-password" required @error('password') aria-invalid="true" aria-describedby="err-password" @enderror>
+                    <x-field-error name="password" />
                 </div>
 
-                @error('username')
-                    <p class="form-error" role="alert">{{ $message }}</p>
-                @enderror
-
                 <button class="btn btn-primary w-full" type="submit">Ingresar</button>
-                <p class="auth-hint">Demo: <strong>admin</strong> / <strong>password</strong></p>
+                @if(app()->environment('local'))
+                    <p class="auth-hint">Demo: <strong>admin</strong> / <strong>password</strong></p>
+                @endif
             </form>
         </section>
     </main>

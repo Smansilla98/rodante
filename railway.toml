@@ -1,4 +1,10 @@
 # https://docs.railway.com/guides/config-as-code
+[build]
+dockerfilePath = "Dockerfile.fpm"
+
 [deploy]
-# Monta MySQL o PostgreSQL (según variables), migra y carga la demo.
 releaseCommand = "bash scripts/railway-db-setup.sh"
+# nginx + php-fpm in the same image. PHP-FPM alone is not a public HTTP server.
+startCommand = "supervisord -n -c /etc/supervisor/conf.d/rodante.conf"
+healthcheckPath = "/up"
+healthcheckTimeout = 30

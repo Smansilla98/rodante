@@ -6,7 +6,6 @@ use App\Enums\OdometerStatus;
 use App\Exceptions\DomainException;
 use App\Models\FleetUnit;
 use App\Models\OdometerReading;
-use App\Models\TireOperation;
 use App\Models\User;
 
 class OdometerService
@@ -103,10 +102,6 @@ class OdometerService
             'validated_at' => now(),
             'notes' => $notes ?? $reading->notes,
         ]);
-
-        if ($reading->tire_operation_id) {
-            TireOperation::whereKey($reading->tire_operation_id)->update(['odometer' => $value]);
-        }
 
         $this->refreshCurrentOdometer($reading->unit()->first());
         $this->audit->log('odometer.updated', $reading->fresh(['unit']), ['value' => $old], [

@@ -8,7 +8,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Base extends Model
 {
-    protected $fillable = ['name', 'code', 'location', 'is_active'];
+    use Concerns\BelongsToCompany;
+
+    protected $fillable = ['company_id', 'name', 'code', 'location', 'is_active'];
 
     protected function casts(): array
     {

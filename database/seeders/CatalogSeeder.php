@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Base;
+use App\Models\Company;
 use App\Models\Fleet;
 use App\Models\MeasurementZone;
 use App\Models\MovementReason;
@@ -23,19 +24,20 @@ class CatalogSeeder extends Seeder
             return;
         }
 
-        $sanLorenzo = Base::create(['name' => 'Predio MRT San Lorenzo', 'code' => 'SLT', 'location' => 'San Lorenzo, Santa Fe']);
-        $rosario = Base::create(['name' => 'Base Rosario', 'code' => 'ROS', 'location' => 'Rosario, Santa Fe']);
+        $company = Company::demo();
+        $sanLorenzo = Base::create(['company_id' => $company->id, 'name' => 'Predio MRT San Lorenzo', 'code' => 'SLT', 'location' => 'San Lorenzo, Santa Fe']);
+        $rosario = Base::create(['company_id' => $company->id, 'name' => 'Base Rosario', 'code' => 'ROS', 'location' => 'Rosario, Santa Fe']);
 
-        $combustible = Fleet::create(['name' => 'Axion Combustible', 'code' => 'AXN-COMB']);
-        $alcohol = Fleet::create(['name' => 'Axion Alcohol', 'code' => 'AXN-ALC']);
-        $bio = Fleet::create(['name' => 'Axion Bio', 'code' => 'AXN-BIO']);
+        $combustible = Fleet::create(['company_id' => $company->id, 'name' => 'Axion Combustible', 'code' => 'AXN-COMB']);
+        $alcohol = Fleet::create(['company_id' => $company->id, 'name' => 'Axion Alcohol', 'code' => 'AXN-ALC']);
+        $bio = Fleet::create(['company_id' => $company->id, 'name' => 'Axion Bio', 'code' => 'AXN-BIO']);
         $combustible->bases()->sync([$sanLorenzo->id, $rosario->id]);
         $alcohol->bases()->sync([$sanLorenzo->id]);
         $bio->bases()->sync([$sanLorenzo->id]);
 
-        Supplier::create(['name' => 'Michelin Argentina', 'tax_id' => '30-50000001-9']);
-        Supplier::create(['name' => 'Pirelli Neumáticos', 'tax_id' => '30-50000002-7']);
-        Supplier::create(['name' => 'Fate SAICI', 'tax_id' => '30-50000003-5']);
+        Supplier::create(['company_id' => $company->id, 'name' => 'Michelin Argentina', 'tax_id' => '30-50000001-9']);
+        Supplier::create(['company_id' => $company->id, 'name' => 'Pirelli Neumáticos', 'tax_id' => '30-50000002-7']);
+        Supplier::create(['company_id' => $company->id, 'name' => 'Fate SAICI', 'tax_id' => '30-50000003-5']);
 
         $sizes = [
             ['code' => '275/80 R22.5', 'alias' => null, 'width_mm' => 275, 'aspect_ratio' => 80, 'rim_inches' => 22.5],

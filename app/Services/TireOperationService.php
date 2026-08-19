@@ -32,6 +32,10 @@ class TireOperationService
      */
     public function execute(FleetUnit $unit, array $data, User $user): TireOperation
     {
+        if (! $user->role->canWrite()) {
+            throw new DomainException('No tiene permiso para operar cubiertas.');
+        }
+
         return DB::transaction(function () use ($unit, $data, $user) {
             $unit = FleetUnit::with('type', 'configuration.positions')->lockForUpdate()->findOrFail($unit->id);
             $odometerUnit = $this->couplings->resolveOdometerUnit($unit);
@@ -184,6 +188,24 @@ class TireOperationService
                 $tire = Tire::findOrFail($tireId);
                 $kind = $move['position']->is_spare ? LocationKind::Auxilio : LocationKind::Instalada;
                 $this->locations->place($tire, $kind, $unit->base_id, $unit->id, $move['to']);
+                $countsKm = ! $move['position']->is_spare;
+                $assignment = TireAssignment::where('tire_id', $tireId)->whereNull('ended_at')->first();
+                if ($assignment) {
+                    $segment = $assignment->openSegment;
+                    if ($segment && (bool) $segment->counts_km !== $countsKm) {
+                        $this->couplings->closeSegment($segment, $odometer);
+                        TireAssignmentSegment::create([
+                            'tire_assignment_id' => $assignment->id,
+                            'odometer_unit_id' => $odometerUnit->id,
+                            'start_odometer' => $odometer,
+                            'counts_km' => $countsKm,
+                            'started_at' => $occurredAt,
+                            'open_key' => $assignment->id,
+                        ]);
+                        $this->locations->refreshAccumulatedKm($tire->fresh());
+                    }
+                    $assignment->update(['counts_km' => $countsKm]);
+                }
                 $tire->movements()->create([
                     'type' => MovementType::Rotate,
                     'occurred_at' => $occurredAt,
@@ -379,5 +401,51 @@ class TireOperationService
             'user_id' => $user->id,
             'created_at' => now(),
         ]);
+    }
+
+    public function returnToStock(Tire $tire, User $user, ?string $notes = null): Tire
+    {
+        if (! $user->role->canWrite()) {
+            throw new DomainException('No tiene permiso para devolver cubiertas a stock.');
+        }
+
+        $status = $tire->status;
+        if (! in_array($status, [TireStatus::EnReparacion, TireStatus::Reserva], true)) {
+            throw new DomainException('Solo se puede devolver a stock una cubierta en reparación o reserva.');
+        }
+        if ($tire->openAssignment) {
+            throw new DomainException('Retirá la cubierta de la unidad antes de devolverla a stock.');
+        }
+
+        return DB::transaction(function () use ($tire, $user, $notes, $status) {
+            $tire = Tire::lockForUpdate()->findOrFail($tire->id);
+            $baseId = $tire->currentLocation?->base_id;
+            $type = $status === TireStatus::EnReparacion ? MovementType::FromRepair : MovementType::FromReserva;
+
+            $this->locations->place($tire, LocationKind::Stock, $baseId);
+
+            if ($status === TireStatus::EnReparacion && $tire->condition !== TireCondition::Recapada) {
+                $tire->update(['condition' => TireCondition::Reparada]);
+            }
+
+            $tire->movements()->create([
+                'type' => $type,
+                'occurred_at' => now(),
+                'from_base_id' => $baseId,
+                'to_base_id' => $baseId,
+                'user_id' => $user->id,
+                'notes' => $notes ?? ($status === TireStatus::EnReparacion
+                    ? 'Vuelta a stock después de reparación (parche). Misma vida.'
+                    : 'Salida de reserva a stock.'),
+                'created_at' => now(),
+            ]);
+
+            $this->audit->log('tire.returned_stock', $tire, null, [
+                'from' => $status->value,
+                'tire' => $tire->auditLabel(),
+            ]);
+
+            return $tire->fresh();
+        });
     }
 }

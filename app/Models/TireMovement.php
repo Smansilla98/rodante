@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\MovementType;
+use App\Exceptions\DomainException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -66,5 +67,15 @@ class TireMovement extends Model
     public function reason(): BelongsTo
     {
         return $this->belongsTo(MovementReason::class, 'reason_id');
+    }
+
+    public function update(array $attributes = [], array $options = []): bool
+    {
+        throw new DomainException('El historial no se modifica. Si hay un error, registrá un evento de corrección.');
+    }
+
+    public function delete(): ?bool
+    {
+        throw new DomainException('El historial no se borra.');
     }
 }

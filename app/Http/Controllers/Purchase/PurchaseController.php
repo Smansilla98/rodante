@@ -8,24 +8,34 @@ use App\Models\Base;
 use App\Models\Supplier;
 use App\Models\TirePurchase;
 use App\Models\TireSize;
-use App\Support\TireProductCatalog;
 use App\Services\PurchaseService;
+use App\Support\AccessScope;
+use App\Support\TireProductCatalog;
 use Illuminate\Http\Request;
 
 class PurchaseController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $query = TirePurchase::with('supplier', 'base', 'user')->latest();
+        AccessScope::purchases($query, $request->user());
+
         return view('purchases.index', [
-            'purchases' => TirePurchase::with('supplier', 'base', 'user')->latest()->paginate(20),
+            'purchases' => $query->paginate(20),
         ]);
     }
 
-    public function create()
+    public function create(Request $request)
     {
+        $bases = Base::where('is_active', true)->orderBy('name');
+        if (! AccessScope::seesEverything($request->user())) {
+            $ids = AccessScope::visibleBaseIds($request->user());
+            $bases->whereIn('id', $ids ?: [0]);
+        }
+
         return view('purchases.create', [
-            'suppliers' => Supplier::where('is_active', true)->orderBy('name')->get(),
-            'bases' => Base::where('is_active', true)->orderBy('name')->get(),
+            'suppliers' => tap(Supplier::where('is_active', true)->orderBy('name'), fn ($q) => AccessScope::applyCompany($q, $request->user()))->get(),
+            'bases' => $bases->get(),
             'sizes' => TireSize::where('is_active', true)->orderBy('code')->get(),
             'catalog' => TireProductCatalog::uiPayload(),
         ]);
@@ -44,10 +54,14 @@ class PurchaseController extends Controller
             'items.*.tire_size_id' => 'nullable|exists:tire_sizes,id',
             'items.*.quantity' => 'nullable|integer|min:1|max:200',
             'items.*.first_number' => 'nullable|integer|min:1',
+            'items.*.unit_cost' => 'nullable|numeric|min:0',
         ]);
         $data['items'] = collect($data['items'])->filter(fn ($item) => ! empty($item['tire_brand_id']) && ! empty($item['quantity']))->values()->all();
         if ($data['items'] === []) {
             return back()->withErrors(['items' => 'Cargá al menos una línea de compra.'])->withInput();
+        }
+        if (! AccessScope::seesEverything($request->user()) && ! in_array((int) $data['base_id'], AccessScope::visibleBaseIds($request->user()), true)) {
+            abort(404);
         }
 
         try {
@@ -59,8 +73,10 @@ class PurchaseController extends Controller
         return redirect()->route('purchases.show', $purchase)->with('success', 'Compra creada en borrador.');
     }
 
-    public function show(TirePurchase $purchase)
+    public function show(Request $request, TirePurchase $purchase)
     {
+        AccessScope::abortUnlessPurchase($request->user(), $purchase->id);
+
         return view('purchases.show', [
             'purchase' => $purchase->load(['supplier', 'base', 'items.brand', 'items.model', 'items.size', 'items.tires']),
             'suppliers' => Supplier::orderBy('name')->get(),
@@ -68,8 +84,10 @@ class PurchaseController extends Controller
         ]);
     }
 
-    public function confirm(TirePurchase $purchase, PurchaseService $purchases, Request $request)
+    public function confirm(Request $request, TirePurchase $purchase, PurchaseService $purchases)
     {
+        AccessScope::abortUnlessPurchase($request->user(), $purchase->id);
+
         try {
             $purchases->confirm($purchase, $request->user());
         } catch (DomainException $e) {
@@ -81,6 +99,7 @@ class PurchaseController extends Controller
 
     public function update(Request $request, TirePurchase $purchase, PurchaseService $purchases)
     {
+        AccessScope::abortUnlessPurchase($request->user(), $purchase->id);
         $data = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
             'base_id' => 'required|exists:bases,id',
@@ -97,8 +116,9 @@ class PurchaseController extends Controller
         return redirect()->route('purchases.show', $purchase)->with('success', 'Compra actualizada.');
     }
 
-    public function destroy(TirePurchase $purchase, PurchaseService $purchases)
+    public function destroy(Request $request, TirePurchase $purchase, PurchaseService $purchases)
     {
+        AccessScope::abortUnlessPurchase($request->user(), $purchase->id);
         $number = $purchase->number;
         try {
             $purchases->discard($purchase);

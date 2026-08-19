@@ -26,6 +26,8 @@ MySQL: `localhost:33062` / `trazabilidad` / `laravel` / `secret`
 
 ### Documentación
 
+- [Auditoría técnica](docs/AUDIT.md)
+- [Roadmap P0/P1/P2](docs/ROADMAP.md)
 - [Manual de uso](docs/manual-de-uso.md) (también en la app: **Consulta → Ayuda**)
 - [Propuesta de presupuesto para empresa de transportes](docs/presupuesto-empresa-transportes.md)
 - QA por rol: `php artisan qa:roles` (logs en `storage/logs/qa/` y `docs/qa/`)
@@ -65,7 +67,7 @@ docker compose exec app php artisan test
 - Auxilio no suma km.
 - Rotación no cierra el periodo de km.
 - Eventos históricos inmutables.
-- 6X24 y 6X1 están parametrizados. 7X24 y 6X1X1 no se cargaron a propósito.
+- Las configuraciones de ejes son las del catálogo: tractores `4X2`, `4X4`, `6X2`, `6X2-P`, `6X4`, `6X6`, `8X2`, `8X4`, `8X8`, `10X4`, `10X6`; acoplados `1E`–`5E` (simple/dual) y `3E-1S2D`. No existen `6X24`, `6X1`, `7X24` ni `6X1X1`.
 
 ## Costos
 

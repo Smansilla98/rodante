@@ -8,7 +8,10 @@
     <form method="POST" action="{{ $editing ? route('brands.update', $editing) : route('brands.store') }}" class="toolbar">
         @csrf
         @if($editing) @method('PUT') @endif
-        <input name="name" value="{{ old('name', $editing?->name) }}" placeholder="Nombre" required>
+        <label class="field"><span>Nombre</span>
+            <input name="name" class="inp" value="{{ old('name', $editing?->name) }}" required>
+            <x-field-error name="name" />
+        </label>
         @if($editing)
             <label class="abm-check"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $editing->is_active))> Activa</label>
         @endif
@@ -39,7 +42,7 @@
                 <td class="text-right"><a class="abm-link" href="{{ route('brands.index', ['edit' => $brand->id]) }}">Editar</a></td>
             </tr>
         @empty
-            <tr><td colspan="4"><x-empty title="No hay marcas" /></td></tr>
+            <tr><td colspan="4"><x-empty title="No hay marcas" action="Nueva marca" :href="route('brands.index')" /></td></tr>
         @endforelse
         </tbody>
     </x-content-table>

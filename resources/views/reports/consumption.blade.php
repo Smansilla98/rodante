@@ -32,5 +32,6 @@
         @endforelse
         </tbody>
     </x-content-table>
+    <div class="pager">{{ $rows->links() }}</div>
 </x-panel>
 @endsection

@@ -22,6 +22,9 @@ class IncidentService
 
     public function register(Tire $tire, array $data, User $user): TireIncident
     {
+        if (! $user->role->canWrite()) {
+            throw new DomainException('No tiene permiso para registrar incidencias.');
+        }
         if ($tire->status === TireStatus::DeBaja) {
             throw new DomainException('No se pueden cargar incidencias sobre un neumático de baja.');
         }
@@ -41,7 +44,8 @@ class IncidentService
                 'notes' => $data['notes'] ?? null,
             ]);
 
-            if ($type === IncidentType::Reparacion) {
+            if (in_array($type, [IncidentType::Reparacion, IncidentType::Parche, IncidentType::Pinchadura], true)
+                && $tire->condition !== TireCondition::Recapada) {
                 $tire->update(['condition' => TireCondition::Reparada]);
             }
 

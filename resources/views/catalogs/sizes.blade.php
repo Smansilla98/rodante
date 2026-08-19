@@ -8,9 +8,16 @@
     <form method="POST" action="{{ $editing ? route('sizes.update', $editing) : route('sizes.store') }}" class="toolbar">
         @csrf
         @if($editing) @method('PUT') @endif
-        <input name="code" value="{{ old('code', $editing?->code) }}" placeholder="385/90 R22.5" required>
-        <input name="alias" value="{{ old('alias', $editing?->alias) }}" placeholder="Alias (Gomón)">
-        <input name="uneven_wear_threshold_mm" type="number" min="1" max="20" value="{{ old('uneven_wear_threshold_mm', $editing?->uneven_wear_threshold_mm ?? 3) }}" placeholder="Umbral mm">
+        <label class="field"><span>Medida</span>
+            <input name="code" class="inp" value="{{ old('code', $editing?->code) }}" required>
+            <x-field-error name="code" />
+        </label>
+        <label class="field"><span>Alias</span>
+            <input name="alias" class="inp" value="{{ old('alias', $editing?->alias) }}">
+        </label>
+        <label class="field"><span>Umbral desgaste (mm)</span>
+            <input name="uneven_wear_threshold_mm" class="inp" type="number" min="1" max="20" value="{{ old('uneven_wear_threshold_mm', $editing?->uneven_wear_threshold_mm ?? 3) }}">
+        </label>
         @if($editing)
             <label class="abm-check"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $editing->is_active))> Activa</label>
         @endif
@@ -39,7 +46,7 @@
                 <td class="text-right"><a class="abm-link" href="{{ route('sizes.index', ['edit' => $size->id]) }}">Editar</a></td>
             </tr>
         @empty
-            <tr><td colspan="3"><x-empty title="No hay medidas" /></td></tr>
+            <tr><td colspan="3"><x-empty title="No hay medidas" action="Nueva medida" :href="route('sizes.index')" /></td></tr>
         @endforelse
         </tbody>
     </x-content-table>

@@ -9,8 +9,14 @@
         @csrf
         @if($editing) @method('PUT') @endif
         <div class="toolbar">
-            <input name="name" class="inp" value="{{ old('name', $editing?->name) }}" placeholder="Nombre" required>
-            <input name="code" class="inp" value="{{ old('code', $editing?->code) }}" placeholder="Código" required>
+            <label class="field"><span>Nombre</span>
+                <input name="name" class="inp" value="{{ old('name', $editing?->name) }}" required>
+                <x-field-error name="name" />
+            </label>
+            <label class="field"><span>Código</span>
+                <input name="code" class="inp" value="{{ old('code', $editing?->code) }}" required>
+                <x-field-error name="code" />
+            </label>
             @if($editing)
                 <label class="abm-check"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $editing->is_active))> Activa</label>
             @endif
@@ -52,7 +58,7 @@
                 <td class="text-right"><a class="abm-link" href="{{ route('fleets.index', ['edit' => $fleet->id]) }}">Editar</a></td>
             </tr>
         @empty
-            <tr><td colspan="4"><x-empty title="No hay flotas" /></td></tr>
+            <tr><td colspan="4"><x-empty title="No hay flotas" action="Nueva flota" :href="route('fleets.index')" /></td></tr>
         @endforelse
         </tbody>
     </x-content-table>

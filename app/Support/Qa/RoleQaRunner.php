@@ -19,8 +19,10 @@ use App\Models\TireSize;
 use App\Models\UnitConfiguration;
 use App\Models\UnitType;
 use App\Models\User;
+use App\Services\PurchaseService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
+use Illuminate\Testing\TestResponse;
 
 class RoleQaRunner
 {
@@ -88,7 +90,7 @@ class RoleQaRunner
         if (! $this->browseTire) {
             $model = TireModel::where('code', 'FH:01')->firstOrFail();
             $size = $model->sizes()->where('code', '295/80 R22.5')->first() ?: $model->sizes()->first();
-            $purchase = app(\App\Services\PurchaseService::class)->create([
+            $purchase = app(PurchaseService::class)->create([
                 'supplier_id' => Supplier::first()->id,
                 'base_id' => Base::first()->id,
                 'purchased_at' => now()->toDateString(),
@@ -100,7 +102,7 @@ class RoleQaRunner
                     'first_number' => $this->takeNumbers(1),
                 ]],
             ], $admin);
-            app(\App\Services\PurchaseService::class)->confirm($purchase, $admin);
+            app(PurchaseService::class)->confirm($purchase, $admin);
             $this->browseTire = Tire::orderByDesc('id')->first();
         }
     }
@@ -401,6 +403,7 @@ class RoleQaRunner
                 $this->hit($user, 'Cambio de configuración 6X4→6X2', 'POST', route('units.configuration', $tractor), [
                     'unit_configuration_id' => $cfg62->id,
                     'reason' => 'QA urbana a ripio',
+                    'odometer' => $tractor->current_odometer,
                 ], [302], true);
             }
         } else {
@@ -594,9 +597,9 @@ class RoleQaRunner
                 'DELETE' => $this->http->delete($url, $data),
                 default => throw new \InvalidArgumentException($method),
             };
-            $response = $raw instanceof \Illuminate\Testing\TestResponse
+            $response = $raw instanceof TestResponse
                 ? $raw
-                : \Illuminate\Testing\TestResponse::fromBaseResponse($raw);
+                : TestResponse::fromBaseResponse($raw);
             $status = $response->status();
             $flash = null;
             $error = null;

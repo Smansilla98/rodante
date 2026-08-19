@@ -1,0 +1,34 @@
+# Used by Railway (single container). Listens on $PORT and proxies to PHP-FPM.
+# docker-compose keeps a separate nginx sidecar talking to the `app` service.
+
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen LISTEN_PORT default_server;
+    server_name _;
+    root /var/www/html/public;
+    index index.php;
+    client_max_body_size 32M;
+
+    add_header X-Frame-Options SAMEORIGIN always;
+    add_header X-Content-Type-Options nosniff always;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include fastcgi_params;
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        fastcgi_param DOCUMENT_ROOT $realpath_root;
+        fastcgi_read_timeout 120s;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}

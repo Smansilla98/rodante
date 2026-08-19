@@ -2,7 +2,11 @@
 @section('kicker', 'Compra')
 @section('title', $purchase->number)
 @section('content')
-<x-page-header kicker="Compra" :title="$purchase->number" :subtitle="$purchase->supplier->name.' · '.$purchase->purchased_at->format('d/m/Y')">
+<x-page-header kicker="Compra" :title="$purchase->number" :subtitle="$purchase->supplier->name.' · '.$purchase->purchased_at->format('d/m/Y')" :crumbs="[
+    ['label' => 'Tablero', 'url' => route('dashboard')],
+    ['label' => 'Compras', 'url' => route('purchases.index')],
+    ['label' => $purchase->number],
+]">
     <x-slot:actions>
         <a href="{{ route('purchases.index') }}" class="btn btn-ghost"><x-icon name="back" class="w-4 h-4" /> Compras</a>
         @if(auth()->user()->role->canManageAbm() && ! $purchase->isConfirmed())
@@ -88,8 +92,9 @@
         </tbody>
     </x-content-table>
     @if(! $purchase->isConfirmed() && auth()->user()->role->canWrite())
-        <form method="POST" action="{{ route('purchases.confirm', $purchase) }}" class="mt-6">
+        <form method="POST" action="{{ route('purchases.confirm', $purchase) }}" class="mt-6" data-confirm="Al confirmar, las cubiertas ingresan a stock con su número individual. El borrador deja de poder anularse. ¿Confirmar la compra?">
             @csrf
+            <p class="hint mb-3">Confirmá solo si los números y la medida están bien. Después las cubiertas quedan en stock listas para instalar.</p>
             <button class="btn btn-primary">Confirmar e ingresar a stock</button>
         </form>
     @endif

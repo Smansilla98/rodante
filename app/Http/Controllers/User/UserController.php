@@ -7,19 +7,28 @@ use App\Http\Controllers\Controller;
 use App\Models\Base;
 use App\Models\Fleet;
 use App\Models\User;
+use App\Support\AccessScope;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $users = User::with('fleets', 'bases')->orderBy('name');
+        AccessScope::applyCompany($users, $request->user());
+        $fleets = Fleet::orderBy('name');
+        AccessScope::applyCompany($fleets, $request->user());
+        $bases = Base::orderBy('name');
+        AccessScope::applyCompany($bases, $request->user());
+
         return view('users.index', [
-            'users' => User::with('fleets', 'bases')->orderBy('name')->get(),
+            'users' => $users->get(),
             'roles' => UserRole::cases(),
-            'fleets' => Fleet::orderBy('name')->get(),
-            'bases' => Base::orderBy('name')->get(),
+            'fleets' => $fleets->get(),
+            'bases' => $bases->get(),
         ]);
     }
 
@@ -27,6 +36,7 @@ class UserController extends Controller
     {
         $data = $this->validated($request);
         $user = User::create([
+            'company_id' => $request->user()->company_id,
             'name' => $data['name'],
             'username' => $data['username'],
             'email' => $data['email'] ?? null,
@@ -42,6 +52,7 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        abort_unless((int) $user->company_id === (int) $request->user()->company_id, 404);
         $data = $this->validated($request, $user);
         $payload = [
             'name' => $data['name'],
@@ -62,6 +73,7 @@ class UserController extends Controller
 
     public function destroy(Request $request, User $user)
     {
+        abort_unless((int) $user->company_id === (int) $request->user()->company_id, 404);
         if ($user->is($request->user())) {
             return back()->withErrors(['delete' => 'No podés eliminar tu propio usuario.']);
         }
@@ -80,7 +92,9 @@ class UserController extends Controller
 
     private function validated(Request $request, ?User $user = null): array
     {
-        $password = $user ? 'nullable|string|min:6' : 'required|string|min:6';
+        $password = $user
+            ? ['nullable', 'string', Password::min(8)]
+            : ['required', 'string', Password::min(8)];
 
         return $request->validate([
             'name' => 'required|string|max:80',

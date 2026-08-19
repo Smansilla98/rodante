@@ -8,9 +8,16 @@
     <form method="POST" action="{{ $editing ? route('suppliers.update', $editing) : route('suppliers.store') }}" class="toolbar">
         @csrf
         @if($editing) @method('PUT') @endif
-        <input name="name" value="{{ old('name', $editing?->name) }}" placeholder="Nombre" required>
-        <input name="tax_id" value="{{ old('tax_id', $editing?->tax_id) }}" placeholder="CUIT">
-        <input name="phone" value="{{ old('phone', $editing?->phone) }}" placeholder="Teléfono">
+        <label class="field"><span>Nombre</span>
+            <input name="name" class="inp" value="{{ old('name', $editing?->name) }}" required>
+            <x-field-error name="name" />
+        </label>
+        <label class="field"><span>CUIT</span>
+            <input name="tax_id" class="inp" value="{{ old('tax_id', $editing?->tax_id) }}">
+        </label>
+        <label class="field"><span>Teléfono</span>
+            <input name="phone" class="inp" value="{{ old('phone', $editing?->phone) }}">
+        </label>
         @if($editing)
             <label class="abm-check"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $editing->is_active))> Activo</label>
         @endif
@@ -39,7 +46,7 @@
                 <td class="text-right"><a class="abm-link" href="{{ route('suppliers.index', ['edit' => $supplier->id]) }}">Editar</a></td>
             </tr>
         @empty
-            <tr><td colspan="3"><x-empty title="No hay proveedores" /></td></tr>
+            <tr><td colspan="3"><x-empty title="No hay proveedores" action="Nuevo proveedor" :href="route('suppliers.index')" /></td></tr>
         @endforelse
         </tbody>
     </x-content-table>

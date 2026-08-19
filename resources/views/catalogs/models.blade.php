@@ -9,18 +9,27 @@
         @csrf
         @if($editing) @method('PUT') @endif
         <div class="grid md:grid-cols-4 gap-2">
+            <label class="field"><span>Marca</span>
             <select name="tire_brand_id" class="inp">
                 @foreach($brands as $brand)
                     <option value="{{ $brand->id }}" @selected((string) old('tire_brand_id', $editing?->tire_brand_id) === (string) $brand->id)>{{ $brand->name }}</option>
                 @endforeach
             </select>
-            <input name="code" class="inp" value="{{ old('code', $editing?->code) }}" placeholder="Código (FH:01)" required>
-            <input name="name" class="inp" value="{{ old('name', $editing?->name) }}" placeholder="Nombre">
+            </label>
+            <label class="field"><span>Código</span>
+                <input name="code" class="inp" value="{{ old('code', $editing?->code) }}" required>
+                <x-field-error name="code" />
+            </label>
+            <label class="field"><span>Nombre</span>
+                <input name="name" class="inp" value="{{ old('name', $editing?->name) }}">
+            </label>
+            <label class="field"><span>Aplicación</span>
             <select name="application" class="inp" required>
                 @foreach($applications as $application)
                     <option value="{{ $application->value }}" @selected(old('application', $editing?->application?->value) === $application->value)>{{ $application->label() }}</option>
                 @endforeach
             </select>
+            </label>
         </div>
         <div class="abm-sizes">
             @foreach($sizes as $size)
@@ -64,7 +73,7 @@
                 <td class="text-right"><a class="abm-link" href="{{ route('models.index', ['edit' => $model->id]) }}">Editar</a></td>
             </tr>
         @empty
-            <tr><td colspan="6"><x-empty title="No hay modelos" /></td></tr>
+            <tr><td colspan="6"><x-empty title="No hay modelos" action="Nuevo modelo" :href="route('models.index')" /></td></tr>
         @endforelse
         </tbody>
     </x-content-table>

@@ -3,8 +3,14 @@
 namespace Tests\Feature;
 
 use App\Enums\UserRole;
+use App\Models\Base;
+use App\Models\OdometerReading;
+use App\Models\Supplier;
 use App\Models\TireBrand;
+use App\Models\TireModel;
 use App\Models\User;
+use App\Services\PurchaseService;
+use App\Services\TireOperationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesDomain;
 use Tests\TestCase;
@@ -77,14 +83,14 @@ class AdminAbmTest extends TestCase
     public function test_admin_can_discard_draft_purchase(): void
     {
         $this->get(route('purchases.create'))->assertOk();
-        $purchase = app(\App\Services\PurchaseService::class)->create([
-            'supplier_id' => \App\Models\Supplier::first()->id,
-            'base_id' => \App\Models\Base::first()->id,
+        $purchase = app(PurchaseService::class)->create([
+            'supplier_id' => Supplier::first()->id,
+            'base_id' => Base::first()->id,
             'purchased_at' => now()->toDateString(),
             'items' => [[
-                'tire_brand_id' => \App\Models\TireModel::first()->tire_brand_id,
-                'tire_model_id' => \App\Models\TireModel::first()->id,
-                'tire_size_id' => \App\Models\TireModel::first()->sizes()->first()->id,
+                'tire_brand_id' => TireModel::first()->tire_brand_id,
+                'tire_model_id' => TireModel::first()->id,
+                'tire_size_id' => TireModel::first()->sizes()->first()->id,
                 'quantity' => 1,
                 'first_number' => 90001,
             ]],
@@ -101,7 +107,7 @@ class AdminAbmTest extends TestCase
         $unit = $this->createTractor();
         [$tire] = $this->purchaseTires(1, 91000);
         $position = $unit->configuration->positions()->where('is_spare', false)->first();
-        $ops = app(\App\Services\TireOperationService::class);
+        $ops = app(TireOperationService::class);
         $ops->execute($unit, [
             'odometer' => 100500,
             'installations' => [['tire_id' => $tire->id, 'position_id' => $position->id]],
@@ -111,11 +117,15 @@ class AdminAbmTest extends TestCase
             'removals' => [['tire_id' => $tire->id]],
         ], $this->admin);
 
-        $this->assertEquals(1, \App\Models\OdometerReading::count());
-        $reading = \App\Models\OdometerReading::first();
+        $this->assertEquals(1, OdometerReading::count());
+        $reading = OdometerReading::first();
         $this->assertEquals('VALIDATED', $reading->status->value);
 
-        $this->get(route('odometers.index'))->assertOk()->assertDontSee('Validar');
+        $this->get(route('odometers.index'))
+            ->assertOk()
+            ->assertDontSee('Validar')
+            ->assertDontSee('pagination.previous')
+            ->assertDontSee('pagination.next');
 
         $this->put(route('odometers.update', $reading), [
             '_token' => csrf_token(),

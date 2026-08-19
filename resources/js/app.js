@@ -203,6 +203,38 @@ const recambio = () => {
     }
 
     const byId = Object.fromEntries(slots.map((slot) => [String(slot.id), slot]));
+    const stockUrl = document.getElementById('stockPool')?.dataset.url || document.getElementById('stockSearch')?.dataset.url;
+    const loadSlotStock = async (slot) => {
+        if (!stockUrl) {
+            return slot.stock || [];
+        }
+        const url = new URL(stockUrl, window.location.origin);
+        url.searchParams.set('position_id', String(slot.id));
+        const q = document.getElementById('stockSearch')?.value?.trim();
+        if (q) {
+            url.searchParams.set('q', q);
+        }
+        try {
+            const res = await fetch(url, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+            const json = await res.json();
+            const stock = json.data || [];
+            slot.stock = stock;
+            return stock;
+        } catch {
+            return slot.stock || [];
+        }
+    };
+    const applyStockDrop = (target, tireId) => {
+        selectSlot(target.id);
+        window.setTimeout(() => {
+            if (target.empty) {
+                installTire.value = String(tireId);
+            } else {
+                showAction('cambio');
+                cambioTire.value = String(tireId);
+            }
+        }, 400);
+    };
     const odometer = document.getElementById('sheetOdometer');
     const idle = document.getElementById('recambioIdle');
     const panel = document.getElementById('recambioPanel');
@@ -322,6 +354,8 @@ const recambio = () => {
         measureSubmit.hidden = !hasZones;
     };
 
+    const kmFmt = new Intl.NumberFormat('es-AR');
+
     const fillFacts = (tire) => {
         const list = document.getElementById('tireFactsList');
         list.innerHTML = '';
@@ -398,12 +432,14 @@ const recambio = () => {
             installForm.hidden = false;
             mounted.hidden = true;
             document.getElementById('installPosition').value = slot.id;
-            fillSelect(installTire, slot.stock, 'Elegir cubierta');
-            const hasStock = slot.stock.length > 0;
-            installEmpty.hidden = hasStock;
-            installTire.hidden = !hasStock;
-            installSubmit.hidden = !hasStock;
-            installTire.required = hasStock;
+            loadSlotStock(slot).then((stock) => {
+                fillSelect(installTire, stock, 'Elegir cubierta');
+                const hasStock = stock.length > 0;
+                installEmpty.hidden = hasStock;
+                installTire.hidden = !hasStock;
+                installSubmit.hidden = !hasStock;
+                installTire.required = hasStock;
+            });
             return;
         }
 
@@ -419,12 +455,14 @@ const recambio = () => {
         document.getElementById('incidenciaPosition').value = slot.id;
         document.getElementById('medicionPosition').value = slot.id;
         fillMeasureZones(slot.tire.zones);
-        fillSelect(cambioTire, slot.stock, 'Elegir cubierta nueva');
-        const hasStock = slot.stock.length > 0;
-        cambioEmpty.hidden = hasStock;
-        cambioTire.hidden = !hasStock;
-        cambioSubmit.hidden = !hasStock;
-        cambioTire.required = hasStock;
+        loadSlotStock(slot).then((stock) => {
+            fillSelect(cambioTire, stock, 'Elegir cubierta nueva');
+            const hasStock = stock.length > 0;
+            cambioEmpty.hidden = hasStock;
+            cambioTire.hidden = !hasStock;
+            cambioSubmit.hidden = !hasStock;
+            cambioTire.required = hasStock;
+        });
         fillSelect(rotatePosition, slot.rotateTo, 'Ubicación libre');
         const canRotate = slot.rotateTo.length > 0;
         rotateEmpty.hidden = canRotate;
@@ -434,16 +472,15 @@ const recambio = () => {
         showAction('cambio');
     };
 
-    document.querySelectorAll('.tire-box--action[data-slot]').forEach((box) => {
-        box.addEventListener('click', () => selectSlot(box.dataset.slot));
-    });
-
     const clearDrop = () => {
         document.querySelectorAll('.is-drop').forEach((el) => el.classList.remove('is-drop'));
     };
 
     const targetsFor = (payload) => {
         if (payload.kind === 'stock') {
+            if (payload.positions) {
+                return slots.filter((slot) => payload.positions.includes(slot.id) || payload.positions.includes(Number(slot.id)));
+            }
             return slots.filter((slot) => slot.stock.some((item) => String(item.id) === String(payload.tireId)));
         }
         const origin = byId[String(payload.slotId)];
@@ -469,17 +506,22 @@ const recambio = () => {
             return;
         }
         if (payload.kind === 'stock') {
-            const allowed = target.stock.some((item) => String(item.id) === String(payload.tireId));
+            const allowed = target.stock.some((item) => String(item.id) === String(payload.tireId))
+                || (payload.positions && payload.positions.map(String).includes(String(target.id)));
+            if (!allowed && !payload.positions) {
+                loadSlotStock(target).then((stock) => {
+                    const ok = stock.some((item) => String(item.id) === String(payload.tireId));
+                    if (!ok) {
+                        return;
+                    }
+                    applyStockDrop(target, payload.tireId);
+                });
+                return;
+            }
             if (!allowed) {
                 return;
             }
-            selectSlot(target.id);
-            if (target.empty) {
-                installTire.value = String(payload.tireId);
-            } else {
-                showAction('cambio');
-                cambioTire.value = String(payload.tireId);
-            }
+            applyStockDrop(target, payload.tireId);
             return;
         }
         if (String(payload.slotId) === String(target.id)) {
@@ -495,6 +537,9 @@ const recambio = () => {
         rotatePosition.value = String(target.id);
     };
 
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    let pickedStockId = null;
+    let pickedPositions = null;
     const bindDrag = (el, payload) => {
         el.addEventListener('dragstart', (event) => {
             event.dataTransfer.setData('application/json', JSON.stringify(payload));
@@ -507,13 +552,89 @@ const recambio = () => {
             clearDrop();
         });
     };
+    const bindChip = (chip) => {
+        if (coarse) {
+            chip.removeAttribute('draggable');
+        }
+        chip.addEventListener('click', async () => {
+            pickedStockId = chip.dataset.tireId;
+            document.querySelectorAll('.stock-chip[data-tire-id]').forEach((other) => other.classList.toggle('is-on', other === chip));
+            pickedPositions = null;
+            if (stockUrl) {
+                const url = new URL(stockUrl, window.location.origin);
+                url.searchParams.set('tire_id', pickedStockId);
+                try {
+                    const res = await fetch(url, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+                    const json = await res.json();
+                    pickedPositions = json.positions || [];
+                } catch {
+                    pickedPositions = [];
+                }
+            }
+            markTargets({ kind: 'stock', tireId: pickedStockId, positions: pickedPositions });
+        });
+        if (!coarse) {
+            bindDrag(chip, { kind: 'stock', tireId: chip.dataset.tireId });
+        }
+    };
+    document.querySelectorAll('.stock-chip[data-tire-id]').forEach(bindChip);
 
-    document.querySelectorAll('.stock-chip[data-tire-id]').forEach((chip) => {
-        bindDrag(chip, { kind: 'stock', tireId: chip.dataset.tireId });
+    const stockSearch = document.getElementById('stockSearch');
+    let searchTimer = null;
+    const renderStockChips = (items) => {
+        const pool = document.getElementById('stockPool');
+        if (!pool) {
+            return;
+        }
+        pool.querySelectorAll('.stock-chip').forEach((el) => el.remove());
+        const empty = pool.querySelector('.stock-rail__empty');
+        if (empty) {
+            empty.hidden = items.length > 0;
+        }
+        items.forEach((item) => {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'stock-chip';
+            chip.dataset.tireId = String(item.id);
+            chip.innerHTML = `<strong>${item.name || item.label}</strong><span>${item.meta || ''}</span>`;
+            pool.append(chip);
+            bindChip(chip);
+        });
+    };
+    stockSearch?.addEventListener('input', () => {
+        window.clearTimeout(searchTimer);
+        searchTimer = window.setTimeout(async () => {
+            if (!stockUrl) {
+                return;
+            }
+            const url = new URL(stockUrl, window.location.origin);
+            if (stockSearch.value.trim()) {
+                url.searchParams.set('q', stockSearch.value.trim());
+            }
+            const res = await fetch(url, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
+            const json = await res.json();
+            renderStockChips(json.data || []);
+        }, 250);
     });
-    document.querySelectorAll('.tire-box--action[data-tire-id]').forEach((box) => {
-        bindDrag(box, { kind: 'slot', slotId: box.dataset.slot, tireId: box.dataset.tireId });
+
+    document.querySelectorAll('.tire-box--action[data-slot]').forEach((box) => {
+        box.addEventListener('click', () => {
+            if (pickedStockId) {
+                handleDrop(box.dataset.slot, { kind: 'stock', tireId: pickedStockId });
+                pickedStockId = null;
+                chips.forEach((chip) => chip.classList.remove('is-on'));
+                clearDrop();
+                return;
+            }
+            selectSlot(box.dataset.slot);
+        });
     });
+
+    if (!coarse) {
+        document.querySelectorAll('.tire-box--action[data-tire-id]').forEach((box) => {
+            bindDrag(box, { kind: 'slot', slotId: box.dataset.slot, tireId: box.dataset.tireId });
+        });
+    }
 
     const droppables = [
         ...document.querySelectorAll('.tire-box--action[data-slot]'),
@@ -602,3 +723,163 @@ const recambio = () => {
 };
 
 recambio();
+
+const bindSearchSuggest = () => {
+    const form = document.querySelector('.top-search[data-suggest]');
+    const input = document.getElementById('topSearch');
+    const box = document.getElementById('searchSuggest');
+    if (!form || !input || !box) {
+        return;
+    }
+    const url = form.dataset.suggest;
+    let timer = 0;
+    let seq = 0;
+    let active = -1;
+    let links = [];
+
+    const hide = () => {
+        box.hidden = true;
+        box.innerHTML = '';
+        input.setAttribute('aria-expanded', 'false');
+        active = -1;
+        links = [];
+    };
+
+    const paint = (items) => {
+        box.innerHTML = '';
+        if (!items.length) {
+            const empty = document.createElement('div');
+            empty.className = 'search-suggest__empty';
+            empty.textContent = 'No hay coincidencias. Enter busca en el listado.';
+            box.append(empty);
+            box.hidden = false;
+            input.setAttribute('aria-expanded', 'true');
+            links = [];
+            return;
+        }
+        items.forEach((item, index) => {
+            const a = document.createElement('a');
+            a.href = item.url;
+            a.id = `searchOpt${index}`;
+            a.setAttribute('role', 'option');
+            a.innerHTML = `<span class="search-suggest__type">${item.type_label}</span><strong>${item.label}</strong><span class="search-suggest__hint">${item.hint || ''}</span>`;
+            box.append(a);
+        });
+        links = [...box.querySelectorAll('a')];
+        box.hidden = false;
+        input.setAttribute('aria-expanded', 'true');
+        active = -1;
+    };
+
+    const lookup = () => {
+        const term = input.value.trim();
+        if (term.length < 2) {
+            hide();
+            return;
+        }
+        const n = ++seq;
+        fetch(`${url}?q=${encodeURIComponent(term)}`, { headers: { Accept: 'application/json' } })
+            .then((res) => res.json())
+            .then((data) => {
+                if (n !== seq) {
+                    return;
+                }
+                paint(data.items || []);
+            })
+            .catch(() => {
+                if (n === seq) {
+                    hide();
+                }
+            });
+    };
+
+    input.addEventListener('input', () => {
+        window.clearTimeout(timer);
+        timer = window.setTimeout(lookup, 180);
+    });
+    input.addEventListener('focus', () => {
+        if (input.value.trim().length >= 2) {
+            lookup();
+        }
+    });
+    input.addEventListener('keydown', (event) => {
+        if (box.hidden || !links.length) {
+            return;
+        }
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            active = (active + 1) % links.length;
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            active = (active - 1 + links.length) % links.length;
+        } else if (event.key === 'Enter' && active >= 0) {
+            event.preventDefault();
+            links[active].click();
+            return;
+        } else if (event.key === 'Escape') {
+            hide();
+            return;
+        } else {
+            return;
+        }
+        links.forEach((link, index) => link.classList.toggle('is-on', index === active));
+        links[active]?.scrollIntoView({ block: 'nearest' });
+    });
+    document.addEventListener('click', (event) => {
+        if (!form.contains(event.target)) {
+            hide();
+        }
+    });
+};
+bindSearchSuggest();
+
+document.addEventListener('submit', (event) => {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) {
+        return;
+    }
+    if ((form.method || 'get').toLowerCase() === 'get') {
+        return;
+    }
+    if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
+        event.preventDefault();
+        return;
+    }
+    if (form.dataset.submitting === '1') {
+        event.preventDefault();
+        return;
+    }
+    form.dataset.submitting = '1';
+    const button = form.querySelector('button[type="submit"], button:not([type]), input[type="submit"]');
+    if (button && !button.disabled) {
+        button.disabled = true;
+        if (button.tagName === 'BUTTON' && !button.dataset.label) {
+            button.dataset.label = button.textContent;
+            button.textContent = 'Guardando…';
+        }
+    }
+});
+
+(window.__rodanteFieldErrors || []).forEach((name) => {
+    document.querySelectorAll(`[name="${name}"]`).forEach((el) => {
+        el.setAttribute('aria-invalid', 'true');
+    });
+});
+
+document.querySelectorAll('.flash.toast').forEach((el) => {
+    window.setTimeout(() => {
+        el.classList.add('is-out');
+        window.setTimeout(() => el.remove(), 350);
+    }, 6500);
+});
+
+document.querySelectorAll('.table-responsive table').forEach((table) => {
+    const headers = [...table.querySelectorAll('thead th')].map((th) => th.textContent.trim());
+    table.querySelectorAll('tbody tr').forEach((tr) => {
+        [...tr.children].forEach((td, i) => {
+            if (headers[i]) {
+                td.setAttribute('data-label', headers[i]);
+            }
+        });
+    });
+});

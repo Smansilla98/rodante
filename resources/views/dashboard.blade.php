@@ -2,15 +2,19 @@
 @section('kicker', 'Inicio')
 @section('title', 'Tablero')
 @section('content')
-@php $s = $stats; @endphp
+@php
+    $s = $stats;
+    $kpis = auth()->user()->role->dashboardKpis();
+@endphp
 
 <x-page-header
     kicker="Inicio"
     title="Tablero"
-    subtitle="Hola, {{ auth()->user()->name }}. Acá ves el estado de las cubiertas, el stock y los odómetros. Tocá una tarjeta para entrar."
+    subtitle="Hola, {{ auth()->user()->name }}."
 />
 
 <div class="kpi-grid mb-8">
+    @if(in_array('total', $kpis, true))
     <a class="kpi kpi--blue" href="{{ route('tires.index') }}">
         <span class="kpi__ico" aria-hidden="true"><x-icon name="circle" class="w-6 h-6" /></span>
         <div>
@@ -18,6 +22,8 @@
             <div class="kpi__v">{{ $s['total'] }}</div>
         </div>
     </a>
+    @endif
+    @if(in_array('stock', $kpis, true))
     <a class="kpi kpi--indigo" href="{{ route('tires.stock') }}">
         <span class="kpi__ico" aria-hidden="true"><x-icon name="boxes" class="w-6 h-6" /></span>
         <div>
@@ -25,6 +31,8 @@
             <div class="kpi__v">{{ $s['by_status']['STOCK'] ?? 0 }}</div>
         </div>
     </a>
+    @endif
+    @if(in_array('installed', $kpis, true))
     <a class="kpi kpi--teal" href="{{ route('tires.index', ['status' => 'INSTALADA']) }}">
         <span class="kpi__ico" aria-hidden="true"><x-icon name="truck" class="w-6 h-6" /></span>
         <div>
@@ -32,6 +40,8 @@
             <div class="kpi__v">{{ $s['by_status']['INSTALADA'] ?? 0 }}</div>
         </div>
     </a>
+    @endif
+    @if(in_array('reserve', $kpis, true))
     <a class="kpi kpi--amber" href="{{ route('tires.index', ['status' => 'RESERVA']) }}">
         <span class="kpi__ico" aria-hidden="true"><x-icon name="inbox" class="w-6 h-6" /></span>
         <div>
@@ -39,6 +49,8 @@
             <div class="kpi__v">{{ $s['by_status']['RESERVA'] ?? 0 }}</div>
         </div>
     </a>
+    @endif
+    @if(in_array('spare', $kpis, true))
     <a class="kpi kpi--violet" href="{{ route('tires.index', ['status' => 'AUXILIO']) }}">
         <span class="kpi__ico" aria-hidden="true"><x-icon name="grid" class="w-6 h-6" /></span>
         <div>
@@ -46,6 +58,8 @@
             <div class="kpi__v">{{ $s['by_status']['AUXILIO'] ?? 0 }}</div>
         </div>
     </a>
+    @endif
+    @if(in_array('repair', $kpis, true))
     <a class="kpi kpi--cyan" href="{{ route('tires.index', ['status' => 'EN_REPARACION']) }}">
         <span class="kpi__ico" aria-hidden="true"><x-icon name="alert" class="w-6 h-6" /></span>
         <div>
@@ -53,6 +67,8 @@
             <div class="kpi__v">{{ $s['by_status']['EN_REPARACION'] ?? 0 }}</div>
         </div>
     </a>
+    @endif
+    @if(in_array('retired', $kpis, true))
     <a class="kpi kpi--red" href="{{ route('tires.index', ['status' => 'DE_BAJA']) }}">
         <span class="kpi__ico" aria-hidden="true"><x-icon name="shield" class="w-6 h-6" /></span>
         <div>
@@ -60,12 +76,54 @@
             <div class="kpi__v">{{ $s['by_status']['DE_BAJA'] ?? 0 }}</div>
         </div>
     </a>
+    @endif
+    @if(in_array('km', $kpis, true))
     <a class="kpi kpi--slate" href="{{ route('reports.kilometers') }}">
         <span class="kpi__ico" aria-hidden="true"><x-icon name="chart" class="w-6 h-6" /></span>
         <div>
             <div class="kpi__l">Kilómetros acumulados</div>
             <div class="kpi__v">{{ number_format($s['km_total']) }}</div>
         </div>
+    </a>
+    @endif
+</div>
+
+<div class="queue-grid mb-8">
+    <a class="queue queue--repair" href="{{ route('tires.index', ['queue' => 'repair']) }}">
+        <div class="queue__l">Cola de reparación</div>
+        <div class="queue__v">{{ $s['in_repair_count'] }}</div>
+        <div class="queue__s">Pinchadura o parche. Vuelven a stock sin recapar.</div>
+        @if($s['in_repair']->isNotEmpty())
+            <ul class="queue__list">
+                @foreach($s['in_repair']->take(4) as $tire)
+                    <li>{{ $tire->displayName() }}</li>
+                @endforeach
+            </ul>
+        @endif
+    </a>
+    <a class="queue queue--tread" href="{{ route('tires.index', ['queue' => 'tread']) }}">
+        <div class="queue__l">Profundidad crítica</div>
+        <div class="queue__v">{{ $s['critical_tread_count'] }}</div>
+        <div class="queue__s">Umbral {{ $s['thresholds']['mm'] }} mm o menos.</div>
+        @if($s['critical_tread']->isNotEmpty())
+            <ul class="queue__list">
+                @foreach($s['critical_tread']->take(4) as $tire)
+                    <li>{{ $tire->displayName() }} · {{ $tire->current_tread_min }} mm</li>
+                @endforeach
+            </ul>
+        @endif
+    </a>
+    <a class="queue queue--retire" href="{{ route('tires.index', ['queue' => 'retirement']) }}">
+        <div class="queue__l">Próximas a baja</div>
+        <div class="queue__v">{{ $s['near_retirement_count'] }}</div>
+        <div class="queue__s">{{ number_format($s['thresholds']['km']) }} km o {{ $s['thresholds']['mm'] }} mm.</div>
+        @if($s['near_retirement']->isNotEmpty())
+            <ul class="queue__list">
+                @foreach($s['near_retirement']->take(4) as $tire)
+                    <li>{{ $tire->displayName() }}</li>
+                @endforeach
+            </ul>
+        @endif
     </a>
 </div>
 
@@ -115,13 +173,16 @@
                     <td class="text-right mono">{{ $row->total }}</td>
                 </tr>
             @empty
-                <tr><td colspan="2"><x-empty title="Sin cubiertas cargadas" /></td></tr>
+                <tr><td colspan="2"><x-empty title="Sin cubiertas cargadas" :action="auth()->user()->role->canWrite() ? 'Nueva compra' : null" :href="route('purchases.create')" /></td></tr>
             @endforelse
             </tbody>
         </x-content-table>
     </x-panel>
 
-    <x-panel title="Próximas a baja" :flush="true">
+    <x-panel title="Próximas a baja ({{ number_format($s['thresholds']['km']) }} km o {{ $s['thresholds']['mm'] }} mm)" :flush="true">
+        <x-slot:toolbar>
+            <a class="btn btn-ghost btn-sm" href="{{ route('tires.index', ['queue' => 'retirement']) }}">Ver cola</a>
+        </x-slot:toolbar>
         <x-content-table :small="true">
             <thead>
                 <tr>
@@ -177,7 +238,7 @@
             <tbody>
             @forelse($s['units_with_incidents'] as $row)
                 <tr>
-                    <td>{{ $row['plate'] }}</td>
+                    <td><a href="{{ route('units.show', $row['id']) }}">{{ $row['plate'] }}</a></td>
                     <td class="text-right mono">{{ $row['total'] }}</td>
                 </tr>
             @empty

@@ -24,9 +24,10 @@
                 <td class="mono">{{ $tire->repairs_count }}</td>
             </tr>
         @empty
-            <tr><td colspan="5"><x-empty title="Sin datos" /></td></tr>
+            <tr><td colspan="5"><x-empty title="Sin datos" text="Cuando haya cubiertas, aparecen acá con sus kilómetros." /></td></tr>
         @endforelse
         </tbody>
     </x-content-table>
+    <div class="pager">{{ $tires->links() }}</div>
 </x-panel>
 @endsection

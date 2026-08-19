@@ -17,9 +17,10 @@ class ConfigurationChangeService
     public function __construct(
         private LocationService $locations,
         private AuditService $audit,
+        private OdometerService $odometers,
     ) {}
 
-    public function change(FleetUnit $unit, int $toConfigurationId, string $reason, User $user, ?string $notes = null): UnitConfigurationChange
+    public function change(FleetUnit $unit, int $toConfigurationId, string $reason, User $user, ?string $notes = null, ?int $odometer = null): UnitConfigurationChange
     {
         if (! $user->role->canChangeConfiguration()) {
             throw new DomainException('Solo el jefe de sector o un administrador pueden cambiar la configuración.');
@@ -34,8 +35,12 @@ class ConfigurationChangeService
             throw new DomainException('Esa configuración no aplica al tipo '.$unit->type->name.'.');
         }
 
-        return DB::transaction(function () use ($unit, $to, $reason, $user, $notes) {
+        return DB::transaction(function () use ($unit, $to, $reason, $user, $notes, $odometer) {
             $unit = FleetUnit::lockForUpdate()->findOrFail($unit->id);
+            if ($unit->hasOdometer() && $odometer !== null) {
+                $this->odometers->record($unit, $odometer, $user, null, 'Cambio de configuración');
+                $unit->refresh();
+            }
             $locations = TireCurrentLocation::where('unit_id', $unit->id)->lockForUpdate()->get();
 
             foreach ($locations as $location) {

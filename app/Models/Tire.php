@@ -4,7 +4,10 @@ namespace App\Models;
 
 use App\Enums\TireCondition;
 use App\Enums\TireStatus;
+use App\Models\Concerns\BelongsToCompany;
+use Database\Factories\TireFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,8 +15,11 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Tire extends Model
 {
+    /** @use HasFactory<TireFactory> */
+    use BelongsToCompany, HasFactory;
+
     protected $fillable = [
-        'individual_number', 'tire_brand_id', 'tire_model_id', 'tire_size_id',
+        'company_id', 'public_token', 'individual_number', 'tire_brand_id', 'tire_model_id', 'tire_size_id',
         'tire_purchase_item_id', 'current_lifecycle_id', 'status', 'condition',
         'accumulated_km', 'current_tread_min', 'purchased_at', 'retired_at',
     ];
@@ -126,6 +132,21 @@ class Tire extends Model
     public function openAssignment(): HasOne
     {
         return $this->hasOne(TireAssignment::class)->whereNull('ended_at');
+    }
+
+    public function numberChanges(): HasMany
+    {
+        return $this->hasMany(TireNumberChange::class)->orderByDesc('id');
+    }
+
+    public function workOrders(): HasMany
+    {
+        return $this->hasMany(WorkOrder::class);
+    }
+
+    public function costEntries(): HasMany
+    {
+        return $this->hasMany(CostEntry::class);
     }
 
     public function scopeInstallable(Builder $query): Builder

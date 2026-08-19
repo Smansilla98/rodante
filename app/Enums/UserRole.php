@@ -55,4 +55,16 @@ enum UserRole: string
     {
         return in_array($this, [self::Administrador, self::JefeSector, self::Logistica], true);
     }
+
+    public function dashboardKpis(): array
+    {
+        $all = ['total', 'stock', 'installed', 'reserve', 'spare', 'repair', 'retired', 'km'];
+
+        return match ($this) {
+            self::Consulta => ['total', 'installed', 'km'],
+            self::Operario => ['stock', 'installed', 'spare', 'repair'],
+            self::Logistica => ['stock', 'installed', 'reserve', 'repair'],
+            default => $all,
+        };
+    }
 }

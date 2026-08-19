@@ -1,9 +1,14 @@
 <?php
 
+use App\Exceptions\DomainException;
+use App\Http\Middleware\EnsureCapability;
+use App\Http\Middleware\EnsureRole;
+use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -16,14 +21,27 @@ return Application::configure(basePath: dirname(__DIR__))
         // Railway (y cualquier reverse proxy) termina TLS afuera: hace falta
         // confiar en X-Forwarded-* para URL HTTPS y cookies secure.
         $middleware->trustProxies(at: '*');
+        $middleware->appendToGroup('web', EnsureUserIsActive::class);
+        $middleware->appendToGroup('api', EnsureUserIsActive::class);
 
         $middleware->alias([
-            'role' => \App\Http\Middleware\EnsureRole::class,
-            'capability' => \App\Http\Middleware\EnsureCapability::class,
+            'role' => EnsureRole::class,
+            'capability' => EnsureCapability::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+        $exceptions->render(function (DomainException $e, Request $request) {
+            Log::warning('Regla de negocio: '.$e->getMessage(), [
+                'user_id' => $request->user()?->id,
+                'path' => $request->path(),
+            ]);
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+
+            return back()->withErrors(['error' => $e->getMessage()])->withInput();
+        });
     })->create();

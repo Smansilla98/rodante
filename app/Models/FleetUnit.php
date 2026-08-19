@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use App\Enums\UnitStatus;
+use App\Models\Concerns\BelongsToCompany;
+use Database\Factories\FleetUnitFactory;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -11,8 +14,11 @@ use Illuminate\Support\Collection;
 
 class FleetUnit extends Model
 {
+    /** @use HasFactory<FleetUnitFactory> */
+    use BelongsToCompany, HasFactory;
+
     protected $fillable = [
-        'fleet_id', 'base_id', 'unit_type_id', 'unit_configuration_id',
+        'company_id', 'fleet_id', 'base_id', 'unit_type_id', 'unit_configuration_id',
         'plate', 'brand', 'model_name', 'current_odometer', 'status', 'notes', 'specs',
     ];
 
