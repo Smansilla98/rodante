@@ -99,6 +99,7 @@
                     <input type="hidden" name="action" value="install">
                     <input type="hidden" name="odometer">
                     <input type="hidden" name="position_id" id="installPosition">
+                    <input type="hidden" name="expected_tire_id" id="installExpected" value="">
                     <p class="recambio-dock__idle mb-3">Ubicación vacía. Elegí una cubierta compatible de stock.</p>
                     <label class="field">
                         <span>Cubierta de stock</span>
@@ -129,6 +130,7 @@
                         <input type="hidden" name="action" value="cambio">
                         <input type="hidden" name="odometer">
                         <input type="hidden" name="position_id" id="cambioPosition">
+                        <input type="hidden" name="expected_tire_id" class="expected-tire">
                         <label class="field">
                             <span>Cubierta nueva</span>
                             <select name="tire_id" id="cambioTire" class="inp" required></select>
@@ -146,6 +148,7 @@
                         <input type="hidden" name="action" value="pinchadura">
                         <input type="hidden" name="odometer">
                         <input type="hidden" name="position_id" id="pinchaduraPosition">
+                        <input type="hidden" name="expected_tire_id" class="expected-tire">
                         <p class="recambio-dock__idle mb-3">Registra la pinchadura y manda la cubierta a reparación. La ubicación queda libre.</p>
                         <label class="field">
                             <span>Nota</span>
@@ -159,6 +162,8 @@
                         <input type="hidden" name="action" value="rotacion">
                         <input type="hidden" name="odometer">
                         <input type="hidden" name="position_id" id="rotacionFrom">
+                        <input type="hidden" name="expected_tire_id" class="expected-tire">
+                        <input type="hidden" name="expected_to_tire_id" id="expectedToTire">
                         <label class="field">
                             <span>Rotar o intercambiar con</span>
                             <select name="to_position_id" id="rotatePosition" class="inp" required></select>
@@ -176,6 +181,7 @@
                         <input type="hidden" name="action" value="retirar">
                         <input type="hidden" name="odometer">
                         <input type="hidden" name="position_id" id="retirarPosition">
+                        <input type="hidden" name="expected_tire_id" class="expected-tire">
                         <p class="recambio-dock__idle mb-3">Retira la cubierta de esta ubicación sin instalar otra.</p>
                         <label class="field">
                             <span>Motivo</span>
@@ -206,6 +212,7 @@
                         <input type="hidden" name="action" value="incidencia">
                         <input type="hidden" name="odometer">
                         <input type="hidden" name="position_id" id="incidenciaPosition">
+                        <input type="hidden" name="expected_tire_id" class="expected-tire">
                         <p class="recambio-dock__idle mb-3">La cubierta sigue montada. Usá pinchadura o cambio si hay que retirarla.</p>
                         <label class="field">
                             <span>Tipo</span>
@@ -232,6 +239,7 @@
                         <input type="hidden" name="action" value="medicion">
                         <input type="hidden" name="odometer">
                         <input type="hidden" name="position_id" id="medicionPosition">
+                        <input type="hidden" name="expected_tire_id" class="expected-tire">
                         <p class="recambio-dock__idle mb-3">Cargá la profundidad de cada franja. Un desgaste lateral disparado genera alerta.</p>
                         <div id="measureFields" class="space-y-2"></div>
                         <p class="recambio-dock__empty" id="measureEmpty" hidden>Esta medida no tiene franjas de profundidad configuradas.</p>

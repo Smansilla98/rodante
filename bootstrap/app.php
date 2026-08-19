@@ -1,6 +1,7 @@
 <?php
 
 use App\Exceptions\DomainException;
+use App\Exceptions\SheetConflictException;
 use App\Http\Middleware\EnsureCapability;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\EnsureUserIsActive;
@@ -33,6 +34,17 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+        $exceptions->render(function (SheetConflictException $e, Request $request) {
+            Log::warning('Conflicto de planilla: '.$e->getMessage(), [
+                'user_id' => $request->user()?->id,
+                'path' => $request->path(),
+            ]);
+            if ($request->expectsJson() || $request->is('api/*')) {
+                return response()->json(['message' => $e->getMessage()], 409);
+            }
+
+            return back()->withErrors(['operation' => $e->getMessage()])->withInput();
+        });
         $exceptions->render(function (DomainException $e, Request $request) {
             Log::warning('Regla de negocio: '.$e->getMessage(), [
                 'user_id' => $request->user()?->id,

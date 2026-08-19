@@ -131,6 +131,9 @@ const fillSelect = (select, items, placeholder) => {
         const option = document.createElement('option');
         option.value = String(item.id);
         option.textContent = item.label || item.code || item.name || String(item.id);
+        if (item.tire_id) {
+            option.dataset.tireId = String(item.tire_id);
+        }
         select.append(option);
     });
 };
@@ -427,8 +430,21 @@ const recambio = () => {
         document.getElementById('recambioSlot').textContent = slot.code;
         document.getElementById('recambioRole').textContent = `${slot.name} · ${slot.role}`;
         const mountedName = document.getElementById('mountedName');
+        const setExpectedTire = (tireId) => {
+            dock.querySelectorAll('.expected-tire').forEach((el) => {
+                el.value = tireId ? String(tireId) : '';
+            });
+        };
+        const syncExpectedTo = () => {
+            const dest = document.getElementById('expectedToTire');
+            if (!dest) {
+                return;
+            }
+            dest.value = rotatePosition.selectedOptions[0]?.dataset.tireId || '';
+        };
 
         if (slot.empty) {
+            setExpectedTire('');
             installForm.hidden = false;
             mounted.hidden = true;
             document.getElementById('installPosition').value = slot.id;
@@ -448,6 +464,7 @@ const recambio = () => {
         mountedName.textContent = slot.tire.name;
         document.getElementById('mountedLink').href = slot.tire.url;
         fillFacts(slot.tire);
+        setExpectedTire(slot.tire.id);
         document.getElementById('cambioPosition').value = slot.id;
         document.getElementById('pinchaduraPosition').value = slot.id;
         document.getElementById('rotacionFrom').value = slot.id;
@@ -464,6 +481,8 @@ const recambio = () => {
             cambioTire.required = hasStock;
         });
         fillSelect(rotatePosition, slot.rotateTo, 'Ubicación libre');
+        syncExpectedTo();
+        rotatePosition.onchange = syncExpectedTo;
         const canRotate = slot.rotateTo.length > 0;
         rotateEmpty.hidden = canRotate;
         rotatePosition.hidden = !canRotate;
@@ -535,6 +554,7 @@ const recambio = () => {
         selectSlot(origin.id);
         showAction('rotacion');
         rotatePosition.value = String(target.id);
+        rotatePosition.dispatchEvent(new Event('change'));
     };
 
     const coarse = window.matchMedia('(pointer: coarse)').matches;

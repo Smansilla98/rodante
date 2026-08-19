@@ -628,6 +628,7 @@ class TireTraceabilityTest extends TestCase
             'action' => 'retirar',
             'odometer' => 101000,
             'position_id' => $steer->id,
+            'expected_tire_id' => $tire->id,
             'reason_id' => MovementReason::where('code', 'INSPECCION')->value('id'),
             'destination' => TireStatus::Reserva->value,
         ])->assertRedirect();
@@ -652,6 +653,7 @@ class TireTraceabilityTest extends TestCase
             'action' => 'incidencia',
             'odometer' => 101000,
             'position_id' => $steer->id,
+            'expected_tire_id' => $tire->id,
             'incident_type' => IncidentType::Sopladura->value,
             'description' => 'Sopladura en flanco',
         ])->assertRedirect();
@@ -683,6 +685,7 @@ class TireTraceabilityTest extends TestCase
             'action' => 'medicion',
             'odometer' => 101000,
             'position_id' => $steer->id,
+            'expected_tire_id' => $tire->id,
             'readings' => $readings,
         ])->assertRedirect();
 

@@ -6,6 +6,7 @@ use App\Enums\IncidentType;
 use App\Enums\TireStatus;
 use App\Enums\UnitStatus;
 use App\Exceptions\DomainException;
+use App\Exceptions\SheetConflictException;
 use App\Http\Controllers\Controller;
 use App\Models\Base;
 use App\Models\Fleet;
@@ -29,6 +30,7 @@ use App\Support\AccessScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 
 class UnitController extends Controller
 {
@@ -171,15 +173,19 @@ class UnitController extends Controller
             'removals.*.tire_id' => 'nullable|exists:tires,id',
             'removals.*.reason_id' => 'nullable|exists:movement_reasons,id',
             'removals.*.destination' => 'nullable|string',
+            'removals.*.position_id' => 'nullable|exists:unit_positions,id',
             'installations' => 'array',
             'installations.*.tire_id' => 'nullable|exists:tires,id',
             'installations.*.position_id' => 'nullable|exists:unit_positions,id',
+            'installations.*.expect_empty' => 'nullable|boolean',
         ]);
         $data['removals'] = collect($data['removals'] ?? [])->filter(fn ($row) => ! empty($row['tire_id']))->values()->all();
         $data['installations'] = collect($data['installations'] ?? [])->filter(fn ($row) => ! empty($row['tire_id']) && ! empty($row['position_id']))->values()->all();
 
         try {
             $operations->execute($unit, $data, $request->user());
+        } catch (SheetConflictException $e) {
+            return back()->withErrors(['operation' => $e->getMessage()])->withInput();
         } catch (DomainException $e) {
             return back()->withErrors(['operation' => $e->getMessage()])->withInput();
         }
@@ -255,11 +261,19 @@ class UnitController extends Controller
         PositionFitService $fit,
     ) {
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
+        $mounted = ['cambio', 'pinchadura', 'rotacion', 'retirar', 'incidencia', 'medicion'];
         $data = $request->validate([
             'action' => 'required|in:install,cambio,pinchadura,rotacion,retirar,incidencia,medicion,patron',
             'odometer' => 'required|integer|min:0',
             'position_id' => 'nullable|exists:unit_positions,id',
             'tire_id' => 'nullable|exists:tires,id',
+            'expected_tire_id' => [
+                'nullable',
+                'integer',
+                Rule::requiredIf(fn () => in_array($request->input('action'), $mounted, true)),
+                'exists:tires,id',
+            ],
+            'expected_to_tire_id' => 'nullable|integer|exists:tires,id',
             'to_position_id' => 'nullable|exists:unit_positions,id',
             'pattern' => 'nullable|in:longitudinal,cruzado,diagonal',
             'reason_id' => 'nullable|exists:movement_reasons,id',
@@ -273,9 +287,13 @@ class UnitController extends Controller
         ]);
 
         try {
-            if ($data['action'] === 'patron') {
-                $this->slotPatron($unit, $data, $operations, $patterns, $fit, $request->user());
-            } else {
+            DB::transaction(function () use ($unit, $data, $operations, $incidents, $measurements, $patterns, $fit, $request) {
+                FleetUnit::lockForUpdate()->findOrFail($unit->id);
+                if ($data['action'] === 'patron') {
+                    $this->slotPatron($unit, $data, $operations, $patterns, $fit, $request->user());
+
+                    return;
+                }
                 if (empty($data['position_id'])) {
                     throw new DomainException('Elegí una ubicación.');
                 }
@@ -292,7 +310,13 @@ class UnitController extends Controller
                     'incidencia' => $this->slotIncidencia($unit, $position, $data, $incidents, $request->user()),
                     'medicion' => $this->slotMedicion($unit, $position, $data, $measurements, $request->user()),
                 };
+            });
+        } catch (SheetConflictException $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage()], 409);
             }
+
+            return back()->withErrors(['operation' => $e->getMessage()])->withInput();
         } catch (DomainException $e) {
             return back()->withErrors(['operation' => $e->getMessage()])->withInput();
         }
@@ -522,6 +546,7 @@ class UnitController extends Controller
                                 ? 'Intercambiar · '.$other['position']->sheetCode($prefix).' · '.$other['tire']->displayName()
                                 : 'Libre · '.$other['position']->sheetCode($prefix).' · '.$other['position']->axleRole(),
                             'occupied' => $other['tire'] !== null,
+                            'tire_id' => $other['tire']?->id,
                         ])
                         ->values()
                         ->all()
@@ -530,16 +555,20 @@ class UnitController extends Controller
         })->values()->all();
     }
 
-    private function mountedTire(FleetUnit $unit, UnitPosition $position): Tire
+    private function mountedTire(FleetUnit $unit, UnitPosition $position, ?int $expectedTireId = null): Tire
     {
         $location = TireCurrentLocation::where('unit_id', $unit->id)
             ->where('position_id', $position->id)
+            ->lockForUpdate()
             ->first();
         if (! $location) {
-            throw new DomainException('Esa ubicación está vacía.');
+            throw $expectedTireId ? new SheetConflictException : new DomainException('Esa ubicación está vacía.');
+        }
+        if ($expectedTireId !== null && (int) $location->tire_id !== $expectedTireId) {
+            throw new SheetConflictException;
         }
 
-        return Tire::findOrFail($location->tire_id);
+        return Tire::lockForUpdate()->findOrFail($location->tire_id);
     }
 
     private function slotInstall(FleetUnit $unit, UnitPosition $position, array $data, TireOperationService $operations, $user): void
@@ -547,11 +576,18 @@ class UnitController extends Controller
         if (empty($data['tire_id'])) {
             throw new DomainException('Elegí una cubierta de stock para instalar.');
         }
+        if (TireCurrentLocation::where('unit_id', $unit->id)->where('position_id', $position->id)->exists()) {
+            throw new SheetConflictException;
+        }
 
         $operations->execute($unit, [
             'odometer' => (int) $data['odometer'],
             'notes' => $data['notes'] ?? null,
-            'installations' => [['tire_id' => (int) $data['tire_id'], 'position_id' => $position->id]],
+            'installations' => [[
+                'tire_id' => (int) $data['tire_id'],
+                'position_id' => $position->id,
+                'expect_empty' => true,
+            ]],
         ], $user);
     }
 
@@ -567,7 +603,7 @@ class UnitController extends Controller
             throw new DomainException('Elegí la cubierta nueva para el cambio.');
         }
 
-        $current = $this->mountedTire($unit, $position);
+        $current = $this->mountedTire($unit, $position, isset($data['expected_tire_id']) ? (int) $data['expected_tire_id'] : null);
         $reasonId = MovementReason::where('code', 'RECAMBIO')->value('id');
 
         DB::transaction(function () use ($unit, $position, $data, $operations, $incidents, $user, $current, $reasonId) {
@@ -586,8 +622,13 @@ class UnitController extends Controller
                     'tire_id' => $current->id,
                     'reason_id' => $reasonId,
                     'destination' => TireStatus::Stock->value,
+                    'position_id' => $position->id,
                 ]],
-                'installations' => [['tire_id' => (int) $data['tire_id'], 'position_id' => $position->id]],
+                'installations' => [[
+                    'tire_id' => (int) $data['tire_id'],
+                    'position_id' => $position->id,
+                    'expect_empty' => true,
+                ]],
             ], $user);
         });
     }
@@ -600,7 +641,7 @@ class UnitController extends Controller
         IncidentService $incidents,
         $user,
     ): void {
-        $current = $this->mountedTire($unit, $position);
+        $current = $this->mountedTire($unit, $position, isset($data['expected_tire_id']) ? (int) $data['expected_tire_id'] : null);
         $reasonId = MovementReason::where('code', 'PINCHADURA')->value('id');
 
         DB::transaction(function () use ($unit, $position, $data, $operations, $incidents, $user, $current, $reasonId) {
@@ -619,6 +660,7 @@ class UnitController extends Controller
                     'tire_id' => $current->id,
                     'reason_id' => $reasonId,
                     'destination' => TireStatus::EnReparacion->value,
+                    'position_id' => $position->id,
                 ]],
             ], $user);
         });
@@ -630,8 +672,15 @@ class UnitController extends Controller
             throw new DomainException('Elegí la ubicación destino para rotar.');
         }
 
-        $current = $this->mountedTire($unit, $position);
-        $operations->rotate($unit, $current->id, (int) $data['to_position_id'], (int) $data['odometer'], $user);
+        $current = $this->mountedTire($unit, $position, isset($data['expected_tire_id']) ? (int) $data['expected_tire_id'] : null);
+        $toOccupant = array_key_exists('expected_to_tire_id', $data)
+            ? ($data['expected_to_tire_id'] !== null && $data['expected_to_tire_id'] !== '' ? (int) $data['expected_to_tire_id'] : null)
+            : false;
+        $expect = ['from' => [$current->id => $position->id]];
+        if ($toOccupant !== false) {
+            $expect['to'] = [(int) $data['to_position_id'] => $toOccupant];
+        }
+        $operations->rotate($unit, $current->id, (int) $data['to_position_id'], (int) $data['odometer'], $user, $data['notes'] ?? null, $expect);
     }
 
     private function slotPatron(
@@ -669,7 +718,7 @@ class UnitController extends Controller
             throw new DomainException('Elegí el destino del retiro.');
         }
 
-        $current = $this->mountedTire($unit, $position);
+        $current = $this->mountedTire($unit, $position, isset($data['expected_tire_id']) ? (int) $data['expected_tire_id'] : null);
         $operations->execute($unit, [
             'odometer' => (int) $data['odometer'],
             'notes' => $data['notes'] ?? 'Retiro',
@@ -677,6 +726,7 @@ class UnitController extends Controller
                 'tire_id' => $current->id,
                 'reason_id' => (int) $data['reason_id'],
                 'destination' => $destination->value,
+                'position_id' => $position->id,
             ]],
         ], $user);
     }
@@ -688,7 +738,7 @@ class UnitController extends Controller
             throw new DomainException('Elegí un tipo de incidencia válido.');
         }
 
-        $current = $this->mountedTire($unit, $position);
+        $current = $this->mountedTire($unit, $position, isset($data['expected_tire_id']) ? (int) $data['expected_tire_id'] : null);
         $incidents->register($current, [
             'type' => $type->value,
             'odometer' => (int) $data['odometer'],
@@ -701,7 +751,7 @@ class UnitController extends Controller
 
     private function slotMedicion(FleetUnit $unit, UnitPosition $position, array $data, MeasurementService $measurements, $user): void
     {
-        $current = $this->mountedTire($unit, $position);
+        $current = $this->mountedTire($unit, $position, isset($data['expected_tire_id']) ? (int) $data['expected_tire_id'] : null);
         $measurements->record($current, [
             'odometer' => (int) $data['odometer'],
             'unit_id' => $unit->id,

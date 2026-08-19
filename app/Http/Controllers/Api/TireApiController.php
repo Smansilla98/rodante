@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Enums\IncidentType;
 use App\Exceptions\DomainException;
+use App\Exceptions\SheetConflictException;
 use App\Http\Controllers\Controller;
 use App\Models\FleetUnit;
 use App\Models\Tire;
@@ -84,15 +85,19 @@ class TireApiController extends Controller
             'removals.*.tire_id' => 'nullable|exists:tires,id',
             'removals.*.reason_id' => 'nullable|exists:movement_reasons,id',
             'removals.*.destination' => 'nullable|string',
+            'removals.*.position_id' => 'nullable|exists:unit_positions,id',
             'installations' => 'array',
             'installations.*.tire_id' => 'nullable|exists:tires,id',
             'installations.*.position_id' => 'nullable|exists:unit_positions,id',
+            'installations.*.expect_empty' => 'nullable|boolean',
         ]);
         $data['removals'] = collect($data['removals'] ?? [])->filter(fn ($row) => ! empty($row['tire_id']))->values()->all();
         $data['installations'] = collect($data['installations'] ?? [])->filter(fn ($row) => ! empty($row['tire_id']) && ! empty($row['position_id']))->values()->all();
 
         try {
             $operation = $operations->execute($unit, $data, $request->user());
+        } catch (SheetConflictException $e) {
+            return response()->json(['message' => $e->getMessage()], 409);
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

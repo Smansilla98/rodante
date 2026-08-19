@@ -44,6 +44,7 @@ class ProductCycleTest extends TestCase
             'action' => 'pinchadura',
             'odometer' => 102000,
             'position_id' => $steer->id,
+            'expected_tire_id' => $tire->id,
             'notes' => 'Pinchó en ruta',
         ])->assertRedirect();
 
@@ -89,6 +90,7 @@ class ProductCycleTest extends TestCase
             'action' => 'retirar',
             'odometer' => 101000,
             'position_id' => $steer->id,
+            'expected_tire_id' => $tire->id,
             'reason_id' => MovementReason::where('code', 'INSPECCION')->value('id'),
             'destination' => TireStatus::Reserva->value,
         ])->assertRedirect();

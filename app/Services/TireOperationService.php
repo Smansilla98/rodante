@@ -7,6 +7,7 @@ use App\Enums\MovementType;
 use App\Enums\TireCondition;
 use App\Enums\TireStatus;
 use App\Exceptions\DomainException;
+use App\Exceptions\SheetConflictException;
 use App\Models\FleetUnit;
 use App\Models\Tire;
 use App\Models\TireAssignment;
@@ -15,6 +16,7 @@ use App\Models\TireCurrentLocation;
 use App\Models\TireOperation;
 use App\Models\UnitPosition;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class TireOperationService
@@ -56,6 +58,10 @@ class TireOperationService
 
             Tire::whereIn('id', $tireIds)->lockForUpdate()->get();
             TireCurrentLocation::whereIn('tire_id', $tireIds)->lockForUpdate()->get();
+            TireCurrentLocation::where('unit_id', $unit->id)->lockForUpdate()->get();
+
+            $this->assertRemovalSlots($unit, $removals);
+            $this->assertInstallationSlots($unit, $installations, $removals);
 
             $operation = TireOperation::create([
                 'unit_id' => $unit->id,
@@ -87,9 +93,12 @@ class TireOperationService
         });
     }
 
-    public function rotate(FleetUnit $unit, int $tireId, int $toPositionId, int $odometer, User $user, ?string $notes = null): TireAssignment
+    /**
+     * @param  array{from?: array<int, int>, to?: array<int, int|null>}  $expect
+     */
+    public function rotate(FleetUnit $unit, int $tireId, int $toPositionId, int $odometer, User $user, ?string $notes = null, array $expect = []): TireAssignment
     {
-        $this->relocateMounted($unit, [$tireId => $toPositionId], $odometer, $user, $notes);
+        $this->relocateMounted($unit, [$tireId => $toPositionId], $odometer, $user, $notes, $expect);
 
         return TireAssignment::where('tire_id', $tireId)->whereNull('ended_at')->firstOrFail();
     }
@@ -101,18 +110,10 @@ class TireOperationService
      */
     public function applyPattern(FleetUnit $unit, array $pairs, int $odometer, User $user, ?string $notes = null): void
     {
-        $moves = [];
-        foreach ($pairs as [$fromId, $toId]) {
-            $from = TireCurrentLocation::where('unit_id', $unit->id)->where('position_id', $fromId)->first();
-            $to = TireCurrentLocation::where('unit_id', $unit->id)->where('position_id', $toId)->first();
-            if (! $from?->tire_id || ! $to?->tire_id) {
-                throw new DomainException('El esquema necesita cubiertas en todas las ubicaciones.');
-            }
-            $moves[$from->tire_id] = $toId;
-            $moves[$to->tire_id] = $fromId;
-        }
-
-        $this->relocateMounted($unit, $moves, $odometer, $user, $notes);
+        DB::transaction(function () use ($unit, $pairs, $odometer, $user, $notes) {
+            $unit = FleetUnit::lockForUpdate()->findOrFail($unit->id);
+            $this->relocateMounted($unit, $this->movesFromLockedPairs($unit->id, $pairs), $odometer, $user, $notes);
+        });
     }
 
     /**
@@ -120,16 +121,19 @@ class TireOperationService
      * Si el destino está ocupado, intercambia. Los kilómetros del periodo siguen abiertos.
      *
      * @param  array<int, int>  $tireToPosition  tire_id => position_id destino
+     * @param  array{from?: array<int, int>, to?: array<int, int|null>}  $expect
      */
-    public function relocateMounted(FleetUnit $unit, array $tireToPosition, int $odometer, User $user, ?string $notes = null): void
+    public function relocateMounted(FleetUnit $unit, array $tireToPosition, int $odometer, User $user, ?string $notes = null, array $expect = []): void
     {
-        DB::transaction(function () use ($unit, $tireToPosition, $odometer, $user, $notes) {
+        DB::transaction(function () use ($unit, $tireToPosition, $odometer, $user, $notes, $expect) {
             $unit = FleetUnit::lockForUpdate()->findOrFail($unit->id);
             $odometerUnit = $this->couplings->resolveOdometerUnit($unit);
 
             $tireIds = array_map('intval', array_keys($tireToPosition));
             Tire::whereIn('id', $tireIds)->lockForUpdate()->get();
             $locations = TireCurrentLocation::where('unit_id', $unit->id)->lockForUpdate()->get()->keyBy('tire_id');
+
+            $this->assertRelocationExpect($locations, $expect);
 
             $resolved = [];
             foreach ($tireToPosition as $tireId => $toPositionId) {
@@ -249,6 +253,9 @@ class TireOperationService
         if (! $location || $location->unit_id !== $unit->id) {
             throw new DomainException($tire->displayName().' no está instalado en '.$unit->plate.'.');
         }
+        if (! empty($removal['position_id']) && (int) $location->position_id !== (int) $removal['position_id']) {
+            throw new SheetConflictException;
+        }
 
         $assignment = TireAssignment::where('tire_id', $tire->id)->whereNull('ended_at')->lockForUpdate()->first();
         $km = 0;
@@ -331,7 +338,7 @@ class TireOperationService
             ->lockForUpdate()
             ->first();
         if ($occupied) {
-            throw new DomainException('La posición '.$position->name.' ya está ocupada.');
+            throw new SheetConflictException;
         }
 
         if (TireAssignment::where('tire_id', $tire->id)->whereNull('ended_at')->exists()) {
@@ -447,5 +454,85 @@ class TireOperationService
 
             return $tire->fresh();
         });
+    }
+
+    /**
+     * @param  list<array{tire_id:int,position_id?:int}>  $removals
+     */
+    private function assertRemovalSlots(FleetUnit $unit, array $removals): void
+    {
+        foreach ($removals as $removal) {
+            if (empty($removal['position_id'])) {
+                continue;
+            }
+            $location = TireCurrentLocation::where('tire_id', $removal['tire_id'])->first();
+            if (! $location || (int) $location->unit_id !== (int) $unit->id
+                || (int) $location->position_id !== (int) $removal['position_id']) {
+                throw new SheetConflictException;
+            }
+        }
+    }
+
+    /**
+     * @param  list<array{tire_id:int,position_id:int,expect_empty?:bool}>  $installations
+     * @param  list<array{tire_id:int}>  $removals
+     */
+    private function assertInstallationSlots(FleetUnit $unit, array $installations, array $removals): void
+    {
+        $removed = collect($removals)->pluck('tire_id')->map(fn ($id) => (int) $id)->all();
+        foreach ($installations as $installation) {
+            if (empty($installation['expect_empty'])) {
+                continue;
+            }
+            $occupant = TireCurrentLocation::where('unit_id', $unit->id)
+                ->where('position_id', $installation['position_id'])
+                ->value('tire_id');
+            if ($occupant && ! in_array((int) $occupant, $removed, true)) {
+                throw new SheetConflictException;
+            }
+        }
+    }
+
+    /**
+     * @param  Collection<int, TireCurrentLocation>  $locations
+     * @param  array{from?: array<int, int>, to?: array<int, int|null>}  $expect
+     */
+    private function assertRelocationExpect($locations, array $expect): void
+    {
+        foreach ($expect['from'] ?? [] as $tireId => $positionId) {
+            $location = $locations->get((int) $tireId);
+            if (! $location || (int) $location->position_id !== (int) $positionId) {
+                throw new SheetConflictException;
+            }
+        }
+        foreach ($expect['to'] ?? [] as $positionId => $expectedTireId) {
+            $occupant = $locations->first(fn ($row) => (int) $row->position_id === (int) $positionId);
+            $actual = $occupant?->tire_id !== null ? (int) $occupant->tire_id : null;
+            $expected = $expectedTireId !== null ? (int) $expectedTireId : null;
+            if ($actual !== $expected) {
+                throw new SheetConflictException;
+            }
+        }
+    }
+
+    /**
+     * @param  list<array{0:int,1:int}>  $pairs
+     * @return array<int, int>
+     */
+    private function movesFromLockedPairs(int $unitId, array $pairs): array
+    {
+        $byPos = TireCurrentLocation::where('unit_id', $unitId)->lockForUpdate()->get()->keyBy('position_id');
+        $moves = [];
+        foreach ($pairs as [$fromId, $toId]) {
+            $from = $byPos->get($fromId);
+            $to = $byPos->get($toId);
+            if (! $from?->tire_id || ! $to?->tire_id) {
+                throw new SheetConflictException;
+            }
+            $moves[(int) $from->tire_id] = (int) $toId;
+            $moves[(int) $to->tire_id] = (int) $fromId;
+        }
+
+        return $moves;
     }
 }

@@ -298,6 +298,7 @@ class RoleQaRunner
             'action' => 'medicion',
             'odometer' => 200100,
             'position_id' => $pos1->id,
+            'expected_tire_id' => $a->id,
             'readings' => $readings,
         ], [302], true);
 
@@ -305,6 +306,7 @@ class RoleQaRunner
             'action' => 'incidencia',
             'odometer' => 200100,
             'position_id' => $pos1->id,
+            'expected_tire_id' => $a->id,
             'incident_type' => IncidentType::Inspeccion->value,
             'description' => 'QA inspección',
         ], [302], true);
@@ -313,6 +315,7 @@ class RoleQaRunner
             'action' => 'rotacion',
             'odometer' => 200150,
             'position_id' => $pos1->id,
+            'expected_tire_id' => $a->id,
             'to_position_id' => $pos2->id,
         ], [302], true);
 
@@ -320,6 +323,7 @@ class RoleQaRunner
             'action' => 'cambio',
             'odometer' => 200200,
             'position_id' => $pos2->id,
+            'expected_tire_id' => $a->id,
             'tire_id' => $b->id,
             'notes' => 'QA cambio',
         ], [302], true);
@@ -328,6 +332,7 @@ class RoleQaRunner
             'action' => 'pinchadura',
             'odometer' => 200250,
             'position_id' => $pos2->id,
+            'expected_tire_id' => $b->id,
             'notes' => 'QA pinchadura',
         ], [302], true);
 
@@ -344,6 +349,7 @@ class RoleQaRunner
                 'action' => 'retirar',
                 'odometer' => 200350,
                 'position_id' => $pos1->id,
+                'expected_tire_id' => $c->id,
                 'reason_id' => MovementReason::where('code', 'ROTACION')->value('id'),
                 'destination' => 'STOCK',
             ], [302], true);
