@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\IncidentType;
 use App\Enums\MovementType;
+use App\Enums\TireStatus;
 use App\Models\FleetUnit;
 use App\Models\Tire;
 use App\Models\TireIncident;
@@ -23,7 +24,7 @@ class ReportService
             'lifecycles', 'movements.fromUnit', 'movements.toUnit', 'movements.fromPosition',
             'movements.toPosition', 'movements.user', 'incidents.user',
             'measurements.readings.zone', 'measurements.user', 'assignments.segments.odometerUnit',
-            'purchaseItem.purchase',
+            'purchaseItem.purchase', 'costEntries',
         ]);
     }
 
@@ -144,6 +145,43 @@ class ReportService
             ->withQueryString();
     }
 
+    public function costPerKm(?User $user = null): LengthAwarePaginator
+    {
+        $query = Tire::query()->with(['brand', 'model']);
+        if ($user) {
+            AccessScope::tires($query, $user);
+        }
+
+        return $query
+            ->withSum('costEntries', 'amount')
+            ->orderByDesc('accumulated_km')
+            ->paginate(40)
+            ->withQueryString()
+            ->through(function (Tire $tire) {
+                $cost = (float) ($tire->cost_entries_sum_amount ?? 0);
+                $tire->cost_total = $cost;
+                $km = (int) $tire->accumulated_km;
+                $tire->cost_per_km = ($cost > 0 && $km > 0) ? round($cost / $km, 4) : null;
+
+                return $tire;
+            });
+    }
+
+    public function inventory(?User $user = null): LengthAwarePaginator
+    {
+        $query = Tire::query()->with(['brand', 'model', 'size', 'currentLocation.base', 'currentLocation.unit']);
+        if ($user) {
+            AccessScope::tires($query, $user);
+        }
+
+        return $query
+            ->where('status', '!=', TireStatus::DeBaja)
+            ->orderBy('status')
+            ->orderBy('individual_number')
+            ->paginate(80)
+            ->withQueryString();
+    }
+
     public function incidents(?User $user = null): Collection
     {
         $query = TireIncident::query();
@@ -178,6 +216,7 @@ class ReportService
             MovementType::FromRepair => ['Volvió a stock después del parche', 'Misma vida. Lista para instalar.', 'Ubicación', 'green'],
             MovementType::Retire => ['Baja definitiva', $movement->notes ?: 'Ya no se reinstala. El historial se conserva.', 'Baja', 'red'],
             MovementType::TransferBase => ['Cambió de base', $movement->notes, 'Ubicación', 'slate'],
+            MovementType::Correction => ['Corrección de historial', $movement->notes, 'Auditoría', 'slate'],
         };
 
         return [

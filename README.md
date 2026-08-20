@@ -26,7 +26,8 @@ MySQL: `localhost:33062` / `trazabilidad` / `laravel` / `secret`
 
 ### Documentación
 
-- [Auditoría técnica](docs/AUDIT.md)
+- [Invariantes de dominio](docs/INVARIANTES.md)
+- [Deploy](docs/DEPLOY.md)
 - [Roadmap P0/P1/P2](docs/ROADMAP.md)
 - [Manual de uso](docs/manual-de-uso.md) (también en la app: **Consulta → Ayuda**)
 - [Propuesta de presupuesto para empresa de transportes](docs/presupuesto-empresa-transportes.md)
@@ -71,4 +72,4 @@ docker compose exec app php artisan test
 
 ## Costos
 
-Existen en el negocio. No se implementan en v1.
+Compra (costo unitario al confirmar) y cierre de OT generan `cost_entries`. El reporte **Costo / km** divide ese total por `accumulated_km` cuando hay kilómetros.

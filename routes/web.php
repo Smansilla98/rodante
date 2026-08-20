@@ -8,7 +8,9 @@ use App\Http\Controllers\Catalog\SizeController;
 use App\Http\Controllers\CostController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExportController;
+use App\Http\Controllers\FieldController;
 use App\Http\Controllers\HelpController;
+use App\Http\Controllers\IntegrityController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Odometer\OdometerController;
 use App\Http\Controllers\PrintController;
@@ -36,6 +38,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/buscar/sugerencias', [SearchController::class, 'suggest'])->name('search.suggest');
     Route::get('/buscar', [SearchController::class, '__invoke'])->name('search');
+    Route::get('/campo', [FieldController::class, 'index'])->name('field.index');
+    Route::get('/campo/{tire}', [FieldController::class, 'show'])->name('field.show');
+    Route::get('/integridad', [IntegrityController::class, 'index'])->name('integrity.index');
 
     Route::get('/neumaticos', [TireController::class, 'index'])->name('tires.index');
     Route::get('/stock', [TireController::class, 'stock'])->name('tires.stock');
@@ -57,6 +62,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/odometros', [OdometerController::class, 'index'])->name('odometers.index');
 
     Route::get('/reportes/kilometros', [ReportController::class, 'kilometers'])->name('reports.kilometers');
+    Route::get('/reportes/costo-km', [ReportController::class, 'costPerKm'])->name('reports.cost-km');
+    Route::get('/reportes/inventario', [ReportController::class, 'inventory'])->name('reports.inventory');
     Route::get('/reportes/consumo', [ReportController::class, 'consumption'])->name('reports.consumption');
     Route::get('/reportes/incidencias', [ReportController::class, 'incidents'])->name('reports.incidents');
     Route::get('/auditoria', [ReportController::class, 'audit'])->name('reports.audit');

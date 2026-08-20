@@ -31,6 +31,7 @@
             <div class="sb-group">
                 <div class="sb-lbl">Operación</div>
                 <x-nav-link :href="route('dashboard')" icon="home" label="Tablero" match="dashboard" />
+                <x-nav-link :href="route('field.index')" icon="search" label="Campo" match="field.*" />
                 <x-nav-link :href="route('units.index')" icon="truck" label="Unidades" match="units.*" />
                 <x-nav-link :href="route('tires.stock')" icon="boxes" label="Stock" match="tires.stock" />
                 <x-nav-link :href="route('tires.index')" icon="circle" label="Neumáticos" :match="['tires.index', 'tires.show']" />
@@ -41,9 +42,14 @@
             <div class="sb-group">
                 <div class="sb-lbl">Consulta</div>
                 <x-nav-link :href="route('reports.kilometers')" icon="chart" label="Km por cubierta" match="reports.kilometers" />
+                <x-nav-link :href="route('reports.cost-km')" icon="chart" label="Costo / km" match="reports.cost-km" />
+                <x-nav-link :href="route('reports.inventory')" icon="boxes" label="Inventario" match="reports.inventory" />
                 <x-nav-link :href="route('reports.consumption')" icon="grid" label="Consumo" match="reports.consumption" />
                 <x-nav-link :href="route('reports.incidents')" icon="alert" label="Incidencias" match="reports.incidents" />
                 <x-nav-link :href="route('reports.audit')" icon="shield" label="Movimientos" match="reports.audit" />
+                @if(auth()->user()->role->canRetireOrRecap())
+                    <x-nav-link :href="route('integrity.index')" icon="shield" label="Integridad" match="integrity.*" />
+                @endif
                 <x-nav-link :href="route('costs.index')" icon="chart" label="Costos" match="costs.*" />
                 <x-nav-link :href="route('notifications.index')" icon="alert" label="Avisos" match="notifications.*" />
                 <x-nav-link :href="route('help.index')" icon="book" label="Ayuda" match="help.*" />

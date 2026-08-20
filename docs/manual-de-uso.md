@@ -19,7 +19,7 @@ En la barra superior, **Letra** cambia el tamaño: `A` normal, `A+` grande, `A++
 
 ### Buscar una cubierta
 
-El buscador de la barra superior busca por número o texto en **Neumáticos**.
+El buscador de la barra superior busca por número o texto en **Neumáticos**. En **Operación → Campo** podés escribir el número o pegar el token del QR: si hay una sola coincidencia entra directo a acciones grandes (ficha, planilla, devolver a stock).
 
 ---
 
@@ -50,7 +50,7 @@ Es la pantalla de inicio. Las tarjetas grandes muestran cantidades:
 - De baja
 - Kilómetros acumulados
 
-Tocá una tarjeta para ir al listado filtrado. Más abajo hay accesos a Unidades, Stock, Nueva compra, Odómetros y Ayuda, más tablas de marcas, próximas a baja, últimas lecturas e incidencias por patente.
+Tocá una tarjeta para ir al listado filtrado. Más abajo hay colas (reparación, profundidad, baja, integridad) y accesos a Campo, Unidades, Stock, Nueva compra, Odómetros y Ayuda.
 
 ---
 
@@ -170,9 +170,12 @@ El acoplado no tiene reloj propio: los km de sus cubiertas salen del tractor aco
 | Pantalla | Para qué |
 |---|---|
 | **Km por cubierta** | Acumulado, vidas, recapados y reparaciones. |
+| **Costo / km** | Costo acumulado (compra + taller) dividido por km. Sin km no hay ratio. |
+| **Inventario** | Listado para conteo físico: número, estado, ubicación esperada. |
 | **Consumo** | Rendimiento y desgaste para decidir rotación, recap o baja. |
 | **Incidencias** | Eventos (pinchadura, corte, recapado, etc.). |
 | **Movimientos** | Auditoría en castellano: quién montó, acopló, midió o dio de baja. |
+| **Integridad** | Jefe/admin: cubiertas con ubicación, assignment o km que no cierran. |
 
 Los eventos históricos **no se reescriben**. Si hay un error de km, se corrige la lectura de odómetro; el rastro queda.
 

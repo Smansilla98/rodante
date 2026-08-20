@@ -125,9 +125,21 @@
             </ul>
         @endif
     </a>
+    @if(auth()->user()->role->canRetireOrRecap())
+    <a class="queue queue--retire" href="{{ route('integrity.index') }}">
+        <div class="queue__l">Integridad</div>
+        <div class="queue__v">{{ $s['integrity_count'] ?? 0 }}</div>
+        <div class="queue__s">Ubicación, assignments y km que no cierran.</div>
+    </a>
+    @endif
 </div>
 
 <div class="hub-grid mb-8">
+    <a class="hub" href="{{ route('field.index') }}">
+        <span class="hub__ico" aria-hidden="true"><x-icon name="search" class="w-6 h-6" /></span>
+        <div class="hub__t">Campo</div>
+        <div class="hub__s">Número o QR. Identificar y actuar.</div>
+    </a>
     <a class="hub" href="{{ route('units.index') }}">
         <span class="hub__ico" aria-hidden="true"><x-icon name="truck" class="w-6 h-6" /></span>
         <div class="hub__t">Unidades</div>

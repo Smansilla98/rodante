@@ -80,7 +80,8 @@ class SearchController extends Controller
         AccessScope::tires($tires, $user);
         $tires->where(function ($q) use ($term, $digits) {
             $q->where('individual_number', 'like', "%{$term}%")
-                ->orWhereHas('model', fn ($m) => $m->where('code', 'like', "%{$term}%"));
+                ->orWhereHas('model', fn ($m) => $m->where('code', 'like', "%{$term}%"))
+                ->orWhere('public_token', $term);
             if ($digits) {
                 $q->orWhere('individual_number', 'like', "%{$digits}%");
             }

@@ -123,6 +123,9 @@ class DashboardService
             'recapadas' => $byCondition[TireCondition::Recapada->value] ?? 0,
             'reparadas' => $byCondition[TireCondition::Reparada->value] ?? 0,
             'thresholds' => ['km' => 80000, 'mm' => 4],
+            'integrity_count' => ($user && $user->role->canRetireOrRecap())
+                ? app(IntegrityService::class)->count($user)
+                : 0,
         ];
     }
 }

@@ -38,6 +38,9 @@
             <div><span>Condición</span><x-status :tone="$tire->condition->tone()">{{ $tire->condition->label() }}</x-status></div>
             <div><span>Vida actual</span>{{ $tire->currentLifecycle?->life_number ?? 1 }} de {{ $tire->lifecycles->count() ?: 1 }}</div>
             <div><span>Km acumulados</span><span class="mono">{{ number_format($tire->accumulated_km) }}</span></div>
+            @php $costTotal = $tire->costEntries->sum('amount'); @endphp
+            <div><span>Costo acumulado</span><span class="mono">{{ $costTotal ? '$ '.number_format($costTotal, 2, ',', '.') : '—' }}</span></div>
+            <div><span>$ / km</span><span class="mono">{{ ($costTotal && $tire->accumulated_km) ? number_format($costTotal / $tire->accumulated_km, 4, ',', '.') : '—' }}</span></div>
             <div><span>Profundidad mín.</span>{{ $tire->current_tread_min ? $tire->current_tread_min.' mm' : '—' }}</div>
             <div>
                 <span>Ubicación</span>
@@ -192,6 +195,25 @@
     </x-content-table>
 </x-panel>
 @endif
+
+<x-panel title="Vidas" class="mt-6">
+    <x-content-table :small="true">
+        <thead><tr><th>Vida</th><th>Inicio</th><th>Cierre</th><th>Km</th><th>Origen</th></tr></thead>
+        <tbody>
+        @forelse($tire->lifecycles->sortBy('life_number') as $life)
+            <tr>
+                <td class="mono">{{ $life->life_number }}</td>
+                <td class="mono">{{ $life->started_at?->format('d/m/Y') }}</td>
+                <td class="mono">{{ $life->ended_at?->format('d/m/Y') ?? 'Abierta' }}</td>
+                <td class="mono">{{ number_format($life->km_in_life) }}</td>
+                <td>{{ $life->started_by }}</td>
+            </tr>
+        @empty
+            <tr><td colspan="5"><x-empty title="Sin vidas registradas" /></td></tr>
+        @endforelse
+        </tbody>
+    </x-content-table>
+</x-panel>
 
 <x-panel title="Historial" class="mt-6">
     @if($timeline->isEmpty())
