@@ -36,3 +36,11 @@ Corregir una lectura recalcula `start_odometer` / `end_odometer` / `km_delta` de
 - Triggers anti-UPDATE/DELETE en `tire_movements`.
 - CHECK de segmentos en SQLite (tests confían en app + integridad).
 - Inventario físico con diferencias (proceso de producto, no solo listado).
+
+## Inventario físico
+
+Flujo: abrir sesión por base (snapshot STOCK/RESERVA/EN_REPARACION) → conteo (nº o QR) → revisión → cierre.
+
+- **Faltantes / montadas:** solo auditoría (no baja ni desmonte automático).
+- **Wrong base / sobrante stockable:** jefe/admin puede aplicar `TRANSFER_BASE` al cerrar.
+- Una sesión activa por base. Numeración `INV-` vía `document_counters`.

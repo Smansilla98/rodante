@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Enums\UserRole;
 use App\Models\AuditLog;
 use App\Models\FleetUnit;
+use App\Models\InventorySession;
 use App\Models\Tire;
 use App\Models\TirePurchase;
 use App\Models\User;
@@ -144,6 +145,30 @@ class AccessScope
     public static function auditLogs(Builder $query, User $user): Builder
     {
         return self::applyCompany($query, $user);
+    }
+
+    public static function inventorySessions(Builder $query, User $user): Builder
+    {
+        self::applyCompany($query, $user);
+        if (self::seesEverything($user)) {
+            return $query;
+        }
+
+        $bases = self::visibleBaseIds($user);
+        if ($bases === []) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->whereIn('base_id', $bases);
+    }
+
+    public static function canViewInventorySession(User $user, InventorySession|int $session): bool
+    {
+        $id = $session instanceof InventorySession ? (int) $session->id : $session;
+        $ok = InventorySession::query()->whereKey($id);
+        self::inventorySessions($ok, $user);
+
+        return $ok->exists();
     }
 
     public static function abortUnlessAuditLog(User $user, int $logId): void

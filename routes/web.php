@@ -10,6 +10,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\FieldController;
 use App\Http\Controllers\HelpController;
+use App\Http\Controllers\InventoryController;
 use App\Http\Controllers\IntegrityController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Odometer\OdometerController;
@@ -65,6 +66,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/reportes/costo-km', [ReportController::class, 'costPerKm'])->name('reports.cost-km');
     Route::get('/reportes/costo-unidad', [ReportController::class, 'costByAttribution'])->name('reports.cost-attribution');
     Route::get('/reportes/inventario', [ReportController::class, 'inventory'])->name('reports.inventory');
+    Route::get('/inventarios', [InventoryController::class, 'index'])->name('inventories.index');
+    Route::get('/inventarios/{inventory}', [InventoryController::class, 'show'])->whereNumber('inventory')->name('inventories.show');
     Route::get('/reportes/consumo', [ReportController::class, 'consumption'])->name('reports.consumption');
     Route::get('/reportes/incidencias', [ReportController::class, 'incidents'])->name('reports.incidents');
     Route::get('/auditoria', [ReportController::class, 'audit'])->name('reports.audit');
@@ -94,6 +97,14 @@ Route::middleware('auth')->group(function () {
         Route::post('/ordenes/{workOrder}/enviar', [WorkOrderController::class, 'send'])->name('work-orders.send');
         Route::post('/ordenes/{workOrder}/cerrar', [WorkOrderController::class, 'close'])->name('work-orders.close');
         Route::post('/ordenes/{workOrder}/cancelar', [WorkOrderController::class, 'cancel'])->name('work-orders.cancel');
+
+        Route::get('/inventarios/nueva', [InventoryController::class, 'create'])->name('inventories.create');
+        Route::post('/inventarios', [InventoryController::class, 'store'])->name('inventories.store');
+        Route::post('/inventarios/{inventory}/iniciar', [InventoryController::class, 'start'])->whereNumber('inventory')->name('inventories.start');
+        Route::post('/inventarios/{inventory}/escanear', [InventoryController::class, 'scan'])->whereNumber('inventory')->name('inventories.scan');
+        Route::post('/inventarios/{inventory}/revision', [InventoryController::class, 'review'])->whereNumber('inventory')->name('inventories.review');
+        Route::post('/inventarios/{inventory}/cerrar', [InventoryController::class, 'close'])->whereNumber('inventory')->name('inventories.close');
+        Route::post('/inventarios/{inventory}/cancelar', [InventoryController::class, 'cancel'])->whereNumber('inventory')->name('inventories.cancel');
 
         Route::post('/recapadoras', [RetreadShopController::class, 'store'])->name('shops.store');
         Route::put('/recapadoras/{shop}', [RetreadShopController::class, 'update'])->name('shops.update');

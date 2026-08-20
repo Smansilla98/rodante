@@ -1,7 +1,13 @@
 @extends('layouts.app')
 @section('title', 'Inventario')
 @section('content')
-<x-page-header kicker="Consulta" title="Inventario" subtitle="Listado para conteo físico: número, estado y dónde debería estar." />
+<x-page-header kicker="Consulta" title="Inventario teórico" subtitle="Listado del sistema. Para conteo con diferencias usá Inventario físico.">
+    <x-slot:actions>
+        @if(auth()->user()->role->canWrite())
+            <a href="{{ route('inventories.index') }}" class="btn btn-primary">Inventario físico</a>
+        @endif
+    </x-slot:actions>
+</x-page-header>
 <x-panel :flush="true">
     <x-content-table>
         <thead>
