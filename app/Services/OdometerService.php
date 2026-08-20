@@ -6,7 +6,10 @@ use App\Enums\OdometerStatus;
 use App\Exceptions\DomainException;
 use App\Models\FleetUnit;
 use App\Models\OdometerReading;
+use App\Models\Tire;
+use App\Models\TireAssignmentSegment;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 
 class OdometerService
 {
@@ -94,22 +97,82 @@ class OdometerService
             throw new DomainException("No puede ser mayor a la lectura siguiente ({$next} km).");
         }
 
-        $old = $reading->value;
-        $reading->update([
-            'value' => $value,
-            'status' => OdometerStatus::Validated,
-            'validated_by' => $user->id,
-            'validated_at' => now(),
-            'notes' => $notes ?? $reading->notes,
-        ]);
+        return DB::transaction(function () use ($reading, $value, $user, $notes) {
+            $old = $reading->value;
+            $reading->update([
+                'value' => $value,
+                'status' => OdometerStatus::Validated,
+                'validated_by' => $user->id,
+                'validated_at' => now(),
+                'notes' => $notes ?? $reading->notes,
+            ]);
 
-        $this->refreshCurrentOdometer($reading->unit()->first());
-        $this->audit->log('odometer.updated', $reading->fresh(['unit']), ['value' => $old], [
-            'unit' => $reading->unit?->plate,
-            'odometer' => $value,
-        ]);
+            $unit = $reading->unit()->lockForUpdate()->first();
+            $this->refreshCurrentOdometer($unit);
+            if ($unit && (int) $old !== (int) $value) {
+                $this->realignSegmentsForCorrection($unit, (int) $old, (int) $value);
+            }
+            $this->audit->log('odometer.updated', $reading->fresh(['unit']), ['value' => $old], [
+                'unit' => $reading->unit?->plate,
+                'odometer' => $value,
+            ]);
 
-        return $reading->fresh();
+            return $reading->fresh();
+        });
+    }
+
+    /**
+     * Recalcula tramos que usaron el valor corregido como inicio o cierre.
+     * Los movimientos históricos no se reescriben (inmutables); accumulated_km sale de segmentos.
+     */
+    private function realignSegmentsForCorrection(FleetUnit $unit, int $oldValue, int $newValue): void
+    {
+        $segments = TireAssignmentSegment::query()
+            ->where('odometer_unit_id', $unit->id)
+            ->where(function ($q) use ($oldValue) {
+                $q->where('start_odometer', $oldValue)
+                    ->orWhere('end_odometer', $oldValue);
+            })
+            ->with('assignment')
+            ->lockForUpdate()
+            ->get();
+
+        $tireIds = [];
+        foreach ($segments as $segment) {
+            $start = (int) $segment->start_odometer === $oldValue ? $newValue : (int) $segment->start_odometer;
+            $end = $segment->end_odometer !== null
+                ? ((int) $segment->end_odometer === $oldValue ? $newValue : (int) $segment->end_odometer)
+                : null;
+
+            if ($end !== null && $end < $start) {
+                throw new DomainException(
+                    'La corrección de odómetro dejaría un tramo con cierre menor al inicio ('.$end.' < '.$start.').'
+                );
+            }
+
+            $km = 0;
+            if ($segment->counts_km && $end !== null) {
+                $km = $end - $start;
+            }
+
+            $segment->update([
+                'start_odometer' => $start,
+                'end_odometer' => $end,
+                'km_delta' => $km,
+            ]);
+
+            if ($segment->assignment?->tire_id) {
+                $tireIds[] = (int) $segment->assignment->tire_id;
+            }
+        }
+
+        $locations = app(LocationService::class);
+        foreach (array_unique($tireIds) as $tireId) {
+            $tire = Tire::query()->find($tireId);
+            if ($tire) {
+                $locations->refreshAccumulatedKm($tire);
+            }
+        }
     }
 
     private function neighborValue(OdometerReading $reading, string $direction): ?int

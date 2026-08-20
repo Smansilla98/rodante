@@ -93,8 +93,8 @@ class UserController extends Controller
     private function validated(Request $request, ?User $user = null): array
     {
         $password = $user
-            ? ['nullable', 'string', Password::min(8)]
-            : ['required', 'string', Password::min(8)];
+            ? ['nullable', 'string', Password::defaults()]
+            : ['required', 'string', Password::defaults()];
 
         return $request->validate([
             'name' => 'required|string|max:80',

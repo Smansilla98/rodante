@@ -7,6 +7,7 @@ use App\Enums\MovementType;
 use App\Enums\TireCondition;
 use App\Enums\TireStatus;
 use App\Exceptions\DomainException;
+use App\Models\DocumentCounter;
 use App\Models\Tire;
 use App\Models\TireLifecycle;
 use App\Models\TireModel;
@@ -19,6 +20,7 @@ class PurchaseService
     public function __construct(
         private LocationService $locations,
         private AuditService $audit,
+        private DocumentNumberService $numbers,
     ) {}
 
     public function create(array $data, User $user): TirePurchase
@@ -26,7 +28,7 @@ class PurchaseService
         return DB::transaction(function () use ($data, $user) {
             $purchase = TirePurchase::create([
                 'company_id' => $user->company_id,
-                'number' => app(DocumentNumberService::class)->next((int) $user->company_id, 'purchase', 'OC-'),
+                'number' => $this->numbers->next((int) $user->company_id, 'purchase', 'OC-'),
                 'supplier_id' => $data['supplier_id'],
                 'base_id' => $data['base_id'],
                 'user_id' => $user->id,
@@ -79,11 +81,21 @@ class PurchaseService
 
         return DB::transaction(function () use ($purchase, $user) {
             $purchase->load('items');
-            $next = $this->nextIndividualNumber((int) ($purchase->company_id ?: $user->company_id));
+            $companyId = (int) ($purchase->company_id ?: $user->company_id);
+            $this->numbers->ensureAtLeast(
+                $companyId,
+                'tire_individual',
+                (int) Tire::query()->where('company_id', $companyId)->max('individual_number'),
+            );
 
             foreach ($purchase->items as $item) {
-                $start = $item->first_number ?: $next;
+                if ($item->first_number) {
+                    $start = (int) $item->first_number;
+                } else {
+                    $start = $this->allocateIndividualRange($companyId, (int) $item->quantity);
+                }
                 $end = $start + $item->quantity - 1;
+                $this->numbers->ensureAtLeast($companyId, 'tire_individual', $end);
 
                 for ($number = $start; $number <= $end; $number++) {
                     if (Tire::where('company_id', $purchase->company_id)->where('individual_number', $number)->exists()) {
@@ -128,7 +140,6 @@ class PurchaseService
                     'first_number' => $start,
                     'last_number' => $end,
                 ]);
-                $next = $end + 1;
             }
 
             $purchase->update([
@@ -195,10 +206,31 @@ class PurchaseService
         });
     }
 
-    private function nextIndividualNumber(int $companyId): int
+    private function allocateIndividualRange(int $companyId, int $quantity): int
     {
-        $max = (int) Tire::query()->where('company_id', $companyId)->lockForUpdate()->max('individual_number');
+        return DB::transaction(function () use ($companyId, $quantity) {
+            DocumentCounter::query()->insertOrIgnore([
+                'company_id' => $companyId,
+                'document' => 'tire_individual',
+                'value' => 0,
+            ]);
 
-        return $max + 1 ?: 1;
+            $row = DocumentCounter::query()
+                ->where('company_id', $companyId)
+                ->where('document', 'tire_individual')
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $maxExisting = (int) Tire::query()->where('company_id', $companyId)->max('individual_number');
+            if ((int) $row->value < $maxExisting) {
+                $row->value = $maxExisting;
+            }
+
+            $start = (int) $row->value + 1;
+            $row->value = $start + $quantity - 1;
+            $row->save();
+
+            return $start;
+        });
     }
 }

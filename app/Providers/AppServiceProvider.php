@@ -30,7 +30,7 @@ class AppServiceProvider extends ServiceProvider
         Paginator::useBootstrapFive();
         Paginator::defaultView('vendor.pagination.bootstrap-5');
 
-        Password::defaults(fn () => Password::min(8));
+        Password::defaults(fn () => Password::min(10)->letters()->numbers());
 
         Tire::observe(TireObserver::class);
         TireAssignment::observe(TireAssignmentObserver::class);

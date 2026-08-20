@@ -75,7 +75,7 @@ class PurchaseController extends Controller
 
     public function show(Request $request, TirePurchase $purchase)
     {
-        AccessScope::abortUnlessPurchase($request->user(), $purchase->id);
+        $this->authorizeVisible('view', $purchase);
 
         return view('purchases.show', [
             'purchase' => $purchase->load(['supplier', 'base', 'items.brand', 'items.model', 'items.size', 'items.tires']),
@@ -86,7 +86,8 @@ class PurchaseController extends Controller
 
     public function confirm(Request $request, TirePurchase $purchase, PurchaseService $purchases)
     {
-        AccessScope::abortUnlessPurchase($request->user(), $purchase->id);
+        $this->authorizeVisible('view', $purchase);
+        $this->authorize('confirm', $purchase);
 
         try {
             $purchases->confirm($purchase, $request->user());
@@ -99,7 +100,8 @@ class PurchaseController extends Controller
 
     public function update(Request $request, TirePurchase $purchase, PurchaseService $purchases)
     {
-        AccessScope::abortUnlessPurchase($request->user(), $purchase->id);
+        $this->authorizeVisible('view', $purchase);
+        $this->authorize('update', $purchase);
         $data = $request->validate([
             'supplier_id' => 'required|exists:suppliers,id',
             'base_id' => 'required|exists:bases,id',
@@ -118,7 +120,8 @@ class PurchaseController extends Controller
 
     public function destroy(Request $request, TirePurchase $purchase, PurchaseService $purchases)
     {
-        AccessScope::abortUnlessPurchase($request->user(), $purchase->id);
+        $this->authorizeVisible('view', $purchase);
+        $this->authorize('delete', $purchase);
         $number = $purchase->number;
         try {
             $purchases->discard($purchase);

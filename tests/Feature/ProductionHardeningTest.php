@@ -145,14 +145,14 @@ class ProductionHardeningTest extends TestCase
         ]);
     }
 
-    public function test_password_minimum_is_eight(): void
+    public function test_password_requires_letters_and_numbers(): void
     {
         $this->get(route('users.index'))->assertOk();
         $this->post(route('users.store'), [
             '_token' => csrf_token(),
             'name' => 'Corto',
             'username' => 'corto8',
-            'password' => '123456',
+            'password' => '12345678',
             'role' => UserRole::Operario->value,
         ])->assertSessionHasErrors('password');
     }

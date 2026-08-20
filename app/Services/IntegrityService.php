@@ -148,6 +148,25 @@ class IntegrityService
             }
         }
 
+        $openNullKeys = TireAssignment::query()
+            ->whereNull('ended_at')
+            ->whereIn('tire_id', $ids)
+            ->where(function ($q) {
+                $q->whereNull('open_tire_id')->orWhereNull('open_key');
+            })
+            ->with('tire')
+            ->limit(50)
+            ->get();
+        foreach ($openNullKeys as $assignment) {
+            if ($assignment->tire) {
+                $items->push($this->row(
+                    'OPEN_ASSIGNMENT_NULL_KEY',
+                    $assignment->tire,
+                    'Assignment abierto sin open_tire_id/open_key. Riesgo de duplicados si se bypasea Eloquent.'
+                ));
+            }
+        }
+
         $openWrongStatus = TireAssignment::query()
             ->whereNull('ended_at')
             ->whereIn('tire_id', $ids)

@@ -17,24 +17,25 @@ class ExportController extends Controller
     {
         $query = Tire::with('brand', 'model', 'size', 'currentLocation.unit');
         AccessScope::tires($query, $request->user());
-        $rows = $query->orderBy('individual_number')->get();
 
-        return response()->streamDownload(function () use ($rows) {
+        return response()->streamDownload(function () use ($query) {
             $out = fopen('php://output', 'w');
             fwrite($out, "\xEF\xBB\xBF");
             fputcsv($out, ['Numero', 'Marca', 'Modelo', 'Medida', 'Estado', 'Condicion', 'Km', 'Ubicacion'], ';');
-            foreach ($rows as $tire) {
-                fputcsv($out, [
-                    $tire->individual_number,
-                    $tire->brand?->name,
-                    $tire->model?->code,
-                    $tire->size?->code,
-                    $tire->status->label(),
-                    $tire->condition->label(),
-                    $tire->accumulated_km,
-                    $tire->currentLocation?->unit?->plate ?: $tire->status->label(),
-                ], ';');
-            }
+            $query->orderBy('id')->chunkById(500, function ($tires) use ($out) {
+                foreach ($tires as $tire) {
+                    fputcsv($out, [
+                        $tire->individual_number,
+                        $tire->brand?->name,
+                        $tire->model?->code,
+                        $tire->size?->code,
+                        $tire->status->label(),
+                        $tire->condition->label(),
+                        $tire->accumulated_km,
+                        $tire->currentLocation?->unit?->plate ?: $tire->status->label(),
+                    ], ';');
+                }
+            });
             fclose($out);
         }, 'cubiertas-'.now()->format('Ymd').'.csv', [
             'Content-Type' => 'text/csv; charset=UTF-8',
