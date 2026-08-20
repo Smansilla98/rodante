@@ -50,6 +50,7 @@ class IntegrityAndFieldTest extends TestCase
     {
         $this->purchaseTires(1, 77004);
         $this->get(route('reports.cost-km'))->assertOk();
+        $this->get(route('reports.cost-attribution'))->assertOk();
         $this->get(route('reports.inventory'))->assertOk();
     }
 

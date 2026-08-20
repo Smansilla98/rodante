@@ -63,6 +63,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/reportes/kilometros', [ReportController::class, 'kilometers'])->name('reports.kilometers');
     Route::get('/reportes/costo-km', [ReportController::class, 'costPerKm'])->name('reports.cost-km');
+    Route::get('/reportes/costo-unidad', [ReportController::class, 'costByAttribution'])->name('reports.cost-attribution');
     Route::get('/reportes/inventario', [ReportController::class, 'inventory'])->name('reports.inventory');
     Route::get('/reportes/consumo', [ReportController::class, 'consumption'])->name('reports.consumption');
     Route::get('/reportes/incidencias', [ReportController::class, 'incidents'])->name('reports.incidents');

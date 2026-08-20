@@ -136,14 +136,27 @@ class PurchaseService
                 'confirmed_at' => now(),
             ]);
 
-            $totalCost = 0;
+            $costs = app(CostService::class);
+            $purchase->load('items.tires');
             foreach ($purchase->items as $item) {
-                if ($item->unit_cost) {
-                    $totalCost += (float) $item->unit_cost * (int) $item->quantity;
+                $unitCost = $item->unit_cost !== null ? (float) $item->unit_cost : null;
+                if ($unitCost === null || $unitCost <= 0) {
+                    continue;
                 }
-            }
-            if ($totalCost > 0) {
-                app(CostService::class)->record($user, 'PURCHASE', $totalCost, $purchase, null, $purchase->number);
+                foreach ($item->tires as $tire) {
+                    $costs->record(
+                        $user,
+                        'PURCHASE',
+                        $unitCost,
+                        $purchase,
+                        $tire,
+                        $purchase->number,
+                        [
+                            'unit_price' => $unitCost,
+                            'quantity' => 1,
+                        ],
+                    );
+                }
             }
 
             $this->audit->log('purchase.confirmed', $purchase);

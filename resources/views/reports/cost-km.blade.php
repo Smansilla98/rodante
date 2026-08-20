@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', 'Costo por km')
 @section('content')
-<x-page-header kicker="Consulta" title="Costo por kilómetro" subtitle="Compra + taller sobre km acumulados. Sin km, no se calcula." />
+<x-page-header kicker="Consulta" title="Costo por kilómetro" subtitle="Suma de cost_entries con tire_id sobre km acumulados. Sin km, no se calcula." />
 <x-panel :flush="true">
     <x-content-table>
         <thead>

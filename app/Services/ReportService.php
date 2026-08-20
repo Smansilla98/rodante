@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\IncidentType;
 use App\Enums\MovementType;
 use App\Enums\TireStatus;
+use App\Models\CostEntry;
 use App\Models\FleetUnit;
 use App\Models\Tire;
 use App\Models\TireIncident;
@@ -24,7 +25,9 @@ class ReportService
             'lifecycles', 'movements.fromUnit', 'movements.toUnit', 'movements.fromPosition',
             'movements.toPosition', 'movements.user', 'incidents.user',
             'measurements.readings.zone', 'measurements.user', 'assignments.segments.odometerUnit',
-            'purchaseItem.purchase', 'costEntries',
+            'purchaseItem.purchase',
+            'costEntries.fleetUnit',
+            'costEntries.unitPosition',
         ]);
     }
 
@@ -165,6 +168,86 @@ class ReportService
 
                 return $tire;
             });
+    }
+
+    /**
+     * Costo asentado por posición (suma de amount con unit_position_id).
+     * No altera costPerKm: solo entradas con atribución de posición.
+     */
+    public function costByPosition(?User $user = null): Collection
+    {
+        $query = CostEntry::query()
+            ->select([
+                'unit_position_id',
+                DB::raw('sum(amount) as total_amount'),
+                DB::raw('count(*) as entries_count'),
+                DB::raw('count(distinct tire_id) as tire_count'),
+            ])
+            ->whereNotNull('unit_position_id')
+            ->groupBy('unit_position_id')
+            ->orderByDesc('total_amount');
+
+        if ($user) {
+            AccessScope::applyCompany($query, $user);
+        }
+
+        $rows = $query->get();
+        $positions = \App\Models\UnitPosition::query()
+            ->whereIn('id', $rows->pluck('unit_position_id'))
+            ->get()
+            ->keyBy('id');
+
+        return $rows->map(function (CostEntry $row) use ($positions) {
+            $pos = $positions->get($row->unit_position_id);
+
+            return (object) [
+                'unit_position_id' => (int) $row->unit_position_id,
+                'position_name' => $pos?->name ?? ('#'.$row->unit_position_id),
+                'position_code' => $pos?->code,
+                'total_amount' => (float) $row->total_amount,
+                'entries_count' => (int) $row->entries_count,
+                'tire_count' => (int) $row->tire_count,
+            ];
+        });
+    }
+
+    /**
+     * Costo asentado por unidad (suma de amount con fleet_unit_id).
+     */
+    public function costByUnit(?User $user = null): Collection
+    {
+        $query = CostEntry::query()
+            ->select([
+                'fleet_unit_id',
+                DB::raw('sum(amount) as total_amount'),
+                DB::raw('count(*) as entries_count'),
+                DB::raw('count(distinct tire_id) as tire_count'),
+            ])
+            ->whereNotNull('fleet_unit_id')
+            ->groupBy('fleet_unit_id')
+            ->orderByDesc('total_amount');
+
+        if ($user) {
+            AccessScope::applyCompany($query, $user);
+        }
+
+        $rows = $query->get();
+        $units = FleetUnit::query()
+            ->whereIn('id', $rows->pluck('fleet_unit_id'))
+            ->get()
+            ->keyBy('id');
+
+        return $rows->map(function (CostEntry $row) use ($units) {
+            $unit = $units->get($row->fleet_unit_id);
+
+            return (object) [
+                'fleet_unit_id' => (int) $row->fleet_unit_id,
+                'plate' => $unit?->plate ?? ('#'.$row->fleet_unit_id),
+                'total_amount' => (float) $row->total_amount,
+                'entries_count' => (int) $row->entries_count,
+                'tire_count' => (int) $row->tire_count,
+            ];
+        });
     }
 
     public function inventory(?User $user = null): LengthAwarePaginator

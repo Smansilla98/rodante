@@ -30,6 +30,14 @@ class ReportController extends Controller
         return view('reports.cost-km', ['tires' => $reports->costPerKm($request->user())]);
     }
 
+    public function costByAttribution(Request $request, ReportService $reports)
+    {
+        return view('reports.cost-attribution', [
+            'byPosition' => $reports->costByPosition($request->user()),
+            'byUnit' => $reports->costByUnit($request->user()),
+        ]);
+    }
+
     public function inventory(Request $request, ReportService $reports)
     {
         return view('reports.inventory', ['tires' => $reports->inventory($request->user())]);

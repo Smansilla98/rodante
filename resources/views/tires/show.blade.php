@@ -41,6 +41,29 @@
             @php $costTotal = $tire->costEntries->sum('amount'); @endphp
             <div><span>Costo acumulado</span><span class="mono">{{ $costTotal ? '$ '.number_format($costTotal, 2, ',', '.') : '—' }}</span></div>
             <div><span>$ / km</span><span class="mono">{{ ($costTotal && $tire->accumulated_km) ? number_format($costTotal / $tire->accumulated_km, 4, ',', '.') : '—' }}</span></div>
+            @if($tire->costEntries->isNotEmpty())
+                <div class="mt-3 col-span-full">
+                    <h3 class="font-semibold mb-2 text-sm">Serie de precios / costos</h3>
+                    <ul class="text-sm space-y-1">
+                        @foreach($tire->costEntries->sortBy('occurred_at') as $entry)
+                            <li>
+                                <span class="mono">{{ $entry->occurred_at->format('d/m/Y') }}</span>
+                                · {{ $entry->categoryLabel() }}
+                                · <span class="mono">$ {{ number_format($entry->amount, 2, ',', '.') }}</span>
+                                @if($entry->unit_price !== null)
+                                    <span class="hint">(p.u. $ {{ number_format($entry->unit_price, 2, ',', '.') }})</span>
+                                @endif
+                                @if($entry->fleetUnit || $entry->unitPosition)
+                                    <span class="hint">
+                                        — {{ $entry->fleetUnit?->plate }}
+                                        {{ $entry->unitPosition?->name }}
+                                    </span>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
             <div><span>Profundidad mín.</span>{{ $tire->current_tread_min ? $tire->current_tread_min.' mm' : '—' }}</div>
             <div>
                 <span>Ubicación</span>

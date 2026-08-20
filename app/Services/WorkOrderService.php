@@ -132,6 +132,9 @@ class WorkOrderService
                 'closed_at' => now(),
             ]);
             if ($cost !== null && $cost > 0) {
+                $attribution = $this->costs->attributionFromTire($tire);
+                $attribution['unit_price'] = $cost;
+                $attribution['quantity'] = 1;
                 $this->costs->record(
                     $user,
                     $order->type === WorkOrderType::Recapado ? 'RECAP' : 'REPAIR',
@@ -139,6 +142,7 @@ class WorkOrderService
                     $order,
                     $tire,
                     $order->number,
+                    $attribution,
                 );
             }
             $this->audit->log('work_order.closed', $order);

@@ -10,7 +10,7 @@ class CostController extends Controller
 {
     public function index(Request $request)
     {
-        $query = CostEntry::with('tire.model', 'user')->latest('occurred_at');
+        $query = CostEntry::with(['tire.model', 'user', 'fleetUnit', 'unitPosition'])->latest('occurred_at');
         AccessScope::applyCompany($query, $request->user());
 
         return view('costs.index', [
