@@ -10,13 +10,84 @@ use App\Models\TireCurrentLocation;
 use App\Models\User;
 use App\Support\AccessScope;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class IntegrityService
 {
+    private const CACHE_TTL_SECONDS = 86400;
+
     public function findings(?User $user = null): Collection
     {
         $user ??= auth()->user();
+        if (! $user) {
+            return $this->computeFindings(null);
+        }
+
+        $payload = Cache::remember(
+            $this->cacheKey($user, 'findings'),
+            self::CACHE_TTL_SECONDS,
+            fn () => $this->computeFindings($user)->all(),
+        );
+
+        return collect($payload);
+    }
+
+    public function count(?User $user = null): int
+    {
+        $user ??= auth()->user();
+        if (! $user) {
+            return $this->computeFindings(null)->count();
+        }
+
+        return (int) Cache::remember(
+            $this->cacheKey($user, 'count'),
+            self::CACHE_TTL_SECONDS,
+            fn () => $this->computeFindings($user)->count(),
+        );
+    }
+
+    public function invalidateCompany(?int $companyId): void
+    {
+        if (! $companyId) {
+            return;
+        }
+
+        $key = $this->versionKey($companyId);
+        Cache::forever($key, $this->version($companyId) + 1);
+    }
+
+    public function invalidateForTire(Tire $tire): void
+    {
+        $this->invalidateCompany($tire->company_id ? (int) $tire->company_id : null);
+    }
+
+    public function version(int $companyId): int
+    {
+        return (int) Cache::get($this->versionKey($companyId), 0);
+    }
+
+    private function versionKey(int $companyId): string
+    {
+        return 'rodante:integrity:ver:'.$companyId;
+    }
+
+    private function cacheKey(User $user, string $suffix): string
+    {
+        $companyId = AccessScope::companyId($user) ?? 0;
+        $ver = $this->version($companyId);
+        $scope = AccessScope::seesEverything($user)
+            ? 'all'
+            : 's'.md5(json_encode([
+                AccessScope::fleetIds($user),
+                AccessScope::visibleBaseIds($user),
+            ]));
+
+        return "rodante:integrity:{$suffix}:{$companyId}:{$ver}:{$scope}";
+    }
+
+    private function computeFindings(?User $user): Collection
+    {
         $tires = Tire::query();
         if ($user) {
             AccessScope::tires($tires, $user);
@@ -113,11 +184,6 @@ class IntegrityService
         }
 
         return $items->unique(fn ($row) => $row['code'].'-'.$row['tire_id'])->values();
-    }
-
-    public function count(?User $user = null): int
-    {
-        return $this->findings($user)->count();
     }
 
     private function row(string $code, Tire $tire, string $message): array

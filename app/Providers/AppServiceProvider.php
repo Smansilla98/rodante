@@ -5,11 +5,13 @@ namespace App\Providers;
 use App\Models\Tire;
 use App\Models\TireAssignment;
 use App\Models\TireAssignmentSegment;
+use App\Models\TireCurrentLocation;
 use App\Models\TireMovement;
 use App\Models\WorkOrder;
 use App\Observers\ImmutableRecordObserver;
 use App\Observers\TireAssignmentObserver;
 use App\Observers\TireAssignmentSegmentObserver;
+use App\Observers\TireCurrentLocationObserver;
 use App\Observers\TireObserver;
 use App\Observers\WorkOrderObserver;
 use Illuminate\Pagination\Paginator;
@@ -33,6 +35,7 @@ class AppServiceProvider extends ServiceProvider
         Tire::observe(TireObserver::class);
         TireAssignment::observe(TireAssignmentObserver::class);
         TireAssignmentSegment::observe(TireAssignmentSegmentObserver::class);
+        TireCurrentLocation::observe(TireCurrentLocationObserver::class);
         TireMovement::observe(ImmutableRecordObserver::class);
         WorkOrder::observe(WorkOrderObserver::class);
     }

@@ -3,10 +3,13 @@
 namespace App\Observers;
 
 use App\Models\Tire;
+use App\Services\IntegrityService;
 use Illuminate\Support\Str;
 
 class TireObserver
 {
+    public function __construct(private IntegrityService $integrity) {}
+
     public function creating(Tire $tire): void
     {
         if (! $tire->public_token) {
@@ -21,5 +24,15 @@ class TireObserver
         if (! $tire->company_id) {
             $tire->company_id = auth()->user()?->company_id;
         }
+    }
+
+    public function saved(Tire $tire): void
+    {
+        $this->integrity->invalidateForTire($tire);
+    }
+
+    public function deleted(Tire $tire): void
+    {
+        $this->integrity->invalidateForTire($tire);
     }
 }
