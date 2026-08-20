@@ -28,6 +28,8 @@ MySQL: `localhost:33062` / `trazabilidad` / `laravel` / `secret`
 
 - [Invariantes de dominio](docs/INVARIANTES.md)
 - [Deploy](docs/DEPLOY.md)
+- [Backup MySQL](docs/BACKUP.md)
+- [Rollback](docs/ROLLBACK.md)
 - [Roadmap P0/P1/P2](docs/ROADMAP.md)
 - [Manual de uso](docs/manual-de-uso.md) (también en la app: **Consulta → Ayuda**)
 - [Propuesta de presupuesto para empresa de transportes](docs/presupuesto-empresa-transportes.md)

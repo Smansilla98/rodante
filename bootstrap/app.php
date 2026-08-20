@@ -34,9 +34,28 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        $exceptions->dontReport([
+            DomainException::class,
+            SheetConflictException::class,
+        ]);
+
+        $exceptions->context(function () {
+            $request = request();
+
+            return array_filter([
+                'user_id' => $request?->user()?->id,
+                'company_id' => $request?->user()?->company_id,
+                'path' => $request?->path(),
+                'method' => $request?->method(),
+                'ip' => $request?->ip(),
+            ], fn ($value) => $value !== null && $value !== '');
+        });
+
         $exceptions->render(function (SheetConflictException $e, Request $request) {
             Log::warning('Conflicto de planilla: '.$e->getMessage(), [
                 'user_id' => $request->user()?->id,
+                'company_id' => $request->user()?->company_id,
                 'path' => $request->path(),
             ]);
             if ($request->expectsJson() || $request->is('api/*')) {
@@ -48,6 +67,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->render(function (DomainException $e, Request $request) {
             Log::warning('Regla de negocio: '.$e->getMessage(), [
                 'user_id' => $request->user()?->id,
+                'company_id' => $request->user()?->company_id,
                 'path' => $request->path(),
             ]);
             if ($request->expectsJson() || $request->is('api/*')) {

@@ -26,3 +26,8 @@ Un solo contenedor (`Dockerfile.fpm`):
 Healthcheck: `GET /up`.
 
 Variables: ver `.env.railway`.
+
+## Backups y rollback
+
+- [Backup MySQL](BACKUP.md) — `php artisan rodante:backup` / `scripts/backup-mysql.sh`
+- [Runbook de rollback](ROLLBACK.md) — código vs restore, sin borrar historial de planilla

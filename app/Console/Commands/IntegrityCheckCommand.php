@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Models\User;
 use App\Services\IntegrityService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 class IntegrityCheckCommand extends Command
 {
@@ -32,6 +33,13 @@ class IntegrityCheckCommand extends Command
         foreach ($findings as $row) {
             $this->line($row['code'].' · '.$row['label'].' · '.$row['message']);
         }
+
+        Log::warning('Integridad: hallazgos detectados', [
+            'count' => $findings->count(),
+            'company_id' => $this->option('company') ? (int) $this->option('company') : null,
+            'codes' => $findings->pluck('code')->unique()->values()->all(),
+            'tire_ids' => $findings->pluck('tire_id')->unique()->values()->all(),
+        ]);
 
         return self::FAILURE;
     }
