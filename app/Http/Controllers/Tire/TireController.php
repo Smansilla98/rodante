@@ -7,6 +7,11 @@ use App\Enums\TireCondition;
 use App\Enums\TireStatus;
 use App\Exceptions\DomainException;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\RetireTireRequest;
+use App\Http\Requests\ReturnTireToStockRequest;
+use App\Http\Requests\StoreTireIncidentRequest;
+use App\Http\Requests\StoreTireMeasurementRequest;
+use App\Http\Requests\UpdateTireRequest;
 use App\Models\MovementReason;
 use App\Models\Tire;
 use App\Models\TireBrand;
@@ -21,7 +26,6 @@ use App\Services\TireOperationService;
 use App\Support\AccessScope;
 use App\Support\TireProductCatalog;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class TireController extends Controller
 {
@@ -84,7 +88,7 @@ class TireController extends Controller
 
     public function show(Tire $tire, ReportService $reports, Request $request)
     {
-        AccessScope::abortUnlessTire($request->user(), $tire->id);
+        $this->authorizeVisible('view', $tire);
         $history = $reports->tireHistory($tire);
         $incidentTypes = collect(IncidentType::cases())
             ->filter(fn (IncidentType $type) => $type !== IncidentType::Recapado || $request->user()->role->canRetireOrRecap())
@@ -103,31 +107,9 @@ class TireController extends Controller
         ]);
     }
 
-    public function update(Request $request, Tire $tire, TireIdentityService $identity)
+    public function update(UpdateTireRequest $request, Tire $tire, TireIdentityService $identity)
     {
-        AccessScope::abortUnlessTire($request->user(), $tire->id);
-        $data = $request->validate([
-            'individual_number' => [
-                'required',
-                'integer',
-                'min:1',
-                Rule::unique('tires', 'individual_number')
-                    ->ignore($tire->id)
-                    ->where(fn ($q) => $q->where('company_id', $tire->company_id)),
-            ],
-            'number_reason' => 'nullable|string|max:255',
-            'tire_brand_id' => 'required|exists:tire_brands,id',
-            'tire_model_id' => 'required|exists:tire_models,id',
-            'tire_size_id' => 'required|exists:tire_sizes,id',
-            'condition' => 'required|string',
-        ]);
-        $model = TireModel::with('sizes')->findOrFail($data['tire_model_id']);
-        if ((int) $model->tire_brand_id !== (int) $data['tire_brand_id']) {
-            return back()->withErrors(['tire_model_id' => $model->code.' no pertenece a esa marca.'])->withInput();
-        }
-        if (! $model->sizes->contains('id', (int) $data['tire_size_id'])) {
-            return back()->withErrors(['tire_size_id' => $model->code.' no se fabrica en esa medida.'])->withInput();
-        }
+        $data = $request->validated();
         if (! TireCondition::tryFrom($data['condition'])) {
             return back()->withErrors(['condition' => 'Condición inválida.'])->withInput();
         }
@@ -153,19 +135,10 @@ class TireController extends Controller
         return redirect()->route('tires.show', $tire)->with('success', 'Cubierta actualizada.');
     }
 
-    public function storeIncident(Request $request, Tire $tire, IncidentService $incidents)
+    public function storeIncident(StoreTireIncidentRequest $request, Tire $tire, IncidentService $incidents)
     {
-        AccessScope::abortUnlessTire($request->user(), $tire->id);
-        $data = $request->validate([
-            'type' => ['required', 'string', Rule::enum(IncidentType::class)],
-            'occurred_at' => 'nullable|date',
-            'description' => 'nullable|string|max:255',
-            'notes' => 'nullable|string',
-            'odometer' => 'nullable|integer|min:0',
-        ]);
-
         try {
-            $incidents->register($tire, $data, $request->user());
+            $incidents->register($tire, $request->validated(), $request->user());
         } catch (DomainException $e) {
             return back()->withErrors(['incident' => $e->getMessage()]);
         }
@@ -173,20 +146,10 @@ class TireController extends Controller
         return back()->with('success', 'Incidencia registrada.');
     }
 
-    public function storeMeasurement(Request $request, Tire $tire, MeasurementService $measurements)
+    public function storeMeasurement(StoreTireMeasurementRequest $request, Tire $tire, MeasurementService $measurements)
     {
-        AccessScope::abortUnlessTire($request->user(), $tire->id);
-        $data = $request->validate([
-            'measured_at' => 'nullable|date',
-            'odometer' => 'nullable|integer|min:0',
-            'notes' => 'nullable|string',
-            'readings' => 'required|array',
-            'readings.*.zone_id' => 'required|exists:measurement_zones,id',
-            'readings.*.millimeters' => 'required|numeric|min:0|max:40',
-        ]);
-
         try {
-            $measurement = $measurements->record($tire, $data, $request->user());
+            $measurement = $measurements->record($tire, $request->validated(), $request->user());
         } catch (DomainException $e) {
             return back()->withErrors(['measurement' => $e->getMessage()]);
         }
@@ -198,16 +161,10 @@ class TireController extends Controller
         return back()->with('success', $msg);
     }
 
-    public function retire(Request $request, Tire $tire, RetirementService $retirements)
+    public function retire(RetireTireRequest $request, Tire $tire, RetirementService $retirements)
     {
-        AccessScope::abortUnlessTire($request->user(), $tire->id);
-        $data = $request->validate([
-            'reason_id' => 'required|exists:movement_reasons,id',
-            'notes' => 'nullable|string',
-        ]);
-
         try {
-            $retirements->retire($tire, $data, $request->user());
+            $retirements->retire($tire, $request->validated(), $request->user());
         } catch (DomainException $e) {
             return back()->withErrors(['retire' => $e->getMessage()]);
         }
@@ -215,12 +172,9 @@ class TireController extends Controller
         return back()->with('success', 'Neumático dado de baja. El historial se conserva.');
     }
 
-    public function returnToStock(Request $request, Tire $tire, TireOperationService $operations)
+    public function returnToStock(ReturnTireToStockRequest $request, Tire $tire, TireOperationService $operations)
     {
-        AccessScope::abortUnlessTire($request->user(), $tire->id);
-        $data = $request->validate([
-            'notes' => 'nullable|string|max:255',
-        ]);
+        $data = $request->validated();
 
         try {
             $operations->returnToStock($tire, $request->user(), $data['notes'] ?? null);

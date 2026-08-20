@@ -155,20 +155,43 @@ class AccessScope
         }
     }
 
+    public static function canViewTire(User $user, Tire|int $tire): bool
+    {
+        $id = $tire instanceof Tire ? (int) $tire->id : $tire;
+        $ok = Tire::query()->whereKey($id);
+        self::tires($ok, $user);
+
+        return $ok->exists();
+    }
+
+    public static function canViewUnit(User $user, FleetUnit|int $unit): bool
+    {
+        $id = $unit instanceof FleetUnit ? (int) $unit->id : $unit;
+        $ok = FleetUnit::query()->whereKey($id);
+        self::units($ok, $user);
+
+        return $ok->exists();
+    }
+
+    public static function canViewWorkOrder(User $user, WorkOrder|int $order): bool
+    {
+        $id = $order instanceof WorkOrder ? (int) $order->id : $order;
+        $ok = WorkOrder::query()->whereKey($id);
+        self::workOrders($ok, $user);
+
+        return $ok->exists();
+    }
+
     public static function abortUnlessTire(User $user, int $tireId): void
     {
-        $ok = Tire::query()->whereKey($tireId);
-        self::tires($ok, $user);
-        if (! $ok->exists()) {
+        if (! self::canViewTire($user, $tireId)) {
             abort(404);
         }
     }
 
     public static function abortUnlessUnit(User $user, int $unitId): void
     {
-        $ok = FleetUnit::query()->whereKey($unitId);
-        self::units($ok, $user);
-        if (! $ok->exists()) {
+        if (! self::canViewUnit($user, $unitId)) {
             abort(404);
         }
     }
@@ -184,9 +207,7 @@ class AccessScope
 
     public static function abortUnlessWorkOrder(User $user, int $orderId): void
     {
-        $ok = WorkOrder::query()->whereKey($orderId);
-        self::workOrders($ok, $user);
-        if (! $ok->exists()) {
+        if (! self::canViewWorkOrder($user, $orderId)) {
             abort(404);
         }
     }

@@ -4,13 +4,14 @@ namespace App\Http\Controllers;
 
 use App\Enums\WorkOrderType;
 use App\Exceptions\DomainException;
+use App\Http\Requests\CloseWorkOrderRequest;
+use App\Http\Requests\StoreWorkOrderRequest;
 use App\Models\RetreadShop;
 use App\Models\Tire;
 use App\Models\WorkOrder;
 use App\Services\WorkOrderService;
 use App\Support\AccessScope;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class WorkOrderController extends Controller
 {
@@ -26,6 +27,7 @@ class WorkOrderController extends Controller
 
     public function create(Request $request)
     {
+        $this->authorize('create', WorkOrder::class);
         $tires = Tire::query()->orderBy('individual_number');
         AccessScope::tires($tires, $request->user());
         $shops = RetreadShop::query()->where('is_active', true)->orderBy('name');
@@ -38,15 +40,9 @@ class WorkOrderController extends Controller
         ]);
     }
 
-    public function store(Request $request, WorkOrderService $service)
+    public function store(StoreWorkOrderRequest $request, WorkOrderService $service)
     {
-        $data = $request->validate([
-            'tire_id' => 'required|exists:tires,id',
-            'retread_shop_id' => 'required|exists:retread_shops,id',
-            'type' => ['required', Rule::enum(WorkOrderType::class)],
-            'notes' => 'nullable|string',
-        ]);
-        AccessScope::abortUnlessTire($request->user(), (int) $data['tire_id']);
+        $data = $request->validated();
 
         try {
             $order = $service->open(
@@ -65,7 +61,7 @@ class WorkOrderController extends Controller
 
     public function show(Request $request, WorkOrder $workOrder)
     {
-        AccessScope::abortUnlessWorkOrder($request->user(), $workOrder->id);
+        $this->authorizeVisible('view', $workOrder);
 
         return view('work-orders.show', [
             'order' => $workOrder->load('tire.model', 'tire.brand', 'shop', 'opener', 'closer'),
@@ -74,7 +70,8 @@ class WorkOrderController extends Controller
 
     public function send(Request $request, WorkOrder $workOrder, WorkOrderService $service)
     {
-        AccessScope::abortUnlessWorkOrder($request->user(), $workOrder->id);
+        $this->authorizeVisible('view', $workOrder);
+        $this->authorize('manage', $workOrder);
         try {
             $service->sendToShop($workOrder, $request->user());
         } catch (DomainException $e) {
@@ -84,13 +81,9 @@ class WorkOrderController extends Controller
         return back()->with('success', 'La cubierta quedó en taller.');
     }
 
-    public function close(Request $request, WorkOrder $workOrder, WorkOrderService $service)
+    public function close(CloseWorkOrderRequest $request, WorkOrder $workOrder, WorkOrderService $service)
     {
-        AccessScope::abortUnlessWorkOrder($request->user(), $workOrder->id);
-        $data = $request->validate([
-            'cost' => 'nullable|numeric|min:0',
-            'notes' => 'nullable|string',
-        ]);
+        $data = $request->validated();
         try {
             $service->close($workOrder, $request->user(), isset($data['cost']) ? (float) $data['cost'] : null, $data['notes'] ?? null);
         } catch (DomainException $e) {
@@ -102,7 +95,8 @@ class WorkOrderController extends Controller
 
     public function cancel(Request $request, WorkOrder $workOrder, WorkOrderService $service)
     {
-        AccessScope::abortUnlessWorkOrder($request->user(), $workOrder->id);
+        $this->authorizeVisible('view', $workOrder);
+        $this->authorize('manage', $workOrder);
         $data = $request->validate(['notes' => 'nullable|string']);
         try {
             $service->cancel($workOrder, $request->user(), $data['notes'] ?? null);

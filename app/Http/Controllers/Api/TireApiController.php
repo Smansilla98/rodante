@@ -2,10 +2,13 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Enums\IncidentType;
 use App\Exceptions\DomainException;
 use App\Exceptions\SheetConflictException;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\RetireTireRequest;
+use App\Http\Requests\ReturnTireToStockRequest;
+use App\Http\Requests\StoreTireIncidentRequest;
+use App\Http\Requests\StoreTireMeasurementRequest;
 use App\Models\FleetUnit;
 use App\Models\Tire;
 use App\Services\IncidentService;
@@ -15,7 +18,6 @@ use App\Services\RetirementService;
 use App\Services\TireOperationService;
 use App\Support\AccessScope;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 
 class TireApiController extends Controller
 {
@@ -33,14 +35,14 @@ class TireApiController extends Controller
 
     public function show(Request $request, Tire $tire, ReportService $reports)
     {
-        AccessScope::abortUnlessTire($request->user(), $tire->id);
+        $this->authorizeVisible('view', $tire);
 
         return response()->json($reports->tireHistory($tire));
     }
 
     public function history(Request $request, Tire $tire, ReportService $reports)
     {
-        AccessScope::abortUnlessTire($request->user(), $tire->id);
+        $this->authorizeVisible('view', $tire);
         $tire = $reports->tireHistory($tire);
 
         return response()->json([
@@ -63,7 +65,7 @@ class TireApiController extends Controller
 
     public function unitLayout(Request $request, FleetUnit $unit)
     {
-        AccessScope::abortUnlessUnit($request->user(), $unit->id);
+        $this->authorizeVisible('view', $unit);
         $unit->load('configuration.positions', 'locations.tire.brand', 'locations.tire.model', 'locations.position');
 
         return response()->json([
@@ -77,7 +79,8 @@ class TireApiController extends Controller
 
     public function operate(Request $request, FleetUnit $unit, TireOperationService $operations)
     {
-        AccessScope::abortUnlessUnit($request->user(), $unit->id);
+        $this->authorizeVisible('view', $unit);
+        $this->authorize('operate', $unit);
         $data = $request->validate([
             'odometer' => 'required|integer|min:0',
             'notes' => 'nullable|string',
@@ -105,49 +108,27 @@ class TireApiController extends Controller
         return response()->json($operation, 201);
     }
 
-    public function incident(Request $request, Tire $tire, IncidentService $incidents)
+    public function incident(StoreTireIncidentRequest $request, Tire $tire, IncidentService $incidents)
     {
-        AccessScope::abortUnlessTire($request->user(), $tire->id);
-        $data = $request->validate([
-            'type' => ['required', 'string', Rule::enum(IncidentType::class)],
-            'occurred_at' => 'nullable|date',
-            'description' => 'nullable|string|max:255',
-            'notes' => 'nullable|string',
-            'odometer' => 'nullable|integer|min:0',
-        ]);
-
         try {
-            return response()->json($incidents->register($tire, $data, $request->user()), 201);
+            return response()->json($incidents->register($tire, $request->validated(), $request->user()), 201);
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
     }
 
-    public function measurement(Request $request, Tire $tire, MeasurementService $measurements)
+    public function measurement(StoreTireMeasurementRequest $request, Tire $tire, MeasurementService $measurements)
     {
-        AccessScope::abortUnlessTire($request->user(), $tire->id);
-        $data = $request->validate([
-            'measured_at' => 'nullable|date',
-            'odometer' => 'nullable|integer|min:0',
-            'notes' => 'nullable|string',
-            'readings' => 'required|array',
-            'readings.*.zone_id' => 'required|exists:measurement_zones,id',
-            'readings.*.millimeters' => 'required|numeric|min:0|max:40',
-        ]);
-
         try {
-            return response()->json($measurements->record($tire, $data, $request->user()), 201);
+            return response()->json($measurements->record($tire, $request->validated(), $request->user()), 201);
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
     }
 
-    public function returnToStock(Request $request, Tire $tire, TireOperationService $operations)
+    public function returnToStock(ReturnTireToStockRequest $request, Tire $tire, TireOperationService $operations)
     {
-        AccessScope::abortUnlessTire($request->user(), $tire->id);
-        $data = $request->validate([
-            'notes' => 'nullable|string|max:255',
-        ]);
+        $data = $request->validated();
 
         try {
             return response()->json($operations->returnToStock($tire, $request->user(), $data['notes'] ?? null));
@@ -156,16 +137,10 @@ class TireApiController extends Controller
         }
     }
 
-    public function retire(Request $request, Tire $tire, RetirementService $retirements)
+    public function retire(RetireTireRequest $request, Tire $tire, RetirementService $retirements)
     {
-        AccessScope::abortUnlessTire($request->user(), $tire->id);
-        $data = $request->validate([
-            'reason_id' => 'required|exists:movement_reasons,id',
-            'notes' => 'nullable|string',
-        ]);
-
         try {
-            return response()->json($retirements->retire($tire, $data, $request->user()));
+            return response()->json($retirements->retire($tire, $request->validated(), $request->user()));
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
