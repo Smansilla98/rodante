@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Enums\UserRole;
+use App\Models\AuditLog;
 use App\Models\FleetUnit;
 use App\Models\Tire;
 use App\Models\TirePurchase;
@@ -138,6 +139,20 @@ class AccessScope
     public static function workOrders(Builder $query, User $user): Builder
     {
         return self::applyCompany($query, $user);
+    }
+
+    public static function auditLogs(Builder $query, User $user): Builder
+    {
+        return self::applyCompany($query, $user);
+    }
+
+    public static function abortUnlessAuditLog(User $user, int $logId): void
+    {
+        $ok = AuditLog::query()->whereKey($logId);
+        self::auditLogs($ok, $user);
+        if (! $ok->exists()) {
+            abort(404);
+        }
     }
 
     public static function abortUnlessTire(User $user, int $tireId): void

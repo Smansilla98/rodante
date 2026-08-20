@@ -14,6 +14,7 @@ use App\Models\TirePurchase;
 use App\Models\UnitConfigurationChange;
 use App\Models\UnitCoupling;
 use App\Services\ReportService;
+use App\Support\AccessScope;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
 
@@ -44,10 +45,13 @@ class ReportController extends Controller
         return view('reports.incidents', ['rows' => $reports->incidents($request->user())]);
     }
 
-    public function audit()
+    public function audit(Request $request)
     {
+        $query = AuditLog::query();
+        AccessScope::auditLogs($query, $request->user());
+
         return view('reports.audit', [
-            'logs' => AuditLog::query()
+            'logs' => $query
                 ->with([
                     'user',
                     'entity' => function (MorphTo $morphTo) {

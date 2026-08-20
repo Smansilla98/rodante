@@ -11,7 +11,7 @@ class AuditLog extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'user_id', 'action', 'entity_type', 'entity_id',
+        'company_id', 'user_id', 'action', 'entity_type', 'entity_id',
         'old_values', 'new_values', 'ip_address', 'user_agent', 'created_at',
     ];
 
@@ -22,6 +22,11 @@ class AuditLog extends Model
             'new_values' => 'array',
             'created_at' => 'datetime',
         ];
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
     }
 
     public function user(): BelongsTo
