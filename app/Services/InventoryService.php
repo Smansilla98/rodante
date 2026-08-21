@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Enums\InventoryLineDelta;
 use App\Enums\InventorySessionStatus;
 use App\Enums\LocationKind;
-use App\Enums\MovementType;
 use App\Enums\TireStatus;
 use App\Exceptions\DomainException;
 use App\Models\Base;
@@ -27,7 +26,7 @@ class InventoryService
 
     public function __construct(
         private DocumentNumberService $numbers,
-        private LocationService $locations,
+        private BaseTransferService $baseTransfers,
         private AuditService $audit,
     ) {}
 
@@ -260,17 +259,12 @@ class InventoryService
                         continue;
                     }
 
-                    $kind = $tire->currentLocation?->location_kind ?? LocationKind::from($tire->status->value);
-                    $this->locations->place($tire, $kind, $session->base_id);
-                    $tire->movements()->create([
-                        'type' => MovementType::TransferBase,
-                        'occurred_at' => now(),
-                        'from_base_id' => $fromBase,
-                        'to_base_id' => $session->base_id,
-                        'user_id' => $user->id,
-                        'notes' => 'Ajuste inventario '.$session->number,
-                        'created_at' => now(),
-                    ]);
+                    $this->baseTransfers->transfer(
+                        $tire,
+                        Base::findOrFail($session->base_id),
+                        $user,
+                        'Ajuste inventario '.$session->number,
+                    );
                     $line->update(['adjustment_applied' => true]);
                     $fixed++;
                 }
