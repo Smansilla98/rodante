@@ -1,0 +1,212 @@
+openapi: 3.0.3
+info:
+  title: Rodante API
+  version: 1.0.0
+  description: API v1 multiempresa para trazabilidad de neumáticos.
+servers:
+  - url: /api/v1
+security:
+  - bearerAuth: []
+paths:
+  /auth/token:
+    post:
+      security: []
+      summary: Crear token personal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username: { type: string }
+                password: { type: string, format: password }
+                device: { type: string, maxLength: 80 }
+      responses:
+        '200': { description: Token creado }
+        '422': { description: Credenciales incorrectas o datos inválidos }
+    delete:
+      summary: Revocar el token actual
+      responses:
+        '200': { description: Token revocado }
+  /me:
+    get:
+      summary: Usuario, empresa y alcances actuales
+      responses:
+        '200': { description: Usuario autenticado }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+  /bases:
+    get:
+      summary: Bases visibles para el usuario
+      responses:
+        '200': { description: Lista de bases }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+  /tires:
+    get:
+      summary: Neumáticos visibles paginados
+      parameters:
+        - { name: status, in: query, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200': { description: Página de neumáticos }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+  /tires/lookup:
+    post:
+      summary: Buscar neumático por número o token público
+      parameters:
+        - { name: q, in: query, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Neumático encontrado }
+        '404': { description: No encontrado }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+  /tires/{tire}:
+    get:
+      summary: Ficha e historial completo del neumático
+      parameters:
+        - $ref: '#/components/parameters/TireId'
+      responses:
+        '200': { description: Neumático }
+        '404': { description: No visible o inexistente }
+  /tires/{tire}/history:
+    get:
+      summary: Línea de tiempo del neumático
+      parameters:
+        - $ref: '#/components/parameters/TireId'
+      responses:
+        '200': { description: Historial }
+  /tires/{tire}/incident:
+    post:
+      summary: Registrar incidencia (capacidad write)
+      parameters:
+        - $ref: '#/components/parameters/TireId'
+      requestBody:
+        $ref: '#/components/requestBodies/JsonObject'
+      responses:
+        '201': { description: Incidencia creada }
+        '403': { description: Sin capacidad }
+        '422': { description: Datos o estado inválidos }
+  /tires/{tire}/measurement:
+    post:
+      summary: Registrar medición (capacidad write)
+      parameters:
+        - $ref: '#/components/parameters/TireId'
+      requestBody:
+        $ref: '#/components/requestBodies/JsonObject'
+      responses:
+        '201': { description: Medición creada }
+        '422': { description: Datos inválidos }
+  /tires/{tire}/return-stock:
+    post:
+      summary: Devolver neumático a stock (capacidad write)
+      parameters:
+        - $ref: '#/components/parameters/TireId'
+      requestBody:
+        $ref: '#/components/requestBodies/JsonObject'
+      responses:
+        '200': { description: Neumático actualizado }
+        '422': { description: Estado inválido }
+  /tires/{tire}/retire:
+    post:
+      summary: Dar neumático de baja (capacidad retire)
+      parameters:
+        - $ref: '#/components/parameters/TireId'
+      requestBody:
+        $ref: '#/components/requestBodies/JsonObject'
+      responses:
+        '200': { description: Neumático retirado }
+        '403': { description: Sin capacidad }
+  /units:
+    get:
+      summary: Unidades visibles
+      responses:
+        '200': { description: Lista de unidades }
+  /units/{unit}/layout:
+    get:
+      summary: Configuración y neumáticos montados
+      parameters:
+        - $ref: '#/components/parameters/UnitId'
+      responses:
+        '200': { description: Planilla de unidad }
+        '404': { description: No visible o inexistente }
+  /units/{unit}/tire-operations:
+    post:
+      summary: Ejecutar instalaciones y retiros (capacidad write)
+      parameters:
+        - $ref: '#/components/parameters/UnitId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [odometer]
+              properties:
+                odometer: { type: integer, minimum: 0 }
+                notes: { type: string, nullable: true }
+                removals: { type: array, items: { type: object } }
+                installations: { type: array, items: { type: object } }
+      responses:
+        '201': { description: Operación creada }
+        '409': { description: Conflicto de planilla }
+        '422': { description: Operación inválida }
+  /work-orders:
+    get:
+      summary: Órdenes de trabajo visibles paginadas
+      responses:
+        '200': { description: Página de órdenes }
+    post:
+      summary: Abrir orden de trabajo (capacidad write)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tire_id, retread_shop_id, type]
+              properties:
+                tire_id: { type: integer }
+                retread_shop_id: { type: integer }
+                type: { type: string }
+                notes: { type: string, nullable: true }
+      responses:
+        '201': { description: Orden abierta }
+        '403': { description: Sin capacidad }
+        '422': { description: Datos o estado inválidos }
+  /inventory-sessions:
+    get:
+      summary: Sesiones de inventario visibles paginadas
+      responses:
+        '200': { description: Página de sesiones }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: Sanctum
+  parameters:
+    TireId:
+      name: tire
+      in: path
+      required: true
+      schema: { type: integer }
+    UnitId:
+      name: unit
+      in: path
+      required: true
+      schema: { type: integer }
+  requestBodies:
+    JsonObject:
+      required: true
+      content:
+        application/json:
+          schema: { type: object }
+  responses:
+    Unauthenticated:
+      description: Token ausente o inválido
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string }
