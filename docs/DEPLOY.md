@@ -31,3 +31,5 @@ Variables: ver `.env.railway`.
 
 - [Backup MySQL](BACKUP.md) — `php artisan rodante:backup` / `scripts/backup-mysql.sh`
 - [Runbook de rollback](ROLLBACK.md) — código vs restore, sin borrar historial de planilla
+
+Antes de reconstruir o reemplazar el servicio MySQL, generar un `mysqldump` verificable. Una reconstrucción del contenedor no reemplaza el backup de la base ni garantiza que el volumen anterior siga asociado.
