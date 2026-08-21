@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Catalog\BrandController;
 use App\Http\Controllers\Catalog\ModelController;
 use App\Http\Controllers\Catalog\SimpleCatalogController;
@@ -32,6 +33,11 @@ Route::get('/qr/{token}', [QrController::class, 'show'])->name('qr.resolve');
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
+
+    Route::get('/olvide-contrasena', [PasswordResetController::class, 'showForgotForm'])->name('password.request');
+    Route::post('/olvide-contrasena', [PasswordResetController::class, 'sendResetLink'])->middleware('throttle:5,1')->name('password.email');
+    Route::get('/restablecer-contrasena/{token}', [PasswordResetController::class, 'showResetForm'])->name('password.reset');
+    Route::post('/restablecer-contrasena', [PasswordResetController::class, 'reset'])->middleware('throttle:5,1')->name('password.update');
 });
 
 Route::middleware('auth')->group(function () {

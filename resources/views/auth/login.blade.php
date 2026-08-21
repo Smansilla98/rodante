@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Ingresar — {{ config('app.name', 'Rodante') }}</title>
+    <meta name="theme-color" content="#c8102e">
+    <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('brand/rodante-icon-180.png') }}">
     <script>
@@ -42,6 +44,10 @@
                 </div>
 
                 <button class="btn btn-primary w-full" type="submit">Ingresar</button>
+                <p class="auth-hint"><a href="{{ route('password.request') }}">Olvidé mi contraseña</a></p>
+                @if(session('status'))
+                    <div class="flash flash--ok" role="status">{{ session('status') }}</div>
+                @endif
                 @if(app()->environment('local'))
                     <p class="auth-hint">Demo: <strong>admin</strong> / <strong>password</strong></p>
                 @endif
