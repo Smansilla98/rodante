@@ -1,0 +1,22 @@
+{
+  "name": "Rodante — Trazabilidad de neumáticos",
+  "short_name": "Rodante",
+  "description": "Gestión de neumáticos, unidades, inventario y trabajo de campo.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f141c",
+  "theme_color": "#c8102e",
+  "icons": [
+    {
+      "src": "/brand/rodante-icon-180.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/brand/rodante-app-icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

@@ -23,6 +23,11 @@
     --primary: #c8102e;
     --primary-hover: #e11d3a;
     --primary-soft: rgb(200 16 46 / 0.18);
+    --color-primary: var(--primary);
+    --color-primary-hover: var(--primary-hover);
+    --color-surface: var(--card);
+    --color-text: var(--ink);
+    --color-border: var(--line);
     --sidebar: #101820;
     --accent-pink: #f472b6;
     --accent-teal: #2dd4bf;
@@ -77,6 +82,7 @@ body {
     line-height: 1.5;
     letter-spacing: 0;
     overflow-x: clip;
+    max-width: 100%;
 }
 
 body.nav-lock {
@@ -292,6 +298,7 @@ body.nav-lock {
 .app-main {
     margin-left: var(--sw);
     min-width: 0;
+    max-width: 100%;
 }
 
 .app-topbar {
@@ -2912,6 +2919,98 @@ textarea.inp,
 
     .table-responsive tbody td:has(.empty)::before {
         content: none;
+    }
+}
+
+@media (max-width: 390px) {
+    html,
+    body,
+    .app-shell,
+    .app-main,
+    main {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: clip;
+    }
+
+    .app-sidebar {
+        width: min(var(--sw), calc(100vw - 2rem));
+        max-width: 100%;
+    }
+
+    .app-page {
+        min-width: 0;
+        padding: 14px 12px 28px;
+    }
+
+    .app-topbar {
+        padding: 8px;
+    }
+
+    .top-right {
+        gap: 4px;
+    }
+
+    .top-user,
+    .type-ctl {
+        display: none;
+    }
+
+    .app-page--planilla,
+    .planilla-work {
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
+    }
+
+    .tire-sheet,
+    .planilla-work .tire-sheet,
+    .tire-matrix {
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        overflow-y: visible;
+        overscroll-behavior-x: contain;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-x pan-y;
+    }
+
+    .tire-sheet > *,
+    .tire-map {
+        min-width: 20rem;
+    }
+
+    .auth-body {
+        padding: 12px;
+    }
+
+    .auth-panel {
+        padding: 24px 18px;
+    }
+
+    .btn,
+    button,
+    [role="button"],
+    .sb-link,
+    .table-responsive a {
+        min-height: 44px;
+    }
+
+    input,
+    select,
+    textarea,
+    .inp,
+    .field input,
+    .field select,
+    .field textarea,
+    .toolbar input,
+    .toolbar select,
+    .planilla-work .field input,
+    .planilla-work .inp,
+    .planilla-work select.inp {
+        min-height: 44px;
+        font-size: 16px;
     }
 }
 

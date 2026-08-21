@@ -903,3 +903,11 @@ document.querySelectorAll('.table-responsive table').forEach((table) => {
         });
     });
 });
+
+if ('serviceWorker' in navigator && window.isSecureContext) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(() => {
+            // La aplicación continúa online aunque el navegador rechace el registro.
+        });
+    });
+}
