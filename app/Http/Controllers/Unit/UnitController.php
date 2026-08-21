@@ -100,6 +100,7 @@ class UnitController extends Controller
 
     public function show(FleetUnit $unit, ReportService $reports, PositionFitService $fit, RotationPatternService $patterns, Request $request)
     {
+        $this->authorizeVisible('view', $unit);
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $unit->load([
             'fleet', 'base', 'type', 'configuration.positions',
@@ -165,6 +166,8 @@ class UnitController extends Controller
 
     public function operate(Request $request, FleetUnit $unit, TireOperationService $operations)
     {
+        $this->authorizeVisible('view', $unit);
+        $this->authorize('operate', $unit);
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $data = $request->validate([
             'odometer' => 'required|integer|min:0',
@@ -260,6 +263,8 @@ class UnitController extends Controller
         RotationPatternService $patterns,
         PositionFitService $fit,
     ) {
+        $this->authorizeVisible('view', $unit);
+        $this->authorize('operate', $unit);
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $mounted = ['cambio', 'pinchadura', 'rotacion', 'retirar', 'incidencia', 'medicion'];
         $data = $request->validate([
@@ -337,6 +342,8 @@ class UnitController extends Controller
 
     public function couple(Request $request, FleetUnit $unit, CouplingService $couplings)
     {
+        $this->authorizeVisible('view', $unit);
+        $this->authorize('couple', $unit);
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $data = $request->validate([
             'other_unit_id' => 'required|exists:fleet_units,id',
@@ -359,6 +366,8 @@ class UnitController extends Controller
 
     public function uncouple(Request $request, FleetUnit $unit, CouplingService $couplings)
     {
+        $this->authorizeVisible('view', $unit);
+        $this->authorize('couple', $unit);
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $data = $request->validate([
             'odometer' => 'required|integer|min:0',
@@ -379,6 +388,8 @@ class UnitController extends Controller
 
     public function changeConfiguration(Request $request, FleetUnit $unit, ConfigurationChangeService $changes)
     {
+        $this->authorizeVisible('view', $unit);
+        $this->authorize('configure', $unit);
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $data = $request->validate([
             'unit_configuration_id' => 'required|exists:unit_configurations,id',
@@ -405,6 +416,8 @@ class UnitController extends Controller
 
     public function updateSpecs(Request $request, FleetUnit $unit)
     {
+        $this->authorizeVisible('view', $unit);
+        $this->authorize('manage', $unit);
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
         if ($unit->hasOdometer()) {
             return back()->withErrors(['specs' => 'La medida lineal aplica a tanque, semi o batea.']);
@@ -422,6 +435,8 @@ class UnitController extends Controller
 
     public function edit(Request $request, FleetUnit $unit)
     {
+        $this->authorizeVisible('view', $unit);
+        $this->authorize('manage', $unit);
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
 
         return view('units.edit', $this->formData() + [
@@ -431,6 +446,8 @@ class UnitController extends Controller
 
     public function update(Request $request, FleetUnit $unit)
     {
+        $this->authorizeVisible('view', $unit);
+        $this->authorize('manage', $unit);
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $data = $request->validate([
             'fleet_id' => 'required|exists:fleets,id',
@@ -465,6 +482,8 @@ class UnitController extends Controller
 
     public function destroy(Request $request, FleetUnit $unit)
     {
+        $this->authorizeVisible('view', $unit);
+        $this->authorize('manage', $unit);
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
         if ($unit->locations()->exists()) {
             return back()->withErrors(['delete' => 'Retirá las cubiertas antes de eliminar la unidad.']);

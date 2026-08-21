@@ -16,6 +16,7 @@ class SizeController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('manageCatalogs');
         $data = $this->validated($request);
         $size = TireSize::create($this->payload($data) + ['is_active' => true]);
         $this->seedZones($size);
@@ -25,6 +26,7 @@ class SizeController extends Controller
 
     public function update(Request $request, TireSize $size)
     {
+        $this->authorize('manageCatalogs');
         $data = $this->validated($request, $size);
         $size->update($this->payload($data) + ['is_active' => $request->boolean('is_active')]);
 
@@ -33,6 +35,7 @@ class SizeController extends Controller
 
     public function destroy(TireSize $size)
     {
+        $this->authorize('manageCatalogs');
         if (Tire::where('tire_size_id', $size->id)->exists()) {
             return back()->withErrors(['delete' => 'No se puede eliminar: hay cubiertas con esa medida. Desactivala.']);
         }

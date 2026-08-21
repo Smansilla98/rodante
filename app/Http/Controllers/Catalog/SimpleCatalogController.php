@@ -25,6 +25,7 @@ class SimpleCatalogController extends Controller
 
     public function storeFleet(Request $request)
     {
+        $this->authorizeCatalogs();
         $data = $this->fleetData($request);
         $fleet = Fleet::create($data + ['is_active' => true]);
         $fleet->bases()->sync($data['base_ids'] ?? []);
@@ -34,6 +35,7 @@ class SimpleCatalogController extends Controller
 
     public function updateFleet(Request $request, Fleet $fleet)
     {
+        $this->authorizeCatalogs();
         $data = $this->fleetData($request, $fleet);
         $fleet->update($data + ['is_active' => $request->boolean('is_active')]);
         $fleet->bases()->sync($data['base_ids'] ?? []);
@@ -43,6 +45,7 @@ class SimpleCatalogController extends Controller
 
     public function destroyFleet(Fleet $fleet)
     {
+        $this->authorizeCatalogs();
         if ($fleet->units()->exists()) {
             return back()->withErrors(['delete' => 'No se puede eliminar: hay unidades en esta flota. Desactivala.']);
         }
@@ -59,6 +62,7 @@ class SimpleCatalogController extends Controller
 
     public function storeBase(Request $request)
     {
+        $this->authorizeCatalogs();
         $data = $this->baseData($request);
         Base::create($data + ['is_active' => true]);
 
@@ -67,6 +71,7 @@ class SimpleCatalogController extends Controller
 
     public function updateBase(Request $request, Base $base)
     {
+        $this->authorizeCatalogs();
         $data = $this->baseData($request, $base);
         $base->update($data + ['is_active' => $request->boolean('is_active')]);
 
@@ -75,6 +80,7 @@ class SimpleCatalogController extends Controller
 
     public function destroyBase(Base $base)
     {
+        $this->authorizeCatalogs();
         if ($base->units()->exists()) {
             return back()->withErrors(['delete' => 'No se puede eliminar: hay unidades en esta base. Desactivala.']);
         }
@@ -91,6 +97,7 @@ class SimpleCatalogController extends Controller
 
     public function storeSupplier(Request $request)
     {
+        $this->authorizeCatalogs();
         $data = $this->supplierData($request);
         Supplier::create($data + ['is_active' => true]);
 
@@ -99,6 +106,7 @@ class SimpleCatalogController extends Controller
 
     public function updateSupplier(Request $request, Supplier $supplier)
     {
+        $this->authorizeCatalogs();
         $data = $this->supplierData($request);
         $supplier->update($data + ['is_active' => $request->boolean('is_active')]);
 
@@ -107,6 +115,7 @@ class SimpleCatalogController extends Controller
 
     public function destroySupplier(Supplier $supplier)
     {
+        $this->authorizeCatalogs();
         if ($supplier->purchases()->exists()) {
             return back()->withErrors(['delete' => 'No se puede eliminar: tiene compras. Desactivalo.']);
         }
@@ -126,6 +135,7 @@ class SimpleCatalogController extends Controller
 
     public function storeType(Request $request)
     {
+        $this->authorizeCatalogs();
         $data = $this->typeData($request);
         UnitType::create([
             'code' => $data['code'],
@@ -139,6 +149,7 @@ class SimpleCatalogController extends Controller
 
     public function updateType(Request $request, UnitType $type)
     {
+        $this->authorizeCatalogs();
         $data = $this->typeData($request, $type);
         $type->update([
             'code' => $data['code'],
@@ -152,6 +163,7 @@ class SimpleCatalogController extends Controller
 
     public function destroyType(UnitType $type)
     {
+        $this->authorizeCatalogs();
         if ($type->units()->exists()) {
             return back()->withErrors(['delete' => 'No se puede eliminar: hay unidades de este tipo. Desactivalo.']);
         }
@@ -162,6 +174,7 @@ class SimpleCatalogController extends Controller
 
     public function storeReason(Request $request)
     {
+        $this->authorizeCatalogs();
         $data = $this->reasonData($request);
         MovementReason::create($data + ['is_active' => true]);
 
@@ -170,6 +183,7 @@ class SimpleCatalogController extends Controller
 
     public function updateReason(Request $request, MovementReason $reason)
     {
+        $this->authorizeCatalogs();
         $data = $this->reasonData($request, $reason);
         $reason->update($data + ['is_active' => $request->boolean('is_active')]);
 
@@ -178,6 +192,7 @@ class SimpleCatalogController extends Controller
 
     public function destroyReason(MovementReason $reason)
     {
+        $this->authorizeCatalogs();
         if (TireMovement::where('reason_id', $reason->id)->exists()) {
             return back()->withErrors(['delete' => 'No se puede eliminar: ya se usó en movimientos. Desactivalo.']);
         }
@@ -188,6 +203,7 @@ class SimpleCatalogController extends Controller
 
     public function updateConfiguration(Request $request, UnitConfiguration $configuration)
     {
+        $this->authorizeCatalogs();
         $data = $request->validate([
             'name' => 'required|string|max:80',
             'description' => 'nullable|string|max:255',
@@ -199,6 +215,7 @@ class SimpleCatalogController extends Controller
 
     public function destroyConfiguration(UnitConfiguration $configuration)
     {
+        $this->authorizeCatalogs();
         if (FleetUnit::where('unit_configuration_id', $configuration->id)->exists()) {
             return back()->withErrors(['delete' => 'No se puede eliminar: hay unidades con esta configuración. Desactivala.']);
         }
@@ -206,6 +223,11 @@ class SimpleCatalogController extends Controller
         $configuration->delete();
 
         return back()->with('success', 'Configuración eliminada.');
+    }
+
+    private function authorizeCatalogs(): void
+    {
+        $this->authorize('manageCatalogs');
     }
 
     private function fleetData(Request $request, ?Fleet $fleet = null): array

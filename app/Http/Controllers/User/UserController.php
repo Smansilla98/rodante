@@ -17,6 +17,7 @@ class UserController extends Controller
 {
     public function index(Request $request)
     {
+        $this->authorize('viewAny', User::class);
         $users = User::with('fleets', 'bases')->orderBy('name');
         AccessScope::applyCompany($users, $request->user());
         $fleets = Fleet::orderBy('name');
@@ -34,6 +35,7 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('viewAny', User::class);
         $data = $this->validated($request);
         $user = User::create([
             'company_id' => $request->user()->company_id,
@@ -52,6 +54,7 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        $this->authorize('manage', $user);
         abort_unless((int) $user->company_id === (int) $request->user()->company_id, 404);
         $data = $this->validated($request, $user);
         $payload = [
@@ -73,6 +76,7 @@ class UserController extends Controller
 
     public function destroy(Request $request, User $user)
     {
+        $this->authorize('manage', $user);
         abort_unless((int) $user->company_id === (int) $request->user()->company_id, 404);
         if ($user->is($request->user())) {
             return back()->withErrors(['delete' => 'No podés eliminar tu propio usuario.']);

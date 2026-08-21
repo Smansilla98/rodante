@@ -15,6 +15,7 @@ class BrandController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('manageCatalogs');
         $data = $request->validate(['name' => 'required|string|max:80|unique:tire_brands,name']);
         TireBrand::create($data + ['is_active' => true]);
 
@@ -23,6 +24,7 @@ class BrandController extends Controller
 
     public function update(Request $request, TireBrand $brand)
     {
+        $this->authorize('manageCatalogs');
         $data = $request->validate([
             'name' => 'required|string|max:80|unique:tire_brands,name,'.$brand->id,
         ]);
@@ -33,6 +35,7 @@ class BrandController extends Controller
 
     public function destroy(TireBrand $brand)
     {
+        $this->authorize('manageCatalogs');
         if ($brand->models()->exists()) {
             return back()->withErrors(['delete' => 'No se puede eliminar: tiene modelos. Desactivala o borralos antes.']);
         }

@@ -14,6 +14,8 @@ use App\Observers\TireAssignmentSegmentObserver;
 use App\Observers\TireCurrentLocationObserver;
 use App\Observers\TireObserver;
 use App\Observers\WorkOrderObserver;
+use App\Policies\CatalogPolicy;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
@@ -31,6 +33,8 @@ class AppServiceProvider extends ServiceProvider
         Paginator::defaultView('vendor.pagination.bootstrap-5');
 
         Password::defaults(fn () => Password::min(10)->letters()->numbers());
+
+        Gate::define('manageCatalogs', [CatalogPolicy::class, 'manage']);
 
         Tire::observe(TireObserver::class);
         TireAssignment::observe(TireAssignmentObserver::class);

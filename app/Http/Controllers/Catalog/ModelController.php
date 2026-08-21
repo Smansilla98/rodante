@@ -25,6 +25,7 @@ class ModelController extends Controller
 
     public function store(Request $request)
     {
+        $this->authorize('manageCatalogs');
         $data = $this->validated($request);
         $model = TireModel::create($data + ['is_active' => true]);
         $model->sizes()->sync($data['size_ids'] ?? []);
@@ -34,6 +35,7 @@ class ModelController extends Controller
 
     public function update(Request $request, TireModel $model)
     {
+        $this->authorize('manageCatalogs');
         $data = $this->validated($request, $model);
         $model->update($data + ['is_active' => $request->boolean('is_active')]);
         $model->sizes()->sync($data['size_ids'] ?? []);
@@ -43,6 +45,7 @@ class ModelController extends Controller
 
     public function destroy(TireModel $model)
     {
+        $this->authorize('manageCatalogs');
         if ($model->tires()->exists()) {
             return back()->withErrors(['delete' => 'No se puede eliminar: hay cubiertas de este modelo. Desactivalo.']);
         }

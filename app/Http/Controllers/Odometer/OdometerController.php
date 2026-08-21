@@ -32,6 +32,7 @@ class OdometerController extends Controller
 
     public function update(Request $request, OdometerReading $reading, OdometerService $odometers)
     {
+        $this->authorize('update', $reading);
         AccessScope::abortUnlessUnit($request->user(), (int) $reading->unit_id);
         $data = $request->validate([
             'value' => 'required|integer|min:0',
@@ -44,6 +45,6 @@ class OdometerController extends Controller
             return back()->withErrors(['odometer' => $e->getMessage()]);
         }
 
-        return redirect()->route('odometers.index')->with('success', 'Odómetro corregido. La lectura queda actualizada; los km ya asentados en cubiertas no se recalculan.');
+        return redirect()->route('odometers.index')->with('success', 'Odómetro corregido. Se realinearon los tramos de km que usaban ese valor.');
     }
 }
