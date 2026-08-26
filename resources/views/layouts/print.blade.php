@@ -174,6 +174,44 @@
             cursor: pointer;
         }
         .toolbar a { background: #2a3344; }
+        .forecast-copy { margin: 0 0 10px; }
+        .mt { margin-top: 10px; }
+        .hist {
+            border: 1px solid var(--line);
+            border-bottom: 0;
+            padding: 8px 10px;
+        }
+        .hist:last-of-type { border-bottom: 1px solid var(--line); }
+        .hist__when { color: var(--muted); font-size: 11px; margin-bottom: 2px; }
+        .hist ul { margin: 6px 0 0; padding-left: 18px; }
+        .photos {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        .photos img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            border: 1px solid var(--line);
+        }
+        .photos figcaption { color: var(--muted); font-size: 10px; margin-top: 4px; }
+        @media screen and (max-width: 768px) {
+            body { background: #e8ebf2; }
+            .sheet {
+                width: auto;
+                min-height: 0;
+                margin: 8px;
+                padding: 16px;
+            }
+            .facts { grid-template-columns: 1fr; }
+            .facts div { grid-template-columns: 1fr; }
+            .sign { grid-template-columns: 1fr; gap: 28px; }
+            .photos { grid-template-columns: 1fr; }
+            .toolbar { gap: 10px; padding: 12px; }
+            .toolbar button, .toolbar a { min-height: 44px; padding: 10px 16px; }
+            .doc-head { grid-template-columns: 1fr; }
+        }
         @page {
             size: A4;
             margin: 12mm;

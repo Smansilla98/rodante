@@ -22,6 +22,7 @@ use App\Http\Controllers\Report\ReportController;
 use App\Http\Controllers\RetreadShopController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\Tire\TireController;
+use App\Http\Controllers\TirePhotoController;
 use App\Http\Controllers\Unit\UnitController;
 use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\WorkOrderController;
@@ -53,6 +54,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/stock', [TireController::class, 'stock'])->name('tires.stock');
     Route::get('/neumaticos/{tire}/qr.svg', [QrController::class, 'image'])->name('tires.qr');
     Route::get('/neumaticos/{tire}/imprimir', [PrintController::class, 'tire'])->name('tires.print');
+    Route::get('/neumaticos/{tire}/informe', [PrintController::class, 'life'])->name('tires.life-report');
+    Route::get('/neumaticos/{tire}/fotos/{photo}', [TirePhotoController::class, 'show'])->name('tires.photos.show');
     Route::get('/neumaticos/{tire}', [TireController::class, 'show'])->name('tires.show');
     Route::get('/exportar/cubiertas.csv', [ExportController::class, 'tiresCsv'])->name('exports.tires');
 
@@ -76,6 +79,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/inventarios/{inventory}', [InventoryController::class, 'show'])->whereNumber('inventory')->name('inventories.show');
     Route::get('/reportes/consumo', [ReportController::class, 'consumption'])->name('reports.consumption');
     Route::get('/reportes/incidencias', [ReportController::class, 'incidents'])->name('reports.incidents');
+    Route::get('/reportes/predictivo', [ReportController::class, 'predictive'])->name('reports.predictive');
+    Route::get('/reportes/telemetria', [ReportController::class, 'telemetry'])->name('reports.telemetry');
     Route::get('/auditoria', [ReportController::class, 'audit'])->name('reports.audit');
 
     Route::get('/ayuda', [HelpController::class, 'index'])->name('help.index');

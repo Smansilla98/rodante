@@ -159,6 +159,12 @@ class ProductCycleTest extends TestCase
         $this->assertStringContainsString('Se montó en la unidad', $html);
         $this->assertStringContainsString('Alta / montaje', $html);
         $this->assertStringNotContainsString('Dar de baja', $html);
+        $timelineHtml = substr($html, (int) strpos($html, 'class="timeline"'));
+        $this->assertLessThan(
+            strpos($timelineHtml, 'Se montó en la unidad'),
+            strpos($timelineHtml, 'Alta por compra'),
+            'El historial debe listar el alta antes del montaje (más viejo arriba).'
+        );
 
         $adminHtml = $this->actingAs($this->admin)->get(route('tires.show', $tire))->assertOk()->getContent();
         $this->assertStringContainsString('value="RECAPADO"', $adminHtml);

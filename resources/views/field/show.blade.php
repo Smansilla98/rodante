@@ -1,6 +1,7 @@
 @extends('layouts.app')
 @section('title', $tire->displayName())
 @section('content')
+@php $forecast = $forecast ?? []; @endphp
 <x-page-header kicker="Campo" :title="$tire->displayName()" :subtitle="$tire->status->label()">
     <x-slot:actions>
         <a href="{{ route('field.index') }}" class="btn btn-ghost">Otra cubierta</a>
@@ -12,6 +13,12 @@
             <div><span>Estado</span>{{ $tire->status->label() }}</div>
             <div><span>Condición</span>{{ $tire->condition->label() }}</div>
             <div><span>Km</span><span class="mono">{{ number_format($tire->accumulated_km) }}</span></div>
+            @if(!empty($forecast['narrative']))
+                <div class="col-span-full">
+                    <span>Pronóstico</span>
+                    <p>{{ $forecast['narrative'] }}</p>
+                </div>
+            @endif
             <div>
                 <span>Dónde</span>
                 @if($tire->currentLocation?->unit)
@@ -24,6 +31,7 @@
         </div>
         <div class="space-y-2">
             <a class="btn btn-primary w-full" href="{{ route('tires.show', $tire) }}">Historia clínica</a>
+            <a class="btn btn-dark w-full" href="{{ route('tires.life-report', $tire) }}" target="_blank">Informe de vida</a>
             @if($tire->currentLocation?->unit)
                 <a class="btn btn-dark w-full" href="{{ route('units.show', $tire->currentLocation->unit) }}">Abrir planilla</a>
             @endif

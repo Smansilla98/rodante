@@ -15,6 +15,8 @@ class RetirementService
     public function __construct(
         private LocationService $locations,
         private AuditService $audit,
+        private TirePhotoService $photos,
+        private TelemetryService $telemetry,
     ) {}
 
     public function retire(Tire $tire, array $data, User $user): Tire
@@ -29,7 +31,10 @@ class RetirementService
             throw new DomainException('Retirá el neumático de la unidad antes de darlo de baja.');
         }
 
-        return DB::transaction(function () use ($tire, $data, $user) {
+        $files = $data['photos'] ?? [];
+        unset($data['photos']);
+
+        $retired = DB::transaction(function () use ($tire, $data, $user, $files) {
             $location = $tire->currentLocation;
             $this->locations->refreshAccumulatedKm($tire);
 
@@ -53,13 +58,24 @@ class RetirementService
             $this->locations->place($tire, LocationKind::DeBaja, $location?->base_id);
             $tire->update(['retired_at' => now()->toDateString()]);
 
+            $this->photos->storeRetirement($tire, is_array($files) ? $files : [], $user);
+
             $this->audit->log('tire.retired', $tire, null, [
                 'reason_id' => $data['reason_id'] ?? null,
                 'km' => $tire->accumulated_km,
                 'tire' => $tire->auditLabel(),
+                'photos' => $tire->photos()->where('kind', TirePhotoService::KIND_RETIRE)->count(),
             ]);
 
             return $tire->fresh();
         });
+
+        $this->telemetry->record('tire.retired', $retired, [
+            'tire' => $retired->auditLabel(),
+            'km' => $retired->accumulated_km,
+            'photos' => $retired->photos()->where('kind', TirePhotoService::KIND_RETIRE)->count(),
+        ]);
+
+        return $retired;
     }
 }

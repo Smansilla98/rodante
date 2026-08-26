@@ -28,6 +28,8 @@ class ReportService
             'purchaseItem.purchase',
             'costEntries.fleetUnit',
             'costEntries.unitPosition',
+            'photos.user',
+            'company',
         ]);
     }
 
@@ -90,7 +92,7 @@ class ReportService
             ]);
         }
 
-        return $this->clusterTimeline($items->sortByDesc('sort')->values());
+        return $this->clusterTimeline($items->sortBy('sort')->values());
     }
 
     public function unitHistory(FleetUnit $unit): Collection
@@ -342,7 +344,7 @@ class ReportService
                     $used[$otherIndex] = true;
                 }
             }
-            $clusters->push($this->presentCluster($group->sortByDesc('sort')->values()));
+            $clusters->push($this->presentCluster($group->sortBy('sort')->values()));
         }
 
         return $clusters->values();

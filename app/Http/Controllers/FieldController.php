@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\Tire;
+use App\Services\PredictiveWearService;
+use App\Services\TelemetryService;
 use App\Support\AccessScope;
 use Illuminate\Http\Request;
 
@@ -36,11 +38,17 @@ class FieldController extends Controller
         ]);
     }
 
-    public function show(Request $request, Tire $tire)
+    public function show(Request $request, Tire $tire, PredictiveWearService $predictive, TelemetryService $telemetry)
     {
         AccessScope::abortUnlessTire($request->user(), $tire->id);
-        $tire->load(['brand', 'model', 'size', 'currentLocation.unit', 'currentLocation.position', 'currentLocation.base']);
+        $tire->load(['brand', 'model', 'size', 'currentLocation.unit', 'currentLocation.position', 'currentLocation.base', 'measurements.readings.zone']);
+        $telemetry->record('field.identify', $tire, [
+            'tire' => $tire->auditLabel(),
+        ]);
 
-        return view('field.show', ['tire' => $tire]);
+        return view('field.show', [
+            'tire' => $tire,
+            'forecast' => $predictive->forecast($tire),
+        ]);
     }
 }

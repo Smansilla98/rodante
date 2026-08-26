@@ -46,6 +46,11 @@ enum UserRole: string
         return in_array($this, [self::Administrador, self::JefeSector], true);
     }
 
+    public function canViewTelemetry(): bool
+    {
+        return $this->canRetireOrRecap();
+    }
+
     public function canChangeConfiguration(): bool
     {
         return in_array($this, [self::Administrador, self::JefeSector], true);

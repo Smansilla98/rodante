@@ -18,6 +18,9 @@ Route::prefix('v1')->group(function () {
         Route::post('/tires/lookup', [ApiSurfaceController::class, 'lookup']);
         Route::get('/tires/{tire}', [TireApiController::class, 'show']);
         Route::get('/tires/{tire}/history', [TireApiController::class, 'history']);
+        Route::get('/tires/{tire}/prediction', [TireApiController::class, 'prediction']);
+        Route::get('/tires/{tire}/life-report', [TireApiController::class, 'lifeReport']);
+        Route::get('/telemetry', [TireApiController::class, 'telemetry'])->middleware('capability:retire');
         Route::get('/units', [TireApiController::class, 'units']);
         Route::get('/units/{unit}/layout', [TireApiController::class, 'unitLayout']);
 

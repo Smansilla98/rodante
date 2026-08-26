@@ -131,10 +131,11 @@ Estados que vas a ver en el sistema:
 
 **Operación → Neumáticos** o el buscador superior. Cada cubierta se identifica por marca, diseño y número.
 
-La ficha muestra estado, condición, vida actual, km acumulados, profundidad mínima y ubicación. Más abajo, historial de movimientos, incidencias y mediciones.
+La ficha muestra estado, condición, vida actual, km acumulados, profundidad mínima, ubicación y un **pronóstico de desgaste** (km estimados hasta 4 mm). Más abajo, historial de movimientos, incidencias y mediciones.
 
+- **Informe de vida**: documento completo para imprimir o guardar PDF (historial, vidas, mediciones, costos, pronóstico y fotos de baja).
 - **Incidencia** y **medición** se pueden cargar también desde acá (roles con escritura).
-- **Baja** (jefe o administrador): saca la cubierta de circulación con un motivo.
+- **Baja** (jefe o administrador): saca la cubierta de circulación con un motivo. En tablet o celular se pueden **sacar fotos** de la carcasa (hasta 6). La baja no se revierte; el historial y las fotos quedan en la ficha y en el informe.
 - **Recapado** (jefe o administrador): hay que retirarla de la unidad antes. Cierra la vida actual y abre otra. Una **reparación no abre vida nueva**.
 - **Editar** datos maestros: solo administrador. Si la cubierta ya tiene historial, no se borra: se desactiva.
 
@@ -174,6 +175,8 @@ El acoplado no tiene reloj propio: los km de sus cubiertas salen del tractor aco
 | **Inventario** | Listado para conteo físico: número, estado, ubicación esperada. |
 | **Consumo** | Rendimiento y desgaste para decidir rotación, recap o baja. |
 | **Incidencias** | Eventos (pinchadura, corte, recapado, etc.). |
+| **Predictivo** | Km estimados hasta 4 mm. Con dos mediciones y odómetro usa el desgaste real; si no, una estimación de catálogo. |
+| **Telemetría** | Jefe/admin: ingresos, campo, planilla, mediciones, bajas e informes. Queda en la empresa, no se manda a un tercero. |
 | **Movimientos** | Auditoría en castellano: quién montó, acopló, midió o dio de baja. |
 | **Integridad** | Jefe/admin: cubiertas con ubicación, assignment o km que no cierran. |
 

@@ -19,6 +19,7 @@ use App\Models\TireModel;
 use App\Models\TireSize;
 use App\Services\IncidentService;
 use App\Services\MeasurementService;
+use App\Services\PredictiveWearService;
 use App\Services\ReportService;
 use App\Services\RetirementService;
 use App\Services\TireIdentityService;
@@ -86,7 +87,7 @@ class TireController extends Controller
         return $this->index($request);
     }
 
-    public function show(Tire $tire, ReportService $reports, Request $request)
+    public function show(Tire $tire, ReportService $reports, PredictiveWearService $predictive, Request $request)
     {
         $this->authorizeVisible('view', $tire);
         $history = $reports->tireHistory($tire);
@@ -97,6 +98,7 @@ class TireController extends Controller
         return view('tires.show', [
             'tire' => $history,
             'timeline' => $reports->timeline($tire),
+            'forecast' => $predictive->forecast($history),
             'incidentTypes' => $incidentTypes,
             'retirementReasons' => MovementReason::where('applies_to', 'BAJA')->get(),
             'brands' => TireBrand::orderBy('name')->get(),

@@ -7,11 +7,15 @@ Estas reglas viven en servicios y, cuando es posible, en la base. No se corrigen
 3. **Recapado = vida nueva.** `IncidentType::Recapado` cierra la vida y abre la siguiente.
 4. **Reparación (parche) ≠ vida nueva.** Condición `REPARADA`, misma `life_number`.
 5. **Auxilio no suma km.** `counts_km` del assignment/segmento se apaga en posición spare.
-6. **Rotación no cierra el assignment.** Cambia posición; el período de km sigue abierto.
-7. **Movimientos inmutables.** `TireMovement` no se updatea ni borra. Una corrección genera `CORRECTION`.
-8. **Configuraciones.** Solo el catálogo cargado. No hay `6X24`, `6X1`, `7X24` ni `6X1X1` como códigos activos.
-9. **Un assignment abierto por cubierta.** Unique `open_tire_id` (nullable) + observer + CHECK MySQL (`chk_assignment_open_consistency`). Detalle en `docs/DOMAIN_INVARIANTS.md`.
-10. **Multiempresa.** Toda consulta de negocio filtra `company_id`. Un admin no ve otra empresa.
+6. **Km por recambio, no por planilla.** El odómetro se anota en la operación (sale / entra / lugar / km de ese cambio). Las otras cubiertas montadas no heredan esa lectura: cierran su tramo recién cuando las retiran, con el km verdadero de ese momento.
+7. **Rotación no cierra el assignment.** Cambia posición; el período de km sigue abierto.
+8. **Movimientos inmutables.** `TireMovement` no se updatea ni borra. Una corrección genera `CORRECTION`.
+9. **Configuraciones.** Solo el catálogo cargado. No hay `6X24`, `6X1`, `7X24` ni `6X1X1` como códigos activos.
+10. **Un assignment abierto por cubierta.** Unique `open_tire_id` (nullable) + observer + CHECK MySQL (`chk_assignment_open_consistency`). Detalle en `docs/DOMAIN_INVARIANTS.md`.
+11. **Multiempresa.** Toda consulta de negocio filtra `company_id`. Un admin no ve otra empresa.
+
+12. **Baja irreversible.** Sale de circulación; el historial y las fotos de baja se conservan. No se reinstala.
+13. **Informe de vida.** Se arma desde el historial inmutable (movimientos, mediciones, vidas, costos y fotos). No reescribe eventos.
 
 Chequeo operativo: `php artisan rodante:integrity` y pantalla **Consulta → Integridad**.
 

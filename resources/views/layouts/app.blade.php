@@ -50,7 +50,11 @@
                 <x-nav-link :href="route('inventories.index')" icon="boxes" label="Inventario físico" match="inventories.*" />
                 <x-nav-link :href="route('reports.consumption')" icon="grid" label="Consumo" match="reports.consumption" />
                 <x-nav-link :href="route('reports.incidents')" icon="alert" label="Incidencias" match="reports.incidents" />
+                <x-nav-link :href="route('reports.predictive')" icon="chart" label="Predictivo" match="reports.predictive" />
                 <x-nav-link :href="route('reports.audit')" icon="shield" label="Movimientos" match="reports.audit" />
+                @if(auth()->user()->role->canViewTelemetry())
+                    <x-nav-link :href="route('reports.telemetry')" icon="gauge" label="Telemetría" match="reports.telemetry" />
+                @endif
                 @if(auth()->user()->role->canRetireOrRecap())
                     <x-nav-link :href="route('integrity.index')" icon="shield" label="Integridad" match="integrity.*" />
                 @endif

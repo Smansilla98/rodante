@@ -18,6 +18,7 @@ class IncidentService
     public function __construct(
         private LocationService $locations,
         private AuditService $audit,
+        private TelemetryService $telemetry,
     ) {}
 
     public function register(Tire $tire, array $data, User $user): TireIncident
@@ -29,7 +30,7 @@ class IncidentService
             throw new DomainException('No se pueden cargar incidencias sobre un neumático de baja.');
         }
 
-        return DB::transaction(function () use ($tire, $data, $user) {
+        $incident = DB::transaction(function () use ($tire, $data, $user) {
             $type = IncidentType::from($data['type']);
 
             $incident = TireIncident::create([
@@ -62,6 +63,13 @@ class IncidentService
 
             return $incident;
         });
+
+        $this->telemetry->record('tire.incident', $incident, [
+            'type' => $incident->type->value,
+            'tire' => $tire->auditLabel(),
+        ]);
+
+        return $incident;
     }
 
     private function openNewLife(Tire $tire, User $user): void

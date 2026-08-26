@@ -14,6 +14,7 @@ class MeasurementService
     public function __construct(
         private IncidentService $incidents,
         private AuditService $audit,
+        private TelemetryService $telemetry,
     ) {}
 
     public function record(Tire $tire, array $data, User $user): TireMeasurement
@@ -30,7 +31,7 @@ class MeasurementService
 
         $readings = $data['readings'] ?? [];
 
-        return DB::transaction(function () use ($tire, $data, $user, $zones, $readings) {
+        $recorded = DB::transaction(function () use ($tire, $data, $user, $zones, $readings) {
             $byCode = [];
             foreach ($readings as $reading) {
                 $byCode[$reading['zone_id']] = (float) $reading['millimeters'];
@@ -88,5 +89,12 @@ class MeasurementService
 
             return $measurement->load('readings.zone');
         });
+
+        $this->telemetry->record('tire.measured', $recorded, [
+            'tire' => $tire->auditLabel(),
+            'min_mm' => $recorded->readings->min('millimeters'),
+        ]);
+
+        return $recorded;
     }
 }

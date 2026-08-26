@@ -27,6 +27,7 @@ class TireOperationService
         private LocationService $locations,
         private AuditService $audit,
         private PositionFitService $fit,
+        private TelemetryService $telemetry,
     ) {}
 
     /**
@@ -38,7 +39,7 @@ class TireOperationService
             throw new DomainException('No tiene permiso para operar cubiertas.');
         }
 
-        return DB::transaction(function () use ($unit, $data, $user) {
+        $operation = DB::transaction(function () use ($unit, $data, $user) {
             $unit = FleetUnit::with('type', 'configuration.positions')->lockForUpdate()->findOrFail($unit->id);
             $odometerUnit = $this->couplings->resolveOdometerUnit($unit);
             $odometerUnit = FleetUnit::lockForUpdate()->findOrFail($odometerUnit->id);
@@ -91,6 +92,14 @@ class TireOperationService
 
             return $operation->load('movements.tire');
         });
+
+        $this->telemetry->record('tire.operation', $operation, [
+            'unit' => $unit->plate,
+            'odometer' => $operation->odometer,
+            'movements' => $operation->movements->count(),
+        ]);
+
+        return $operation;
     }
 
     /**

@@ -21,6 +21,7 @@ class ApiOpenApiSurfaceTest extends TestCase
             ['POST', '/api/v1/work-orders'],
             ['GET', '/api/v1/inventory-sessions'],
             ['POST', '/api/v1/tires/lookup?q=1'],
+            ['GET', '/api/v1/telemetry'],
         ] as [$method, $uri]) {
             $this->json($method, $uri)->assertUnauthorized();
         }
@@ -45,5 +46,7 @@ class ApiOpenApiSurfaceTest extends TestCase
         $path = public_path('openapi.yaml');
         $this->assertFileExists($path);
         $this->assertStringContainsString('/tires:', file_get_contents($path));
+        $this->assertStringContainsString('/tires/{tire}/prediction:', file_get_contents($path));
+        $this->assertStringContainsString('/telemetry:', file_get_contents($path));
     }
 }

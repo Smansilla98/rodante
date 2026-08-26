@@ -38,6 +38,9 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
         $user->update(['last_login_at' => now()]);
+        app(\App\Services\TelemetryService::class)->record('auth.login', $user, [
+            'username' => $user->username,
+        ]);
 
         return redirect()->intended(route('dashboard'));
     }

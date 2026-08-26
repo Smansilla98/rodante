@@ -65,6 +65,49 @@ class PositionFitService
         }
     }
 
+    public function neededApplication(?Tire $mounted, UnitPosition $position): ?TireApplication
+    {
+        if ($position->is_spare || $position->axle_role === 'AUXILIO') {
+            return null;
+        }
+
+        $fromTire = $mounted?->model?->application;
+        if ($fromTire && $fromTire !== TireApplication::Mixto) {
+            return $fromTire;
+        }
+
+        return match ($position->axle_role) {
+            'DIRECCION', 'DIRECCIONAL' => TireApplication::Direccion,
+            'TRACCION' => TireApplication::Traccion,
+            'ARRASTRE' => TireApplication::Arrastre,
+            default => null,
+        };
+    }
+
+    public function assertReplacementFits(Tire $replacement, UnitPosition $position, ?FleetUnit $unit = null, ?Tire $current = null): void
+    {
+        $this->assertCanMount($replacement, $position, $unit);
+
+        $needed = $this->neededApplication($current, $position);
+        $got = $replacement->model?->application;
+        if ($needed && $got && $got !== TireApplication::Mixto && $got !== $needed) {
+            throw new DomainException(
+                'El recambio tiene que ser de '.$needed->label().'. '.$replacement->displayName().' es de '.$got->label().'.'
+            );
+        }
+    }
+
+    public function canReplace(Tire $replacement, UnitPosition $position, ?FleetUnit $unit = null, ?Tire $current = null): bool
+    {
+        try {
+            $this->assertReplacementFits($replacement, $position, $unit, $current);
+
+            return true;
+        } catch (DomainException) {
+            return false;
+        }
+    }
+
     private function assertSizeFitsUnit(Tire $tire, FleetUnit $unit): void
     {
         $width = $unit->allowedTireWidth();

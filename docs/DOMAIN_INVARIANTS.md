@@ -29,7 +29,9 @@ Ver también `docs/INVARIANTES.md`. En este documento:
 
 ## Odómetro
 
-Corregir una lectura recalcula `start_odometer` / `end_odometer` / `km_delta` de segmentos que usaban el valor viejo y refresca `accumulated_km`. Los `tire_movements.km_delta` **no** se reescriben (inmutabilidad).
+El km se carga **por operación** (como en la OT de gomería: sale / entra / lugar / km de ese cambio). Corregir una lectura recalcula `start_odometer` / `end_odometer` / `km_delta` de segmentos que usaban el valor viejo y refresca `accumulated_km`. Los `tire_movements.km_delta` **no** se reescriben (inmutabilidad).
+
+Una cubierta montada no hereda el km de un recambio vecino: su tramo abierto sigue con el odómetro de cuando se montó y recién cierra cuando la retiran.
 
 ## Qué aún no está blindado en DB
 

@@ -149,6 +149,11 @@ class Tire extends Model
         return $this->hasMany(CostEntry::class);
     }
 
+    public function photos(): HasMany
+    {
+        return $this->hasMany(TirePhoto::class)->orderBy('captured_at');
+    }
+
     public function scopeInstallable(Builder $query): Builder
     {
         return $query->where('status', TireStatus::Stock);

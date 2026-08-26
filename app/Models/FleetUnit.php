@@ -129,7 +129,7 @@ class FleetUnit extends Model
             'locations.tire.brand',
             'locations.tire.model',
             'locations.tire.size',
-            'locations.tire.openAssignment',
+            'locations.tire.openAssignment.openSegment',
             'locations.position',
         ]);
 

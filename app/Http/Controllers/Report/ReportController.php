@@ -14,6 +14,8 @@ use App\Models\TirePurchase;
 use App\Models\UnitConfigurationChange;
 use App\Models\UnitCoupling;
 use App\Services\ReportService;
+use App\Services\PredictiveWearService;
+use App\Services\TelemetryService;
 use App\Support\AccessScope;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
@@ -79,5 +81,22 @@ class ReportController extends Controller
                 ->latest('created_at')
                 ->paginate(50),
         ]);
+    }
+
+    public function predictive(Request $request, PredictiveWearService $predictive)
+    {
+        $payload = $predictive->fleet($request->user());
+
+        return view('reports.predictive', [
+            'tires' => $payload['tires'],
+            'forecasts' => $payload['forecasts'],
+        ]);
+    }
+
+    public function telemetry(Request $request, TelemetryService $telemetry)
+    {
+        abort_unless($request->user()->role->canViewTelemetry(), 403);
+
+        return view('reports.telemetry', $telemetry->dashboard($request->user()));
     }
 }

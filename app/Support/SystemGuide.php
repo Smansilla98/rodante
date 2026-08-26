@@ -18,13 +18,15 @@ class SystemGuide
                 'day' => 'Entra al tablero, abre planillas, ficha de cubiertas, stock, compras y reportes. No confirma nada ni opera el mapa.',
                 'can' => [
                     'Ver tablero, unidades, stock, cubiertas, compras y odómetros',
-                    'Consultar km, consumo, incidencias y movimientos',
+                    'Consultar km, consumo, incidencias, predictivo y movimientos',
+                    'Abrir el informe de vida de una cubierta',
                     'Buscar una cubierta por número',
                 ],
                 'cannot' => [
                     'Montar, rotar, retirar o medir cubiertas',
                     'Cargar compras ni corregir odómetros',
                     'Acoplar unidades, dar de baja ni administrar catálogos',
+                    'Ver telemetría de operación',
                 ],
             ],
             [
@@ -186,7 +188,7 @@ class SystemGuide
                 'key' => 'retire',
                 'name' => 'Baja y recapado',
                 'group' => 'Operación',
-                'what' => 'Baja definitiva o recapado. El recapado cierra la vida actual y abre una nueva. La reparación no.',
+                'what' => 'Baja definitiva (con fotos de la carcasa) o recapado. El recapado cierra la vida actual y abre una nueva. La reparación no.',
                 'route' => 'tires.index',
                 'cells' => [
                     'CONSULTA' => $n,
@@ -247,6 +249,28 @@ class SystemGuide
                 'what' => 'Pinchaduras, cortes, recapados y demás eventos sobre cubiertas.',
                 'route' => 'reports.incidents',
                 'cells' => self::all($v),
+            ],
+            [
+                'key' => 'predictive',
+                'name' => 'Predictivo',
+                'group' => 'Consulta',
+                'what' => 'Km estimados hasta 4 mm e informe completo de vida de cada cubierta.',
+                'route' => 'reports.predictive',
+                'cells' => self::all($v),
+            ],
+            [
+                'key' => 'telemetry',
+                'name' => 'Telemetría',
+                'group' => 'Consulta',
+                'what' => 'Quién operó, midió, identificó en campo o dio de baja, y desde web, app o API.',
+                'route' => 'reports.telemetry',
+                'cells' => [
+                    'CONSULTA' => $n,
+                    'OPERARIO' => $n,
+                    'LOGISTICA' => $n,
+                    'JEFE_SECTOR' => $v,
+                    'ADMINISTRADOR' => $v,
+                ],
             ],
             [
                 'key' => 'audit',

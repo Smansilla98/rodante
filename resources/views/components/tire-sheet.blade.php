@@ -12,7 +12,7 @@
         @endforeach
     </div>
 
-    <details class="tire-legend" open>
+    <details class="tire-legend">
         <summary>Ver / ocultar convenciones</summary>
         <div class="tire-legend__grid">
             <span><i class="lg lg--llanta"></i> Llanta</span>

@@ -5,9 +5,10 @@
 @php
     $loc = $tire->currentLocation;
     $lastMeasure = $tire->measurements->sortByDesc('measured_at')->first();
-    $lastEvent = $timeline->first();
+    $lastEvent = $timeline->last();
     $canReturn = auth()->user()->role->canWrite() && in_array($tire->status->value, ['EN_REPARACION', 'RESERVA'], true);
     $repaired = $tire->condition->value === 'REPARADA';
+    $forecast = $forecast ?? [];
 @endphp
 <x-page-header kicker="Cubierta" :title="$tire->displayName()" :subtitle="$tire->fullName().' · '.$tire->size->displayName()" :crumbs="[
     ['label' => 'Tablero', 'url' => route('dashboard')],
@@ -15,7 +16,8 @@
     ['label' => $tire->displayName()],
 ]">
     <x-slot:actions>
-        <a href="{{ route('tires.print', $tire) }}" class="btn btn-ghost" target="_blank">Imprimir</a>
+        <a href="{{ route('tires.life-report', $tire) }}" class="btn btn-primary" target="_blank">Informe de vida</a>
+        <a href="{{ route('tires.print', $tire) }}" class="btn btn-ghost" target="_blank">Ficha corta</a>
         <a href="{{ route('tires.index') }}" class="btn btn-ghost"><x-icon name="back" class="w-4 h-4" /> Listado</a>
         @if(auth()->user()->role->canManageAbm())
             @if(request('edit'))
@@ -41,6 +43,15 @@
             @php $costTotal = $tire->costEntries->sum('amount'); @endphp
             <div><span>Costo acumulado</span><span class="mono">{{ $costTotal ? '$ '.number_format($costTotal, 2, ',', '.') : '—' }}</span></div>
             <div><span>$ / km</span><span class="mono">{{ ($costTotal && $tire->accumulated_km) ? number_format($costTotal / $tire->accumulated_km, 4, ',', '.') : '—' }}</span></div>
+            @if(!empty($forecast['narrative']))
+                <div class="mt-3 col-span-full forecast-card forecast-card--{{ $forecast['status'] ?? 'unknown' }}">
+                    <strong>Pronóstico</strong>
+                    <p>{{ $forecast['narrative'] }}</p>
+                    @if(($forecast['remaining_km'] ?? null) !== null)
+                        <p class="mono">{{ number_format($forecast['remaining_km']) }} km estimados hasta 4 mm · confianza {{ match($forecast['confidence'] ?? 'low') { 'high' => 'alta', 'medium' => 'media', default => 'baja' } }}</p>
+                    @endif
+                </div>
+            @endif
             @if($tire->costEntries->isNotEmpty())
                 <div class="mt-3 col-span-full">
                     <h3 class="font-semibold mb-2 text-sm">Serie de precios / costos</h3>
@@ -182,10 +193,10 @@
         </form>
         @endif
         @if(auth()->user()->role->canRetireOrRecap() && $tire->status->value !== 'DE_BAJA')
-            <form method="POST" action="{{ route('tires.retire', $tire) }}" class="mt-6 space-y-3 border-t border-slate-100 pt-4" data-confirm="La baja es definitiva e irreversible. El historial se conserva, pero esta cubierta no se puede reinstalar. ¿Dar de baja?">
+            <form method="POST" action="{{ route('tires.retire', $tire) }}" class="mt-6 space-y-3 border-t border-slate-100 pt-4" enctype="multipart/form-data" data-confirm="La baja es definitiva e irreversible. El historial se conserva, pero esta cubierta no se puede reinstalar. ¿Dar de baja?">
                 @csrf
                 <h3 class="font-semibold">Baja definitiva</h3>
-                <p class="hint">La cubierta sale de circulación. No vuelve a stock ni a una unidad. El historial queda en la ficha.</p>
+                <p class="hint">La cubierta sale de circulación. No vuelve a stock ni a una unidad. El historial queda en la ficha. En el celular podés sacar fotos de la carcasa.</p>
                 <label class="field"><span>Motivo</span>
                     <select name="reason_id" required>
                         @foreach($retirementReasons as $reason)
@@ -194,7 +205,13 @@
                     </select>
                 </label>
                 <label class="field"><span>Observaciones</span><textarea name="notes" rows="2" placeholder="Contexto obligatorio"></textarea></label>
-                <button class="btn btn-danger">Dar de baja</button>
+                <label class="field">
+                    <span>Fotos de la cubierta</span>
+                    <input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" capture="environment" multiple data-photo-input="#retirePhotoPreview">
+                </label>
+                <div id="retirePhotoPreview" class="photo-grid" aria-live="polite"></div>
+                <p class="hint">Hasta 6 fotos, JPG o PNG, 5 MB cada una. En tablet o celular se abre la cámara.</p>
+                <button class="btn btn-danger w-full sm:w-auto">Dar de baja</button>
             </form>
         @endif
     </x-panel>
@@ -216,6 +233,20 @@
         @endforeach
         </tbody>
     </x-content-table>
+</x-panel>
+@endif
+
+@php $retirePhotos = $tire->photos->where('kind', 'RETIRE'); @endphp
+@if($retirePhotos->isNotEmpty())
+<x-panel title="Fotos de baja" class="mt-6">
+    <div class="photo-grid">
+        @foreach($retirePhotos as $photo)
+            <a href="{{ route('tires.photos.show', [$tire, $photo]) }}" target="_blank" class="photo-grid__item">
+                <img src="{{ route('tires.photos.show', [$tire, $photo]) }}" alt="Foto de baja {{ $photo->original_name }}">
+                <span>{{ $photo->captured_at?->format('d/m/Y H:i') }}</span>
+            </a>
+        @endforeach
+    </div>
 </x-panel>
 @endif
 

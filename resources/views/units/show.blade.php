@@ -3,7 +3,12 @@
 @section('title', $sheetUnits->pluck('plate')->join(' + '))
 @section('page_class', 'app-page--planilla')
 @section('content')
-@php $coupled = $unit->coupledPartner(); @endphp
+@php
+    $coupled = $unit->coupledPartner();
+    $lastKm = $unit->hasOdometer()
+        ? $unit->current_odometer
+        : ($unit->currentCouplingAsTrailer?->tractor?->current_odometer);
+@endphp
 
 <div class="planilla-bar">
     <div class="planilla-bar__id">
@@ -21,11 +26,8 @@
     <div class="planilla-bar__meta">
         <span><em>Base</em> {{ $unit->base->name }}</span>
         <span><em>Fecha</em> {{ now()->format('d/m/Y') }}</span>
-        @if($canOperate)
-            <label class="planilla-bar__km">
-                <em>Odómetro</em>
-                <input id="sheetOdometer" type="number" required min="0" value="{{ $unit->hasOdometer() ? $unit->current_odometer : ($unit->currentCouplingAsTrailer?->tractor?->current_odometer ?? '') }}">
-            </label>
+        @if($lastKm !== null)
+            <span><em>Última lectura</em> {{ number_format($lastKm) }} km</span>
         @endif
     </div>
     <a href="{{ route('units.index') }}" class="btn btn-ghost btn-sm"><x-icon name="back" class="w-4 h-4" /> Unidades</a>
@@ -36,26 +38,7 @@
 
 <div class="planilla-work {{ $canOperate ? 'planilla-work--ops' : '' }}">
     @if($canOperate)
-        <aside class="stock-rail no-print">
-            <h2 class="stock-rail__title">Disponibles</h2>
-            <label class="field">
-                <span class="sr-only">Buscar en stock</span>
-                <input type="search" id="stockSearch" class="inp" placeholder="Nº, marca o modelo…" autocomplete="off" data-url="{{ route('units.stock', $unit) }}">
-            </label>
-            <p class="stock-rail__hint">Escribí para buscar en todo el depósito. No hace falta ver las 80 primeras.</p>
-            <div class="stock-rail__list" id="stockPool" data-url="{{ route('units.stock', $unit) }}">
-                @forelse($stockTires as $stockTire)
-                    <button type="button" class="stock-chip" draggable="true"
-                        data-tire-id="{{ $stockTire->id }}"
-                        title="{{ $stockTire->fullName() }} · {{ $stockTire->size->displayName() }}">
-                        <strong>{{ $stockTire->displayName() }}</strong>
-                        <span>{{ $stockTire->brand?->name }} {{ $stockTire->size?->code }}</span>
-                    </button>
-                @empty
-                    <p class="stock-rail__empty">No hay cubiertas en stock. <a href="{{ route('purchases.create') }}">Cargar compra</a></p>
-                @endforelse
-            </div>
-
+        <aside class="stock-rail stock-rail--tools no-print">
             <h2 class="stock-rail__title">Auxilio</h2>
             <div class="refaccion-drop" id="refaccionDrop" data-spare-slot="{{ $spareSlotId }}" data-slot="{{ $spareSlotId }}">
                 @php $spareLoc = $unit->locations->firstWhere('position_id', $spareSlotId); @endphp
@@ -63,7 +46,7 @@
                     <p class="refaccion-drop__tire">{{ $spareLoc->tire->displayName() }}</p>
                     <p class="refaccion-drop__meta">Montada en auxilio</p>
                 @else
-                    <p class="refaccion-drop__empty">Agregar auxilio</p>
+                    <p class="refaccion-drop__empty">Tocá el auxilio del mapa para instalar</p>
                 @endif
             </div>
 
@@ -86,9 +69,9 @@
     <x-tire-sheet :units="$sheetUnits" :current="$unit" :interactive="$canOperate" />
 
     @if($canOperate)
-        <aside class="recambio-dock no-print" id="recambioDock">
+        <aside class="recambio-dock no-print" id="recambioDock" data-stock-url="{{ route('units.stock', $unit) }}" data-last-km="{{ $lastKm }}">
             <h2 class="recambio-dock__title">Ubicación</h2>
-            <p class="recambio-dock__idle" id="recambioIdle">Tocá una cubierta del mapa o una de stock. En tablet no hace falta arrastrar ni el menú derecho.</p>
+            <p class="recambio-dock__idle" id="recambioIdle">Tocá una cubierta del mapa. El stock aparece recién cuando elegís <strong>Cambio</strong> o una ubicación vacía, y solo del mismo tipo.</p>
 
             <div id="recambioPanel" hidden>
                 <p class="recambio-dock__slot" id="recambioSlot"></p>
@@ -97,27 +80,31 @@
                 <form method="POST" action="{{ route('units.slot', $unit) }}" id="recambioInstall" hidden>
                     @csrf
                     <input type="hidden" name="action" value="install">
-                    <input type="hidden" name="odometer">
                     <input type="hidden" name="position_id" id="installPosition">
                     <input type="hidden" name="expected_tire_id" id="installExpected" value="">
-                    <p class="recambio-dock__idle mb-3">Ubicación vacía. Elegí una cubierta compatible de stock.</p>
+                    <p class="recambio-dock__hint" id="installHint">Ubicación vacía. Elegí una cubierta compatible del mismo tipo.</p>
                     <label class="field">
-                        <span>Cubierta de stock</span>
+                        <span>Buscar</span>
+                        <input type="search" id="installSearch" class="inp" placeholder="Nº o modelo" autocomplete="off">
+                    </label>
+                    <label class="field">
+                        <span>Entra</span>
                         <select name="tire_id" id="installTire" class="inp" required></select>
                     </label>
                     <p class="recambio-dock__empty" id="installEmpty" hidden>No hay cubiertas compatibles en stock.</p>
+                    <x-slot-odometer :last-km="$lastKm" id="installOdometer" />
                     <button class="btn btn-primary w-full mt-3" id="installSubmit">Instalar</button>
                 </form>
 
                 <div id="recambioMounted" hidden>
                     <div class="recambio-facts" id="tireFacts">
                         <p class="recambio-facts__name" id="mountedName"></p>
+                        <p class="recambio-facts__meta" id="mountedMeta"></p>
                         <p class="recambio-facts__link"><a id="mountedLink" href="#">Ver ficha completa</a></p>
-                        <div class="dl dl--compact" id="tireFactsList"></div>
                     </div>
 
                     <div class="slot-actions" id="slotActions">
-                        <button type="button" class="slot-actions__btn is-on" data-action="cambio">Cambio</button>
+                        <button type="button" class="slot-actions__btn" data-action="cambio">Cambio</button>
                         <button type="button" class="slot-actions__btn" data-action="pinchadura">Pinchadura</button>
                         <button type="button" class="slot-actions__btn" data-action="rotacion">Rotación</button>
                         <button type="button" class="slot-actions__btn" data-action="retirar">Retirar</button>
@@ -125,20 +112,30 @@
                         <button type="button" class="slot-actions__btn" data-action="medicion">Medición</button>
                     </div>
 
-                    <form method="POST" action="{{ route('units.slot', $unit) }}" id="formCambio">
+                    <form method="POST" action="{{ route('units.slot', $unit) }}" id="formCambio" hidden>
                         @csrf
                         <input type="hidden" name="action" value="cambio">
-                        <input type="hidden" name="odometer">
                         <input type="hidden" name="position_id" id="cambioPosition">
                         <input type="hidden" name="expected_tire_id" class="expected-tire">
+                        <dl class="ot-ticket" aria-label="Orden de recambio">
+                            <div><dt>Sale</dt><dd id="cambioSale">—</dd></div>
+                            <div><dt>Entra</dt><dd id="cambioEntra">Elegí la cubierta nueva</dd></div>
+                            <div><dt>Lugar</dt><dd id="cambioLugar">—</dd></div>
+                        </dl>
+                        <p class="recambio-dock__hint" id="cambioHint">El stock se carga al elegir Cambio y coincide con el tipo de esta cubierta.</p>
                         <label class="field">
-                            <span>Cubierta nueva</span>
+                            <span>Buscar recambio</span>
+                            <input type="search" id="cambioSearch" class="inp" placeholder="Nº o modelo" autocomplete="off">
+                        </label>
+                        <label class="field">
+                            <span>Cubierta que entra</span>
                             <select name="tire_id" id="cambioTire" class="inp" required></select>
                         </label>
-                        <p class="recambio-dock__empty" id="cambioEmpty" hidden>No hay cubiertas compatibles para el cambio.</p>
+                        <p class="recambio-dock__empty" id="cambioEmpty" hidden>No hay cubiertas del mismo tipo en stock.</p>
+                        <x-slot-odometer :last-km="$lastKm" id="cambioOdometer" />
                         <label class="field mt-2">
                             <span>Nota</span>
-                            <input name="notes" class="inp" placeholder="Opcional">
+                            <input name="notes" class="inp" placeholder="Opcional. Ej. se cambió 1 cubierta eje portador">
                         </label>
                         <button class="btn btn-primary w-full mt-3" id="cambioSubmit">Confirmar cambio</button>
                     </form>
@@ -146,10 +143,10 @@
                     <form method="POST" action="{{ route('units.slot', $unit) }}" id="formPinchadura" hidden>
                         @csrf
                         <input type="hidden" name="action" value="pinchadura">
-                        <input type="hidden" name="odometer">
                         <input type="hidden" name="position_id" id="pinchaduraPosition">
                         <input type="hidden" name="expected_tire_id" class="expected-tire">
                         <p class="recambio-dock__idle mb-3">Registra la pinchadura y manda la cubierta a reparación. La ubicación queda libre.</p>
+                        <x-slot-odometer :last-km="$lastKm" />
                         <label class="field">
                             <span>Nota</span>
                             <input name="notes" class="inp" placeholder="Opcional">
@@ -160,7 +157,6 @@
                     <form method="POST" action="{{ route('units.slot', $unit) }}" id="formRotacion" hidden>
                         @csrf
                         <input type="hidden" name="action" value="rotacion">
-                        <input type="hidden" name="odometer">
                         <input type="hidden" name="position_id" id="rotacionFrom">
                         <input type="hidden" name="expected_tire_id" class="expected-tire">
                         <input type="hidden" name="expected_to_tire_id" id="expectedToTire">
@@ -169,6 +165,7 @@
                             <select name="to_position_id" id="rotatePosition" class="inp" required></select>
                         </label>
                         <p class="recambio-dock__empty" id="rotateEmpty" hidden>No hay otra ubicación compatible.</p>
+                        <x-slot-odometer :last-km="$lastKm" />
                         <label class="field mt-2">
                             <span>Nota</span>
                             <input name="notes" class="inp" placeholder="Opcional">
@@ -179,10 +176,10 @@
                     <form method="POST" action="{{ route('units.slot', $unit) }}" id="formRetirar" hidden>
                         @csrf
                         <input type="hidden" name="action" value="retirar">
-                        <input type="hidden" name="odometer">
                         <input type="hidden" name="position_id" id="retirarPosition">
                         <input type="hidden" name="expected_tire_id" class="expected-tire">
-                        <p class="recambio-dock__idle mb-3">Retira la cubierta de esta ubicación sin instalar otra.</p>
+                        <p class="recambio-dock__idle mb-3">Retira la cubierta de esta ubicación sin instalar otra. El km se asienta solo en esta cubierta.</p>
+                        <x-slot-odometer :last-km="$lastKm" />
                         <label class="field">
                             <span>Motivo</span>
                             <select name="reason_id" class="inp" required>
@@ -210,10 +207,10 @@
                     <form method="POST" action="{{ route('units.slot', $unit) }}" id="formIncidencia" hidden>
                         @csrf
                         <input type="hidden" name="action" value="incidencia">
-                        <input type="hidden" name="odometer">
                         <input type="hidden" name="position_id" id="incidenciaPosition">
                         <input type="hidden" name="expected_tire_id" class="expected-tire">
                         <p class="recambio-dock__idle mb-3">La cubierta sigue montada. Usá pinchadura o cambio si hay que retirarla.</p>
+                        <x-slot-odometer :last-km="$lastKm" />
                         <label class="field">
                             <span>Tipo</span>
                             <select name="incident_type" class="inp" required>
@@ -237,10 +234,10 @@
                     <form method="POST" action="{{ route('units.slot', $unit) }}" id="formMedicion" hidden>
                         @csrf
                         <input type="hidden" name="action" value="medicion">
-                        <input type="hidden" name="odometer">
                         <input type="hidden" name="position_id" id="medicionPosition">
                         <input type="hidden" name="expected_tire_id" class="expected-tire">
                         <p class="recambio-dock__idle mb-3">Cargá la profundidad de cada franja. Un desgaste lateral disparado genera alerta.</p>
+                        <x-slot-odometer :last-km="$lastKm" />
                         <div id="measureFields" class="space-y-2"></div>
                         <p class="recambio-dock__empty" id="measureEmpty" hidden>Esta medida no tiene franjas de profundidad configuradas.</p>
                         <label class="field mt-2">
@@ -255,10 +252,10 @@
             <form method="POST" action="{{ route('units.slot', $unit) }}" id="formPatron" hidden>
                 @csrf
                 <input type="hidden" name="action" value="patron">
-                <input type="hidden" name="odometer">
                 <input type="hidden" name="pattern" id="patronCode">
                 <p class="recambio-dock__slot">Esquema de rotación</p>
                 <p class="recambio-dock__idle mb-3" id="patronHint"></p>
+                <x-slot-odometer :last-km="$lastKm" />
                 <label class="field">
                     <span>Nota</span>
                     <input name="notes" class="inp" placeholder="Opcional">

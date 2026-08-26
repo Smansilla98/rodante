@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Unit;
 
 use App\Enums\IncidentType;
+use App\Enums\TireApplication;
 use App\Enums\TireStatus;
 use App\Enums\UnitStatus;
 use App\Exceptions\DomainException;
@@ -110,7 +111,7 @@ class UnitController extends Controller
             'currentCouplingAsTractor.trailer.locations.tire.brand',
             'currentCouplingAsTractor.trailer.locations.tire.model',
             'currentCouplingAsTractor.trailer.locations.tire.size',
-            'currentCouplingAsTractor.trailer.locations.tire.openAssignment',
+            'currentCouplingAsTractor.trailer.locations.tire.openAssignment.openSegment',
             'currentCouplingAsTractor.trailer.locations.position',
             'currentCouplingAsTrailer.tractor.type',
             'currentCouplingAsTrailer.tractor.base',
@@ -118,31 +119,20 @@ class UnitController extends Controller
             'currentCouplingAsTrailer.tractor.locations.tire.brand',
             'currentCouplingAsTrailer.tractor.locations.tire.model',
             'currentCouplingAsTrailer.tractor.locations.tire.size',
-            'currentCouplingAsTrailer.tractor.locations.tire.openAssignment',
+            'currentCouplingAsTrailer.tractor.locations.tire.openAssignment.openSegment',
             'currentCouplingAsTrailer.tractor.locations.position',
             'locations.tire.brand', 'locations.tire.model', 'locations.tire.size.zones',
-            'locations.tire.currentLifecycle', 'locations.tire.openAssignment', 'locations.position',
+            'locations.tire.currentLifecycle', 'locations.tire.openAssignment.openSegment', 'locations.position',
         ]);
 
         $layout = $unit->tireLayout();
-        $stockQuery = Tire::with('brand', 'model', 'size', 'currentLifecycle')->installable()->orderBy('individual_number');
-        AccessScope::tires($stockQuery, $request->user());
-        if ($width = $unit->allowedTireWidth()) {
-            $stockQuery->whereHas('size', fn ($q) => $q->where('width_mm', $width));
-        }
-        $stockTires = (clone $stockQuery)->limit(24)->get();
         $canOperate = $request->user()->role->canWrite();
 
         return view('units.show', [
             'unit' => $unit,
             'sheetUnits' => $unit->sheetUnits(),
             'history' => $reports->unitHistory($unit),
-            'slotMap' => $canOperate ? $this->slotMap($unit, $layout, $stockTires, $fit) : [],
-            'stockTires' => $canOperate
-                ? $stockTires->filter(fn (Tire $tire) => $layout->contains(
-                    fn (array $slot) => $fit->canMount($tire, $slot['position'], $unit)
-                ))->values()
-                : collect(),
+            'slotMap' => $canOperate ? $this->slotMap($unit, $layout, $fit) : [],
             'rotationPatterns' => $canOperate ? $patterns->forLayout($layout, $fit, $unit) : [],
             'spareSlotId' => $unit->configuration->positions->firstWhere('is_spare', true)?->id,
             'canOperate' => $canOperate,
@@ -218,10 +208,30 @@ class UnitController extends Controller
             return response()->json(['positions' => $positions]);
         }
 
-        $query = Tire::with('brand', 'model', 'size')->installable()->orderBy('individual_number');
+        if (empty($data['position_id'])) {
+            return response()->json([
+                'data' => [],
+                'application' => null,
+                'hint' => 'Elegí primero la cubierta a cambiar.',
+            ]);
+        }
+
+        $slot = $layout->first(fn (array $row) => (int) $row['position']->id === (int) $data['position_id']);
+        abort_unless($slot, 404);
+        $position = $slot['position'];
+        $mounted = $slot['tire'] ?? null;
+        $needed = $fit->neededApplication($mounted, $position);
+
+        $query = Tire::with('brand', 'model', 'size', 'currentLifecycle')->installable()->orderBy('individual_number');
         AccessScope::tires($query, $request->user());
         if ($width = $unit->allowedTireWidth()) {
             $query->whereHas('size', fn ($q) => $q->where('width_mm', $width));
+        }
+        if ($needed) {
+            $query->whereHas('model', fn ($m) => $m->whereIn('application', [
+                $needed->value,
+                TireApplication::Mixto->value,
+            ]));
         }
         if ($term = trim((string) ($data['q'] ?? ''))) {
             $digits = preg_replace('/\D+/', '', $term);
@@ -235,23 +245,27 @@ class UnitController extends Controller
             });
         }
 
-        $position = null;
-        if (! empty($data['position_id'])) {
-            $position = $layout->firstWhere(fn (array $slot) => (int) $slot['position']->id === (int) $data['position_id'])['position'] ?? null;
-            abort_unless($position, 404);
-        }
-
-        $items = $query->limit(40)->get()
-            ->when($position, fn ($col) => $col->filter(fn (Tire $tire) => $fit->canMount($tire, $position, $unit)))
+        $items = $query->limit(80)->get()
+            ->filter(fn (Tire $tire) => $fit->canReplace($tire, $position, $unit, $mounted))
             ->map(fn (Tire $tire) => [
                 'id' => $tire->id,
-                'label' => $tire->displayName().' · '.$tire->size?->code,
+                'label' => $tire->displayName().' · '.($tire->model?->application?->label() ?? '').' · '.($tire->size?->code ?? ''),
                 'name' => $tire->displayName(),
-                'meta' => ($tire->brand?->name ?? '').' '.($tire->size?->code ?? ''),
+                'meta' => trim(($tire->model?->application?->label() ?? '').' '.($tire->size?->code ?? '')),
+                'application' => $tire->model?->application?->value,
             ])
             ->values();
 
-        return response()->json(['data' => $items]);
+        $hint = $needed
+            ? 'Solo cubiertas de '.$needed->label().'.'
+            : 'Cubiertas compatibles con esta ubicación.';
+
+        return response()->json([
+            'data' => $items,
+            'application' => $needed?->value,
+            'application_label' => $needed?->label(),
+            'hint' => $hint,
+        ]);
     }
 
     public function slotAction(
@@ -308,7 +322,7 @@ class UnitController extends Controller
 
                 match ($data['action']) {
                     'install' => $this->slotInstall($unit, $position, $data, $operations, $request->user()),
-                    'cambio' => $this->slotCambio($unit, $position, $data, $operations, $incidents, $request->user()),
+                    'cambio' => $this->slotCambio($unit, $position, $data, $operations, $incidents, $fit, $request->user()),
                     'pinchadura' => $this->slotPinchadura($unit, $position, $data, $operations, $incidents, $request->user()),
                     'rotacion' => $this->slotRotacion($unit, $position, $data, $operations, $request->user()),
                     'retirar' => $this->slotRetirar($unit, $position, $data, $operations, $request->user()),
@@ -512,11 +526,11 @@ class UnitController extends Controller
         return redirect()->route('units.index')->with('success', 'Unidad eliminada.');
     }
 
-    private function slotMap(FleetUnit $unit, Collection $layout, Collection $stockTires, PositionFitService $fit): array
+    private function slotMap(FleetUnit $unit, Collection $layout, PositionFitService $fit): array
     {
         $prefix = $unit->type->sheetPrefix();
 
-        return $layout->map(function (array $slot) use ($layout, $stockTires, $fit, $prefix, $unit) {
+        return $layout->map(function (array $slot) use ($layout, $fit, $prefix, $unit) {
             $position = $slot['position'];
             $tire = $slot['tire'];
 
@@ -539,6 +553,7 @@ class UnitController extends Controller
                     'status' => $tire->status->label(),
                     'life' => (int) ($tire->currentLifecycle?->life_number ?? 1),
                     'km' => (int) $tire->accumulated_km,
+                    'startOdometer' => $tire->openAssignment?->openSegment?->start_odometer,
                     'tread' => $tire->current_tread_min !== null ? rtrim(rtrim((string) $tire->current_tread_min, '0'), '.').' mm' : null,
                     'mountedAt' => $tire->openAssignment?->started_at?->format('d/m/Y'),
                     'zones' => ($tire->size?->zones ?? collect())
@@ -546,14 +561,7 @@ class UnitController extends Controller
                         ->values()
                         ->all(),
                 ] : null,
-                'stock' => $stockTires
-                    ->filter(fn (Tire $candidate) => $fit->canMount($candidate, $position, $unit))
-                    ->map(fn (Tire $candidate) => [
-                        'id' => $candidate->id,
-                        'label' => $candidate->displayName().' · '.$candidate->size->code,
-                    ])
-                    ->values()
-                    ->all(),
+                'stock' => [],
                 'rotateTo' => $tire
                     ? $layout
                         ->filter(fn (array $other) => $other['position']->id !== $position->id
@@ -616,6 +624,7 @@ class UnitController extends Controller
         array $data,
         TireOperationService $operations,
         IncidentService $incidents,
+        PositionFitService $fit,
         $user,
     ): void {
         if (empty($data['tire_id'])) {
@@ -623,6 +632,8 @@ class UnitController extends Controller
         }
 
         $current = $this->mountedTire($unit, $position, isset($data['expected_tire_id']) ? (int) $data['expected_tire_id'] : null);
+        $replacement = Tire::with('model', 'size', 'currentLifecycle')->findOrFail((int) $data['tire_id']);
+        $fit->assertReplacementFits($replacement, $position, $unit, $current);
         $reasonId = MovementReason::where('code', 'RECAMBIO')->value('id');
 
         DB::transaction(function () use ($unit, $position, $data, $operations, $incidents, $user, $current, $reasonId) {

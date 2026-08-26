@@ -75,6 +75,28 @@ paths:
         - $ref: '#/components/parameters/TireId'
       responses:
         '200': { description: Historial }
+  /tires/{tire}/prediction:
+    get:
+      summary: Pronóstico de desgaste
+      parameters:
+        - $ref: '#/components/parameters/TireId'
+      responses:
+        '200': { description: Km estimados, confianza y narrativa }
+        '404': { description: No visible o inexistente }
+  /tires/{tire}/life-report:
+    get:
+      summary: Informe de vida (JSON)
+      parameters:
+        - $ref: '#/components/parameters/TireId'
+      responses:
+        '200': { description: Timeline, costos, pronóstico y fotos }
+        '404': { description: No visible o inexistente }
+  /telemetry:
+    get:
+      summary: Eventos de operación (capacidad retire)
+      responses:
+        '200': { description: Totales y listado paginado }
+        '403': { description: Sin capacidad }
   /tires/{tire}/incident:
     post:
       summary: Registrar incidencia (capacidad write)
@@ -112,7 +134,26 @@ paths:
       parameters:
         - $ref: '#/components/parameters/TireId'
       requestBody:
-        $ref: '#/components/requestBodies/JsonObject'
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason_id]
+              properties:
+                reason_id: { type: integer }
+                notes: { type: string, nullable: true }
+          multipart/form-data:
+            schema:
+              type: object
+              required: [reason_id]
+              properties:
+                reason_id: { type: integer }
+                notes: { type: string, nullable: true }
+                photos:
+                  type: array
+                  maxItems: 6
+                  items: { type: string, format: binary }
       responses:
         '200': { description: Neumático retirado }
         '403': { description: Sin capacidad }

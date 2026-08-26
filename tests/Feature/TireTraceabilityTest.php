@@ -454,15 +454,18 @@ class TireTraceabilityTest extends TestCase
 
         $html = $this->get(route('units.show', $unit))->assertOk()->getContent();
         $this->assertNotNull($steer);
+        $this->assertStringNotContainsString('Disponibles', $html);
+        $this->assertStringNotContainsString('FH:01 Nº50226', $html);
+        $this->assertStringNotContainsString('TR:01 Nº50227', $html);
 
-        preg_match('/id="slotMap">(.+?)<\/script>/s', $html, $match);
-        $this->assertNotEmpty($match, 'No está el mapa de recambio.');
-        $slots = json_decode($match[1], true);
-        $steerSlot = collect($slots)->firstWhere('id', $steer->id);
-        $labels = collect($steerSlot['stock'] ?? [])->pluck('label')->implode(' | ');
+        $json = $this->getJson(route('units.stock', ['unit' => $unit, 'position_id' => $steer->id]))
+            ->assertOk()
+            ->json();
+        $ids = collect($json['data'] ?? [])->pluck('id');
 
-        $this->assertStringContainsString('FH:01 Nº50226', $labels);
-        $this->assertStringNotContainsString('TR:01 Nº50227', $labels);
+        $this->assertTrue($ids->contains($steerTire->id));
+        $this->assertFalse($ids->contains($driveTire->id));
+        $this->assertSame('DIRECCION', $json['application']);
     }
 
     public function test_drive_tire_can_install_on_drive_axle(): void
@@ -539,6 +542,75 @@ class TireTraceabilityTest extends TestCase
         $this->assertEquals($steer->id, $nuevo->fresh()->currentLocation->position_id);
         $this->assertEquals(IncidentType::Cambio, $old->fresh()->incidents()->first()->type);
         $this->assertEquals(1000, $old->fresh()->accumulated_km);
+    }
+
+    public function test_sibling_tire_does_not_inherit_change_odometer(): void
+    {
+        $unit = $this->createTractor();
+        [$left] = $this->purchaseTires(1, 50304, 'FH:01');
+        [$right] = $this->purchaseTires(1, 50305, 'FH:01');
+        [$replacement] = $this->purchaseTires(1, 50306, 'FH:01');
+        $steer = $unit->configuration->positions()
+            ->where('axle_number', 1)
+            ->where('is_spare', false)
+            ->orderBy('sort_order')
+            ->get();
+        $ops = app(TireOperationService::class);
+        $ops->execute($unit, [
+            'odometer' => 180000,
+            'installations' => [
+                ['tire_id' => $left->id, 'position_id' => $steer[0]->id],
+                ['tire_id' => $right->id, 'position_id' => $steer[1]->id],
+            ],
+        ], $this->admin);
+
+        $this->get(route('units.show', $unit))->assertOk();
+        $this->post(route('units.slot', $unit), [
+            '_token' => csrf_token(),
+            'action' => 'cambio',
+            'odometer' => 200000,
+            'position_id' => $steer[0]->id,
+            'expected_tire_id' => $left->id,
+            'tire_id' => $replacement->id,
+        ])->assertRedirect();
+
+        $this->assertSame(20000, (int) $left->fresh()->accumulated_km);
+        $this->assertSame(0, (int) $right->fresh()->accumulated_km);
+        $rightSegment = $right->fresh()->openAssignment->openSegment;
+        $this->assertSame(180000, (int) $rightSegment->start_odometer);
+        $this->assertNull($rightSegment->end_odometer);
+
+        $ops->execute($unit, [
+            'odometer' => 210000,
+            'removals' => [['tire_id' => $right->id]],
+        ], $this->admin);
+
+        $this->assertSame(30000, (int) $right->fresh()->accumulated_km);
+    }
+
+    public function test_cambio_rejects_drive_tire_on_steer_position(): void
+    {
+        $unit = $this->createTractor();
+        [$old] = $this->purchaseTires(1, 50302, 'FH:01');
+        [$drive] = $this->purchaseTires(1, 50303, 'TR:01');
+        $steer = $unit->configuration->positions()->where('axle_number', 1)->where('is_spare', false)->first();
+        app(TireOperationService::class)->execute($unit, [
+            'odometer' => 100000,
+            'installations' => [['tire_id' => $old->id, 'position_id' => $steer->id]],
+        ], $this->admin);
+
+        $this->get(route('units.show', $unit))->assertOk();
+        $this->post(route('units.slot', $unit), [
+            '_token' => csrf_token(),
+            'action' => 'cambio',
+            'odometer' => 101000,
+            'position_id' => $steer->id,
+            'expected_tire_id' => $old->id,
+            'tire_id' => $drive->id,
+        ])->assertSessionHasErrors('operation');
+
+        $this->assertEquals(TireStatus::Instalada, $old->fresh()->status);
+        $this->assertEquals(TireStatus::Stock, $drive->fresh()->status);
     }
 
     public function test_map_pinchadura_sends_tire_to_repair(): void
@@ -763,13 +835,16 @@ class TireTraceabilityTest extends TestCase
         $this->purchaseTires(1, 50450, 'FH:01');
         $html = $this->get(route('units.show', $unit))->assertOk()->getContent();
 
-        $this->assertStringContainsString('Disponibles', $html);
+        $this->assertStringNotContainsString('Disponibles', $html);
         $this->assertStringContainsString('Auxilio', $html);
         $this->assertStringContainsString('Longitudinal', $html);
         $this->assertStringContainsString('En X', $html);
         $this->assertStringContainsString('Diagonal', $html);
-        $this->assertStringContainsString('Agregar auxilio', $html);
-        $this->assertStringContainsString('draggable="true"', $html);
+        $this->assertStringContainsString('Tocá el auxilio del mapa para instalar', $html);
+        $this->assertStringContainsString('Cambio', $html);
+        $this->assertStringContainsString('Sale', $html);
+        $this->assertStringContainsString('Km de la unidad en esta operación', $html);
+        $this->assertStringNotContainsString('id="sheetOdometer"', $html);
     }
 
     public function test_lineal_tank_accepts_matching_width_and_rejects_the_other(): void
@@ -807,10 +882,15 @@ class TireTraceabilityTest extends TestCase
         $this->purchaseTires(1, 50600, 'FR:01', '295/80 R22.5');
         $this->purchaseTires(1, 50610, 'FR:01', '385/65 R22.5');
 
+        $slot = $tank->configuration->positions()->where('is_spare', false)->first();
         $html = $this->get(route('units.show', $tank))->assertOk()->getContent();
         $this->assertStringContainsString('Lineal 385', $html);
-        $this->assertStringContainsString('FR:01 Nº50610', $html);
         $this->assertStringNotContainsString('FR:01 Nº50600', $html);
+        $this->assertStringNotContainsString('FR:01 Nº50610', $html);
+
+        $ids = collect($this->getJson(route('units.stock', ['unit' => $tank, 'position_id' => $slot->id]))->json('data'))->pluck('id');
+        $this->assertTrue($ids->contains(fn ($id) => \App\Models\Tire::find($id)?->individual_number == 50610));
+        $this->assertFalse($ids->contains(fn ($id) => \App\Models\Tire::find($id)?->individual_number == 50600));
 
         $this->get(route('units.create'))->assertOk();
         $this->post(route('units.store'), [

@@ -24,6 +24,8 @@ class RetireTireRequest extends FormRequest
         return [
             'reason_id' => 'required|exists:movement_reasons,id',
             'notes' => 'nullable|string',
+            'photos' => 'nullable|array|max:6',
+            'photos.*' => 'file|mimetypes:image/jpeg,image/png,image/webp|max:5120',
         ];
     }
 }

@@ -206,14 +206,14 @@ const recambio = () => {
     }
 
     const byId = Object.fromEntries(slots.map((slot) => [String(slot.id), slot]));
-    const stockUrl = document.getElementById('stockPool')?.dataset.url || document.getElementById('stockSearch')?.dataset.url;
-    const loadSlotStock = async (slot) => {
-        if (!stockUrl) {
-            return slot.stock || [];
+    const stockUrl = dock.dataset.stockUrl || '';
+    let currentSlot = null;
+    const loadSlotStock = async (slot, q = '') => {
+        if (!stockUrl || !slot) {
+            return { data: slot?.stock || [], hint: '' };
         }
         const url = new URL(stockUrl, window.location.origin);
         url.searchParams.set('position_id', String(slot.id));
-        const q = document.getElementById('stockSearch')?.value?.trim();
         if (q) {
             url.searchParams.set('q', q);
         }
@@ -222,23 +222,25 @@ const recambio = () => {
             const json = await res.json();
             const stock = json.data || [];
             slot.stock = stock;
-            return stock;
+            return { data: stock, hint: json.hint || '', application: json.application_label || '' };
         } catch {
-            return slot.stock || [];
+            return { data: slot.stock || [], hint: '' };
         }
     };
-    const applyStockDrop = (target, tireId) => {
-        selectSlot(target.id);
-        window.setTimeout(() => {
-            if (target.empty) {
-                installTire.value = String(tireId);
-            } else {
-                showAction('cambio');
-                cambioTire.value = String(tireId);
-            }
-        }, 400);
+    const paintStockSelect = (select, emptyEl, submitEl, stock, placeholder) => {
+        fillSelect(select, stock, placeholder);
+        const hasStock = stock.length > 0;
+        if (emptyEl) {
+            emptyEl.hidden = hasStock;
+        }
+        if (select) {
+            select.hidden = !hasStock;
+            select.required = hasStock;
+        }
+        if (submitEl) {
+            submitEl.hidden = !hasStock;
+        }
     };
-    const odometer = document.getElementById('sheetOdometer');
     const idle = document.getElementById('recambioIdle');
     const panel = document.getElementById('recambioPanel');
     const installForm = document.getElementById('recambioInstall');
@@ -360,41 +362,30 @@ const recambio = () => {
     const kmFmt = new Intl.NumberFormat('es-AR');
 
     const fillFacts = (tire) => {
-        const list = document.getElementById('tireFactsList');
-        list.innerHTML = '';
-        const rows = [
-            ['Marca', tire.brand],
-            ['Modelo', [tire.code, tire.modelName].filter(Boolean).join(' · ')],
-            ['Aplicación', tire.application],
-            ['Medida', tire.size],
-            ['Condición', tire.condition],
-            ['Estado', tire.status],
-            ['Vida', tire.life ? `Vida ${tire.life}` : null],
-            ['Km acumulados', `${kmFmt.format(tire.km || 0)} km`],
-            ['Profundidad', tire.tread || 'Sin medición'],
-            ['Montada el', tire.mountedAt],
-        ];
-        rows.forEach(([label, value]) => {
-            const row = document.createElement('div');
-            const span = document.createElement('span');
-            span.textContent = label;
-            row.append(span, document.createTextNode(value || '—'));
-            list.append(row);
-        });
-    };
-
-    const syncOdometer = (form) => {
-        const hidden = form.querySelector('input[name="odometer"]');
-        if (hidden && odometer) {
-            hidden.value = odometer.value;
+        const meta = document.getElementById('mountedMeta');
+        if (!meta) {
+            return;
         }
+        const bits = [
+            tire.application,
+            tire.size,
+            `${kmFmt.format(tire.km || 0)} km asentados`,
+        ].filter(Boolean);
+        meta.textContent = bits.join(' · ');
     };
 
-    [installForm, patronForm, ...Object.values(forms)]
-        .filter(Boolean)
-        .forEach((form) => {
-            form.addEventListener('submit', () => syncOdometer(form));
-        });
+    const paintCambioTicket = () => {
+        const sale = document.getElementById('cambioSale');
+        const entra = document.getElementById('cambioEntra');
+        const lugar = document.getElementById('cambioLugar');
+        if (!sale || !currentSlot) {
+            return;
+        }
+        sale.textContent = currentSlot.tire?.name || '—';
+        lugar.textContent = `${currentSlot.code} · ${currentSlot.name}`;
+        const chosen = cambioTire?.selectedOptions?.[0];
+        entra.textContent = chosen?.value ? chosen.textContent : 'Elegí la cubierta nueva';
+    };
 
     const showAction = (name) => {
         Object.entries(forms).forEach(([key, form]) => {
@@ -405,6 +396,20 @@ const recambio = () => {
         dock.querySelectorAll('.slot-actions__btn').forEach((btn) => {
             btn.classList.toggle('is-on', btn.dataset.action === name);
         });
+        if (name === 'cambio' && currentSlot && !currentSlot.empty) {
+            const hint = document.getElementById('cambioHint');
+            const q = document.getElementById('cambioSearch')?.value?.trim() || '';
+            if (hint) {
+                hint.textContent = 'Buscando cubiertas del mismo tipo…';
+            }
+            loadSlotStock(currentSlot, q).then((result) => {
+                paintStockSelect(cambioTire, cambioEmpty, cambioSubmit, result.data, 'Elegir cubierta nueva');
+                if (hint) {
+                    hint.textContent = result.hint || 'Solo cubiertas del mismo tipo que la montada.';
+                }
+                paintCambioTicket();
+            });
+        }
     };
 
     dock.querySelectorAll('.slot-actions__btn').forEach((btn) => {
@@ -429,6 +434,7 @@ const recambio = () => {
         drawPatternArrows(null);
         document.getElementById('recambioSlot').textContent = slot.code;
         document.getElementById('recambioRole').textContent = `${slot.name} · ${slot.role}`;
+        currentSlot = slot;
         const mountedName = document.getElementById('mountedName');
         const setExpectedTire = (tireId) => {
             dock.querySelectorAll('.expected-tire').forEach((el) => {
@@ -448,13 +454,15 @@ const recambio = () => {
             installForm.hidden = false;
             mounted.hidden = true;
             document.getElementById('installPosition').value = slot.id;
-            loadSlotStock(slot).then((stock) => {
-                fillSelect(installTire, stock, 'Elegir cubierta');
-                const hasStock = stock.length > 0;
-                installEmpty.hidden = hasStock;
-                installTire.hidden = !hasStock;
-                installSubmit.hidden = !hasStock;
-                installTire.required = hasStock;
+            const installHint = document.getElementById('installHint');
+            if (installHint) {
+                installHint.textContent = 'Ubicación vacía. Cargando cubiertas del mismo tipo…';
+            }
+            loadSlotStock(slot, document.getElementById('installSearch')?.value?.trim() || '').then((result) => {
+                paintStockSelect(installTire, installEmpty, installSubmit, result.data, 'Elegir cubierta');
+                if (installHint) {
+                    installHint.textContent = result.hint || 'Elegí una cubierta compatible de stock.';
+                }
             });
             return;
         }
@@ -472,14 +480,6 @@ const recambio = () => {
         document.getElementById('incidenciaPosition').value = slot.id;
         document.getElementById('medicionPosition').value = slot.id;
         fillMeasureZones(slot.tire.zones);
-        loadSlotStock(slot).then((stock) => {
-            fillSelect(cambioTire, stock, 'Elegir cubierta nueva');
-            const hasStock = stock.length > 0;
-            cambioEmpty.hidden = hasStock;
-            cambioTire.hidden = !hasStock;
-            cambioSubmit.hidden = !hasStock;
-            cambioTire.required = hasStock;
-        });
         fillSelect(rotatePosition, slot.rotateTo, 'Ubicación libre');
         syncExpectedTo();
         rotatePosition.onchange = syncExpectedTo;
@@ -488,7 +488,19 @@ const recambio = () => {
         rotatePosition.hidden = !canRotate;
         rotateSubmit.hidden = !canRotate;
         rotatePosition.required = canRotate;
-        showAction('cambio');
+        const cambioSearch = document.getElementById('cambioSearch');
+        if (cambioSearch) {
+            cambioSearch.value = '';
+        }
+        fillSelect(cambioTire, [], 'Elegí Cambio para ver el stock');
+        paintCambioTicket();
+        cambioEmpty.hidden = true;
+        cambioTire.hidden = false;
+        cambioTire.required = false;
+        if (cambioSubmit) {
+            cambioSubmit.hidden = true;
+        }
+        showAction(null);
     };
 
     const clearDrop = () => {
@@ -521,26 +533,7 @@ const recambio = () => {
 
     const handleDrop = (targetSlotId, payload) => {
         const target = byId[String(targetSlotId)];
-        if (!target) {
-            return;
-        }
-        if (payload.kind === 'stock') {
-            const allowed = target.stock.some((item) => String(item.id) === String(payload.tireId))
-                || (payload.positions && payload.positions.map(String).includes(String(target.id)));
-            if (!allowed && !payload.positions) {
-                loadSlotStock(target).then((stock) => {
-                    const ok = stock.some((item) => String(item.id) === String(payload.tireId));
-                    if (!ok) {
-                        return;
-                    }
-                    applyStockDrop(target, payload.tireId);
-                });
-                return;
-            }
-            if (!allowed) {
-                return;
-            }
-            applyStockDrop(target, payload.tireId);
+        if (!target || payload.kind === 'stock') {
             return;
         }
         if (String(payload.slotId) === String(target.id)) {
@@ -558,8 +551,6 @@ const recambio = () => {
     };
 
     const coarse = window.matchMedia('(pointer: coarse)').matches;
-    let pickedStockId = null;
-    let pickedPositions = null;
     const bindDrag = (el, payload) => {
         el.addEventListener('dragstart', (event) => {
             event.dataTransfer.setData('application/json', JSON.stringify(payload));
@@ -572,82 +563,43 @@ const recambio = () => {
             clearDrop();
         });
     };
-    const bindChip = (chip) => {
-        if (coarse) {
-            chip.removeAttribute('draggable');
-        }
-        chip.addEventListener('click', async () => {
-            pickedStockId = chip.dataset.tireId;
-            document.querySelectorAll('.stock-chip[data-tire-id]').forEach((other) => other.classList.toggle('is-on', other === chip));
-            pickedPositions = null;
-            if (stockUrl) {
-                const url = new URL(stockUrl, window.location.origin);
-                url.searchParams.set('tire_id', pickedStockId);
-                try {
-                    const res = await fetch(url, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
-                    const json = await res.json();
-                    pickedPositions = json.positions || [];
-                } catch {
-                    pickedPositions = [];
-                }
-            }
-            markTargets({ kind: 'stock', tireId: pickedStockId, positions: pickedPositions });
-        });
-        if (!coarse) {
-            bindDrag(chip, { kind: 'stock', tireId: chip.dataset.tireId });
-        }
-    };
-    document.querySelectorAll('.stock-chip[data-tire-id]').forEach(bindChip);
 
-    const stockSearch = document.getElementById('stockSearch');
     let searchTimer = null;
-    const renderStockChips = (items) => {
-        const pool = document.getElementById('stockPool');
-        if (!pool) {
-            return;
-        }
-        pool.querySelectorAll('.stock-chip').forEach((el) => el.remove());
-        const empty = pool.querySelector('.stock-rail__empty');
-        if (empty) {
-            empty.hidden = items.length > 0;
-        }
-        items.forEach((item) => {
-            const chip = document.createElement('button');
-            chip.type = 'button';
-            chip.className = 'stock-chip';
-            chip.dataset.tireId = String(item.id);
-            chip.innerHTML = `<strong>${item.name || item.label}</strong><span>${item.meta || ''}</span>`;
-            pool.append(chip);
-            bindChip(chip);
+    const bindStockSearch = (inputId, mode) => {
+        document.getElementById(inputId)?.addEventListener('input', () => {
+            window.clearTimeout(searchTimer);
+            searchTimer = window.setTimeout(() => {
+                if (!currentSlot) {
+                    return;
+                }
+                if (mode === 'cambio') {
+                    showAction('cambio');
+                    return;
+                }
+                if (mode === 'install' && currentSlot.empty) {
+                    loadSlotStock(currentSlot, document.getElementById(inputId)?.value?.trim() || '').then((result) => {
+                        paintStockSelect(installTire, installEmpty, installSubmit, result.data, 'Elegir cubierta');
+                        const hint = document.getElementById('installHint');
+                        if (hint) {
+                            hint.textContent = result.hint || '';
+                        }
+                    });
+                }
+            }, 250);
         });
     };
-    stockSearch?.addEventListener('input', () => {
-        window.clearTimeout(searchTimer);
-        searchTimer = window.setTimeout(async () => {
-            if (!stockUrl) {
-                return;
-            }
-            const url = new URL(stockUrl, window.location.origin);
-            if (stockSearch.value.trim()) {
-                url.searchParams.set('q', stockSearch.value.trim());
-            }
-            const res = await fetch(url, { headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' } });
-            const json = await res.json();
-            renderStockChips(json.data || []);
-        }, 250);
-    });
+    bindStockSearch('cambioSearch', 'cambio');
+    bindStockSearch('installSearch', 'install');
+    cambioTire?.addEventListener('change', paintCambioTicket);
 
     document.querySelectorAll('.tire-box--action[data-slot]').forEach((box) => {
-        box.addEventListener('click', () => {
-            if (pickedStockId) {
-                handleDrop(box.dataset.slot, { kind: 'stock', tireId: pickedStockId });
-                pickedStockId = null;
-                chips.forEach((chip) => chip.classList.remove('is-on'));
-                clearDrop();
-                return;
-            }
-            selectSlot(box.dataset.slot);
-        });
+        box.addEventListener('click', () => selectSlot(box.dataset.slot));
+    });
+    document.getElementById('refaccionDrop')?.addEventListener('click', () => {
+        const spareId = document.getElementById('refaccionDrop')?.dataset.spareSlot;
+        if (spareId) {
+            selectSlot(spareId);
+        }
     });
 
     if (!coarse) {
@@ -911,3 +863,26 @@ if ('serviceWorker' in navigator && window.isSecureContext) {
         });
     });
 }
+
+if (window.matchMedia('(display-mode: standalone)').matches) {
+    document.cookie = 'rodante_client=pwa; path=/; SameSite=Lax; max-age=31536000';
+}
+
+document.querySelectorAll('[data-photo-input]').forEach((input) => {
+    const target = document.querySelector(input.getAttribute('data-photo-input'));
+    if (!target) {
+        return;
+    }
+    input.addEventListener('change', () => {
+        target.replaceChildren();
+        [...input.files].slice(0, 6).forEach((file) => {
+            if (!file.type.startsWith('image/')) {
+                return;
+            }
+            const img = document.createElement('img');
+            img.src = URL.createObjectURL(file);
+            img.alt = file.name;
+            target.appendChild(img);
+        });
+    });
+});

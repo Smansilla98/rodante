@@ -162,6 +162,18 @@
         <div class="hub__t">Odómetros</div>
         <div class="hub__s">Últimas lecturas y corrección de km.</div>
     </a>
+    <a class="hub" href="{{ route('reports.predictive') }}">
+        <span class="hub__ico" aria-hidden="true"><x-icon name="chart" class="w-6 h-6" /></span>
+        <div class="hub__t">Predictivo</div>
+        <div class="hub__s">Km estimados hasta 4 mm e informe de vida.</div>
+    </a>
+    @if(auth()->user()->role->canViewTelemetry())
+    <a class="hub" href="{{ route('reports.telemetry') }}">
+        <span class="hub__ico" aria-hidden="true"><x-icon name="gauge" class="w-6 h-6" /></span>
+        <div class="hub__t">Telemetría</div>
+        <div class="hub__s">Ingresos, campo, planilla y bajas de la empresa.</div>
+    </a>
+    @endif
     <a class="hub" href="{{ route('help.index') }}">
         <span class="hub__ico" aria-hidden="true"><x-icon name="book" class="w-6 h-6" /></span>
         <div class="hub__t">Ayuda</div>

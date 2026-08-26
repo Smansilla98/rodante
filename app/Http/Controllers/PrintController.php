@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\Models\Tire;
 use App\Models\WorkOrder;
+use App\Services\PredictiveWearService;
+use App\Services\ReportService;
+use App\Services\TelemetryService;
 use App\Support\AccessScope;
 use Illuminate\Http\Request;
 
@@ -20,6 +23,24 @@ class PrintController extends Controller
         return view('print.tire', $this->printContext($request, [
             'tire' => $tire,
             'companyName' => $tire->company?->name,
+        ]));
+    }
+
+    public function life(Request $request, Tire $tire, ReportService $reports, PredictiveWearService $predictive, TelemetryService $telemetry)
+    {
+        AccessScope::abortUnlessTire($request->user(), $tire->id);
+        $history = $reports->tireHistory($tire);
+        $telemetry->record('tire.life_report', $history, [
+            'tire' => $history->auditLabel(),
+        ]);
+
+        return view('print.life-report', $this->printContext($request, [
+            'tire' => $history,
+            'timeline' => $reports->timeline($tire),
+            'forecast' => $predictive->forecast($history),
+            'photos' => $history->photos->where('kind', 'RETIRE')->values(),
+            'costTotal' => $history->costEntries->sum('amount'),
+            'companyName' => $history->company?->name,
         ]));
     }
 

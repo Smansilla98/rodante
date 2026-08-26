@@ -135,6 +135,8 @@ class RoleQaRunner
             'Km por cubierta' => route('reports.kilometers'),
             'Consumo' => route('reports.consumption'),
             'Incidencias' => route('reports.incidents'),
+            'Predictivo' => route('reports.predictive'),
+            'Informe de vida' => route('tires.life-report', $this->browseTire),
             'Movimientos' => route('reports.audit'),
             'Ayuda por rol' => route('help.index'),
             'Manual' => route('help.manual'),
@@ -156,6 +158,9 @@ class RoleQaRunner
         ] as $label => $url) {
             $this->hit($user, $label, 'GET', $url, [], $catalogOk);
         }
+
+        $telemetryOk = $user->role->canViewTelemetry() ? [200] : [403];
+        $this->hit($user, 'Telemetría', 'GET', route('reports.telemetry'), [], $telemetryOk);
     }
 
     private function probeDenied(User $user): void

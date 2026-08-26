@@ -13,8 +13,10 @@ use App\Models\FleetUnit;
 use App\Models\Tire;
 use App\Services\IncidentService;
 use App\Services\MeasurementService;
+use App\Services\PredictiveWearService;
 use App\Services\ReportService;
 use App\Services\RetirementService;
+use App\Services\TelemetryService;
 use App\Services\TireOperationService;
 use App\Support\AccessScope;
 use Illuminate\Http\Request;
@@ -52,6 +54,53 @@ class TireApiController extends Controller
             'movements' => $tire->movements,
             'incidents' => $tire->incidents,
             'lifecycles' => $tire->lifecycles,
+        ]);
+    }
+
+    public function prediction(Request $request, Tire $tire, PredictiveWearService $predictive)
+    {
+        $this->authorizeVisible('view', $tire);
+        $tire->load(['brand', 'model', 'measurements.readings.zone']);
+
+        return response()->json($predictive->forecast($tire));
+    }
+
+    public function lifeReport(Request $request, Tire $tire, ReportService $reports, PredictiveWearService $predictive, TelemetryService $telemetry)
+    {
+        $this->authorizeVisible('view', $tire);
+        $history = $reports->tireHistory($tire);
+        $telemetry->record('tire.life_report', $history, [
+            'tire' => $history->auditLabel(),
+        ]);
+
+        return response()->json([
+            'tire' => $history->only([
+                'id', 'individual_number', 'status', 'condition', 'accumulated_km',
+                'current_tread_min', 'purchased_at', 'retired_at',
+            ]),
+            'display' => $history->displayName(),
+            'timeline' => $reports->timeline($tire),
+            'forecast' => $predictive->forecast($history),
+            'photos' => $history->photos->where('kind', 'RETIRE')->values()->map(fn ($photo) => [
+                'id' => $photo->id,
+                'kind' => $photo->kind,
+                'captured_at' => $photo->captured_at,
+                'original_name' => $photo->original_name,
+            ]),
+            'cost_total' => $history->costEntries->sum('amount'),
+        ]);
+    }
+
+    public function telemetry(Request $request, TelemetryService $telemetry)
+    {
+        abort_unless($request->user()->role->canViewTelemetry(), 403);
+        $data = $telemetry->dashboard($request->user());
+
+        return response()->json([
+            'days' => $data['days'],
+            'totals' => $data['totals'],
+            'sources' => $data['sources'],
+            'events' => $data['events'],
         ]);
     }
 
