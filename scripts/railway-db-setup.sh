@@ -20,8 +20,8 @@
 # Alternativa soportada: PostgreSQL (plugin Postgres de Railway)
 #
 # Variables útiles:
-#   SEED_DEMO=1   — corre db:seed --force (usuarios demo)
-#   SEED_DEMO=0   (default) — solo migraciones
+#   SEED_DEMO=1   — corre db:seed --force (usuarios demo). Default.
+#   SEED_DEMO=0   — solo migraciones
 #   DB_WAIT_SECONDS=90 — timeout de espera a la DB
 # =============================================================================
 
@@ -33,7 +33,7 @@ cd "$ROOT"
 log() { printf '[railway-db] %s\n' "$*"; }
 die() { printf '[railway-db] ERROR: %s\n' "$*" >&2; exit 1; }
 
-SEED_DEMO="${SEED_DEMO:-0}"
+SEED_DEMO="${SEED_DEMO:-1}"
 DB_WAIT_SECONDS="${DB_WAIT_SECONDS:-90}"
 
 # --- Normalizar URL de conexión (Railway suele inyectar varias) --------------

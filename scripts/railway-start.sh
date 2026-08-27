@@ -34,4 +34,13 @@ sed "s/LISTEN_PORT/${PORT}/g" "$TEMPLATE" > /etc/nginx/conf.d/rodante.conf
 echo "[railway-start] nginx listen 0.0.0.0:${PORT}"
 nginx -t
 
+if [[ -f artisan ]]; then
+  echo "[railway-start] migraciones"
+  php artisan migrate --force --no-interaction || true
+  if [[ "${SEED_DEMO:-1}" == "1" || "${SEED_DEMO:-1}" == "true" ]]; then
+    echo "[railway-start] seeders (usuarios de prueba)"
+    php artisan db:seed --force --no-interaction || true
+  fi
+fi
+
 exec supervisord -n -c /etc/supervisor/conf.d/rodante.conf

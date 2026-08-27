@@ -9,7 +9,7 @@
 </head>
 <body class="err-body">
     <main class="err-shell">
-        <img src="{{ asset('brand/rodante-app-icon.png') }}" alt="" class="err-mark" width="56" height="56">
+        <img src="{{ asset('brand/rodante-app-icon.png') }}" alt="Rodante" class="err-mark" width="56" height="56">
         <p class="err-kicker">Rodante</p>
         <p class="err-code">{{ $code }}</p>
         <h1>{{ $title }}</h1>

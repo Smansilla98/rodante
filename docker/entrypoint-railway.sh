@@ -43,7 +43,8 @@ if [ -f artisan ]; then
         echo "ADVERTENCIA: las migraciones fallaron. Verificá los logs."
     }
 
-    if [ "${SEED_DEMO:-0}" = "1" ] || [ "${SEED_DEMO:-0}" = "true" ]; then
+    if [ "${SEED_DEMO:-1}" = "1" ] || [ "${SEED_DEMO:-1}" = "true" ]; then
+        echo "=== Cargando seeders (usuarios de prueba) ==="
         php artisan db:seed --force --no-interaction || true
     fi
 

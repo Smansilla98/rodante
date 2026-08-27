@@ -204,7 +204,11 @@ class ProductCycleTest extends TestCase
 
     public function test_error_pages_are_branded(): void
     {
-        $this->get('/esta-ruta-no-existe-rodante')->assertNotFound()->assertSee('Rodante')->assertSee('err-body', false);
+        $this->get('/esta-ruta-no-existe-rodante')
+            ->assertNotFound()
+            ->assertSee('Rodante')
+            ->assertSee('err-body', false)
+            ->assertSee('err-mark', false);
     }
 
     public function test_dashboard_shows_repair_queue(): void
