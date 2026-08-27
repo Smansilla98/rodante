@@ -12,6 +12,7 @@ use App\Support\AccessScope;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class IntegrityService
 {
@@ -53,8 +54,15 @@ class IntegrityService
             return;
         }
 
-        $key = $this->versionKey($companyId);
-        Cache::forever($key, $this->version($companyId) + 1);
+        try {
+            $key = $this->versionKey($companyId);
+            Cache::forever($key, $this->version($companyId) + 1);
+        } catch (\Throwable $e) {
+            Log::warning('No se pudo invalidar el cache de integridad', [
+                'company_id' => $companyId,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function invalidateForTire(Tire $tire): void

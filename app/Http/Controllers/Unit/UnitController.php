@@ -335,9 +335,15 @@ class UnitController extends Controller
                 return response()->json(['message' => $e->getMessage()], 409);
             }
 
-            return back()->withErrors(['operation' => $e->getMessage()])->withInput();
+            return redirect()->route('units.show', $unit)->withErrors(['operation' => $e->getMessage()])->withInput();
         } catch (DomainException $e) {
-            return back()->withErrors(['operation' => $e->getMessage()])->withInput();
+            return redirect()->route('units.show', $unit)->withErrors(['operation' => $e->getMessage()])->withInput();
+        } catch (\Illuminate\Database\QueryException $e) {
+            report($e);
+
+            return redirect()->route('units.show', $unit)
+                ->withErrors(['operation' => 'No se pudo guardar la operación. Recargá la planilla e intentá de nuevo.'])
+                ->withInput();
         }
 
         $message = match ($data['action']) {
@@ -351,7 +357,7 @@ class UnitController extends Controller
             'patron' => 'Esquema de rotación aplicado. Los kilómetros del periodo siguen abiertos.',
         };
 
-        return back()->with('success', $message);
+        return redirect()->route('units.show', $unit)->with('success', $message);
     }
 
     public function couple(Request $request, FleetUnit $unit, CouplingService $couplings)

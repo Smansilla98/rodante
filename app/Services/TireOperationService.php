@@ -16,6 +16,7 @@ use App\Models\TireCurrentLocation;
 use App\Models\TireOperation;
 use App\Models\UnitPosition;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -39,7 +40,8 @@ class TireOperationService
             throw new DomainException('No tiene permiso para operar cubiertas.');
         }
 
-        $operation = DB::transaction(function () use ($unit, $data, $user) {
+        try {
+            $operation = DB::transaction(function () use ($unit, $data, $user) {
             $unit = FleetUnit::with('type', 'configuration.positions')->lockForUpdate()->findOrFail($unit->id);
             $odometerUnit = $this->couplings->resolveOdometerUnit($unit);
             $odometerUnit = FleetUnit::lockForUpdate()->findOrFail($odometerUnit->id);
@@ -91,7 +93,10 @@ class TireOperationService
             ]);
 
             return $operation->load('movements.tire');
-        });
+            });
+        } catch (QueryException $e) {
+            throw $this->mapQueryException($e);
+        }
 
         $this->telemetry->record('tire.operation', $operation, [
             'unit' => $unit->plate,
@@ -134,7 +139,8 @@ class TireOperationService
      */
     public function relocateMounted(FleetUnit $unit, array $tireToPosition, int $odometer, User $user, ?string $notes = null, array $expect = []): void
     {
-        DB::transaction(function () use ($unit, $tireToPosition, $odometer, $user, $notes, $expect) {
+        try {
+            DB::transaction(function () use ($unit, $tireToPosition, $odometer, $user, $notes, $expect) {
             $unit = FleetUnit::lockForUpdate()->findOrFail($unit->id);
             $odometerUnit = $this->couplings->resolveOdometerUnit($unit);
 
@@ -242,6 +248,9 @@ class TireOperationService
                 'unit' => $unit->plate,
             ]);
         });
+        } catch (QueryException $e) {
+            throw $this->mapQueryException($e);
+        }
     }
 
     /**
@@ -355,6 +364,7 @@ class TireOperationService
         }
 
         $this->fit->assertCanMount($tire, $position, $unit);
+        $lifecycle = $tire->ensureOpenLifecycle();
 
         $fromBase = $tire->currentLocation?->base_id;
         $countsKm = ! $position->is_spare;
@@ -362,7 +372,7 @@ class TireOperationService
 
         $assignment = TireAssignment::create([
             'tire_id' => $tire->id,
-            'tire_lifecycle_id' => $tire->current_lifecycle_id,
+            'tire_lifecycle_id' => $lifecycle->id,
             'unit_id' => $unit->id,
             'start_position_id' => $position->id,
             'counts_km' => $countsKm,
@@ -543,5 +553,21 @@ class TireOperationService
         }
 
         return $moves;
+    }
+
+    private function mapQueryException(QueryException $e): \RuntimeException
+    {
+        $sql = $e->getMessage();
+        if (str_contains($sql, 'tire_lifecycle_id')) {
+            return new DomainException('Esa cubierta no tiene una vida abierta y no se puede instalar.');
+        }
+        if (str_contains($sql, 'Duplicate') || str_contains($sql, '23000') || (string) $e->getCode() === '23000') {
+            return new SheetConflictException;
+        }
+        if (str_contains($sql, 'chk_assignment') || str_contains($sql, 'chk_segment') || str_contains($sql, '3819')) {
+            return new DomainException('El kilometraje de esa cubierta quedó inconsistente. Recargá la planilla e intentá de nuevo.');
+        }
+
+        return $e;
     }
 }

@@ -99,6 +99,25 @@ class Tire extends Model
         return $this->belongsTo(TireLifecycle::class, 'current_lifecycle_id');
     }
 
+    public function ensureOpenLifecycle(): TireLifecycle
+    {
+        $current = $this->currentLifecycle;
+        if ($current && $current->ended_at === null) {
+            return $current;
+        }
+
+        $life = TireLifecycle::create([
+            'tire_id' => $this->id,
+            'life_number' => max(1, (int) $this->lifecycles()->max('life_number') + 1),
+            'started_by' => 'COMPRA',
+            'started_at' => now(),
+            'condition_at_start' => $this->condition?->value ?? TireCondition::Nueva->value,
+        ]);
+        $this->update(['current_lifecycle_id' => $life->id]);
+
+        return $life;
+    }
+
     public function lifecycles(): HasMany
     {
         return $this->hasMany(TireLifecycle::class);

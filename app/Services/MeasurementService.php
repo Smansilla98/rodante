@@ -24,6 +24,9 @@ class MeasurementService
         }
 
         $tire->load('size.zones');
+        if (! $tire->size) {
+            throw new DomainException('La cubierta no tiene medida cargada. No se puede medir profundidad.');
+        }
         $zones = $tire->size->zones;
         if ($zones->isEmpty()) {
             throw new DomainException('La medida no tiene franjas de profundidad configuradas.');

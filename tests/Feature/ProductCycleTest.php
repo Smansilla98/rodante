@@ -74,6 +74,37 @@ class ProductCycleTest extends TestCase
         $this->assertEquals($life, (int) $tire->fresh()->currentLifecycle?->life_number);
     }
 
+    public function test_slot_install_opens_lifecycle_when_missing(): void
+    {
+        $unit = $this->createTractor();
+        $model = \App\Models\TireModel::where('code', 'FH:01')->firstOrFail();
+        $tire = \App\Models\Tire::factory()->create([
+            'tire_brand_id' => $model->tire_brand_id,
+            'tire_model_id' => $model->id,
+            'tire_size_id' => $model->sizes()->firstOrFail()->id,
+            'current_lifecycle_id' => null,
+        ]);
+        app(\App\Services\LocationService::class)->place(
+            $tire,
+            \App\Enums\LocationKind::Stock,
+            \App\Models\Base::query()->firstOrFail()->id,
+        );
+        $steer = $unit->configuration->positions()->where('axle_number', 1)->where('is_spare', false)->first();
+
+        $this->get(route('units.show', $unit))->assertOk();
+        $this->post(route('units.slot', $unit), [
+            '_token' => csrf_token(),
+            'action' => 'install',
+            'odometer' => 100000,
+            'position_id' => $steer->id,
+            'tire_id' => $tire->id,
+        ])->assertRedirect(route('units.show', $unit));
+
+        $tire = $tire->fresh();
+        $this->assertNotNull($tire->current_lifecycle_id);
+        $this->assertEquals(\App\Enums\TireStatus::Instalada, $tire->status);
+    }
+
     public function test_reserve_returns_to_stock(): void
     {
         $unit = $this->createTractor();
