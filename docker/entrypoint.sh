@@ -23,7 +23,10 @@ if [ -f .env ] && ! grep -q '^APP_KEY=base64:' .env 2>/dev/null; then
   php artisan key:generate --force
 fi
 
-php artisan migrate --force
+# En Railway el release command ya migra. Acá solo local/compose.
+if [ -z "${RAILWAY_ENVIRONMENT:-}" ]; then
+  php artisan migrate --force
+fi
 
 if [ "${SEED_DEMO:-0}" = "1" ] || [ "${SEED_DEMO:-0}" = "true" ]; then
   php artisan db:seed --force

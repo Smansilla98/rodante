@@ -14,18 +14,17 @@ Demo: http://localhost:8093 — usuarios `admin` / `jefe` / `logistica` / `opera
 
 ## Railway (producción)
 
-Un solo contenedor (`Dockerfile.fpm`):
+Un solo contenedor (`Dockerfile`, igual que el resto de las apps Laravel del equipo):
 
-1. El **release command** (`scripts/railway-db-setup.sh`) espera la DB, migra y opcionalmente hace seed (`SEED_DEMO=1`).
-2. El **start command** es `supervisord`, que arranca:
-   - `php-fpm -F` en `127.0.0.1:9000`
-   - `nginx` escuchando `$PORT` (Railway lo inyecta) y haciendo FastCGI a FPM
+1. **Build:** Vite (`public/build`) + `composer install` + nginx + PHP-FPM.
+2. **Release:** `bash scripts/railway-db-setup.sh` (espera la DB y migra).
+3. **Start:** `docker/entrypoint-railway.sh` (nginx en `$PORT`, PHP-FPM, migraciones de nuevo por si acaso, scheduler).
 
-**PHP-FPM solo no atiende HTTP público.** Si el start command vuelve a `php-fpm -F` sin nginx/Caddy/Apache delante, Railway no va a servir la app.
+En Railway **no** configures Start Command. Si quedó `supervisord` o `php-fpm` a mano, borralo: tiene que usarse el `ENTRYPOINT` del `Dockerfile`.
 
-Healthcheck: `GET /up`.
+Healthcheck: `GET /up` (timeout 120s).
 
-Variables: ver `.env.railway`.
+Variables: ver `.env.railway`. Mínimo: `APP_KEY`, `APP_URL`, `DB_*` (o `DB_URL`) y `LOG_CHANNEL=stderr`.
 
 ## Backups y rollback
 

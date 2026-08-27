@@ -1,10 +1,10 @@
 # https://docs.railway.com/guides/config-as-code
 [build]
-dockerfilePath = "Dockerfile.fpm"
+dockerfilePath = "Dockerfile"
 
 [deploy]
+# El ENTRYPOINT del Dockerfile genera nginx en $PORT y arranca php-fpm + nginx.
+# No pongas startCommand: Railway lo usa en lugar del ENTRYPOINT y /up falla.
 releaseCommand = "bash scripts/railway-db-setup.sh"
-# nginx + php-fpm in the same image. PHP-FPM alone is not a public HTTP server.
-startCommand = "supervisord -n -c /etc/supervisor/conf.d/rodante.conf"
 healthcheckPath = "/up"
-healthcheckTimeout = 30
+healthcheckTimeout = 120
