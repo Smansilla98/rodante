@@ -11,6 +11,8 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
+COPY . .
+
 COPY docker/nginx/railway.conf.template /etc/nginx/templates/rodante.conf.template
 COPY docker/supervisor/rodante.conf /etc/supervisor/conf.d/rodante.conf
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
