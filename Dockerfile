@@ -2,7 +2,9 @@
 FROM node:22-alpine AS vite
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+# Playwright no hace falta para Vite; omitir optional rompería @rolldown/binding-*-musl.
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+RUN npm ci --no-audit --no-fund
 COPY vite.config.js ./
 COPY resources ./resources
 COPY public ./public
