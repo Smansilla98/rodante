@@ -13,6 +13,8 @@ WORKDIR /var/www/html
 
 COPY . .
 
+RUN composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader
+
 COPY docker/nginx/railway.conf.template /etc/nginx/templates/rodante.conf.template
 COPY docker/supervisor/rodante.conf /etc/supervisor/conf.d/rodante.conf
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
