@@ -11,7 +11,7 @@
     <div class="facts">
         <div><span>Estado</span><div>{{ $order->status->label() }}</div></div>
         <div><span>Tipo</span><div>{{ $order->type->label() }}</div></div>
-        <div><span>Cubierta</span><div>{{ $order->tire?->displayName() }}</div></div>
+        <div><span>{{ $order->tiresOnOrder()->count() > 1 ? 'Cubiertas' : 'Cubierta' }}</span><div>{{ $order->tiresOnOrder()->map->displayName()->implode(', ') }}</div></div>
         <div><span>Recapadora</span><div>{{ $order->shop?->name ?? '—' }}</div></div>
         <div><span>Abierta</span><div class="mono">{{ $order->created_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</div></div>
         <div><span>Abierta por</span><div>{{ $order->opener?->name ?? '—' }}</div></div>

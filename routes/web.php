@@ -6,6 +6,7 @@ use App\Http\Controllers\Catalog\BrandController;
 use App\Http\Controllers\Catalog\ModelController;
 use App\Http\Controllers\Catalog\SimpleCatalogController;
 use App\Http\Controllers\Catalog\SizeController;
+use App\Http\Controllers\ConsultationController;
 use App\Http\Controllers\CostController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExportController;
@@ -57,7 +58,20 @@ Route::middleware('auth')->group(function () {
     Route::get('/neumaticos/{tire}/informe', [PrintController::class, 'life'])->name('tires.life-report');
     Route::get('/neumaticos/{tire}/fotos/{photo}', [TirePhotoController::class, 'show'])->name('tires.photos.show');
     Route::get('/neumaticos/{tire}', [TireController::class, 'show'])->name('tires.show');
+    Route::get('/mediciones', [ConsultationController::class, 'measurements'])->name('measurements.index');
+    Route::get('/incidencias', [ConsultationController::class, 'incidents'])->name('incidents.index');
+    Route::get('/enganches', [ConsultationController::class, 'couplings'])->name('couplings.index');
+
     Route::get('/exportar/cubiertas.csv', [ExportController::class, 'tiresCsv'])->name('exports.tires');
+    Route::get('/exportar/unidades.csv', [ExportController::class, 'unitsCsv'])->name('exports.units');
+    Route::get('/exportar/mediciones.csv', [ExportController::class, 'measurementsCsv'])->name('exports.measurements');
+    Route::get('/exportar/incidencias.csv', [ExportController::class, 'incidentsCsv'])->name('exports.incidents');
+    Route::get('/exportar/enganches.csv', [ExportController::class, 'couplingsCsv'])->name('exports.couplings');
+    Route::get('/exportar/odometros.csv', [ExportController::class, 'odometersCsv'])->name('exports.odometers');
+    Route::get('/exportar/auditoria.csv', [ExportController::class, 'auditCsv'])->name('exports.audit');
+    Route::get('/exportar/reporte-km.csv', [ExportController::class, 'reportKilometersCsv'])->name('exports.report-kilometers');
+    Route::get('/exportar/reporte-consumo.csv', [ExportController::class, 'reportConsumptionCsv'])->name('exports.report-consumption');
+    Route::get('/exportar/reporte-incidencias.csv', [ExportController::class, 'reportIncidentsCsv'])->name('exports.report-incidents');
 
     Route::get('/ordenes', [WorkOrderController::class, 'index'])->name('work-orders.index');
     Route::get('/ordenes/{workOrder}', [WorkOrderController::class, 'show'])->whereNumber('workOrder')->name('work-orders.show');
@@ -90,6 +104,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/neumaticos/{tire}/incidencias', [TireController::class, 'storeIncident'])->name('tires.incidents.store');
         Route::post('/neumaticos/{tire}/mediciones', [TireController::class, 'storeMeasurement'])->name('tires.measurements.store');
         Route::post('/neumaticos/{tire}/stock', [TireController::class, 'returnToStock'])->name('tires.return-stock');
+        Route::post('/neumaticos/{tire}/traslado', [TireController::class, 'transferBase'])->name('tires.transfer-base');
 
         Route::get('/compras/nueva', [PurchaseController::class, 'create'])->name('purchases.create');
         Route::post('/compras', [PurchaseController::class, 'store'])->name('purchases.store');

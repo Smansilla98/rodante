@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             CatalogSeeder::class,
             DemoSeeder::class,
+            // CompletePlateMapSeeder lo invoca DemoSeeder (idempotente) para mapear todas las patentes.
         ]);
     }
 }

@@ -46,6 +46,8 @@ if [ -f artisan ]; then
     if [ "${SEED_DEMO:-1}" = "1" ] || [ "${SEED_DEMO:-1}" = "true" ]; then
         echo "=== Cargando seeders (usuarios de prueba) ==="
         php artisan db:seed --force --no-interaction || true
+        echo "=== Mapeo completo por patente ==="
+        php artisan db:seed --class=Database\\Seeders\\CompletePlateMapSeeder --force --no-interaction || true
     fi
 
     php artisan config:cache || true

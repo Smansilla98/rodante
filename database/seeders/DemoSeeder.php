@@ -62,6 +62,7 @@ class DemoSeeder extends Seeder
 
         if (FleetUnit::query()->where('plate', 'HKH 448')->exists()) {
             $this->upgradeDemoTrailersToLineal();
+            $this->call(CompletePlateMapSeeder::class);
 
             return;
         }
@@ -170,6 +171,8 @@ class DemoSeeder extends Seeder
                 'position_id' => $position->id,
             ])->all(),
         ], $admin);
+
+        $this->call(CompletePlateMapSeeder::class);
     }
 
     private function upgradeDemoTrailersToLineal(): void

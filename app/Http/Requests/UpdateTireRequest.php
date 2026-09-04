@@ -36,10 +36,34 @@ class UpdateTireRequest extends FormRequest
                     ->where(fn ($q) => $q->where('company_id', $tire->company_id)),
             ],
             'number_reason' => 'nullable|string|max:255',
+            'dot' => [
+                'nullable',
+                'string',
+                'max:20',
+                'regex:/^[A-Za-z0-9]{8,20}$/',
+                Rule::unique('tires', 'dot')
+                    ->ignore($tire->id)
+                    ->where(fn ($q) => $q->where('company_id', $tire->company_id)),
+            ],
             'tire_brand_id' => 'required|exists:tire_brands,id',
             'tire_model_id' => 'required|exists:tire_models,id',
             'tire_size_id' => 'required|exists:tire_sizes,id',
             'condition' => 'required|string',
+        ];
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('dot')) {
+            $this->merge(['dot' => Tire::normalizeDot($this->input('dot'))]);
+        }
+    }
+
+    public function messages(): array
+    {
+        return [
+            'dot.regex' => 'El DOT debe tener entre 8 y 20 caracteres (letras y números).',
+            'dot.unique' => 'Ese DOT ya está cargado en otra cubierta de la empresa.',
         ];
     }
 

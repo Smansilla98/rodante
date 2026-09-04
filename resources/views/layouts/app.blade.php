@@ -43,13 +43,16 @@
             </div>
             <div class="sb-group">
                 <div class="sb-lbl">Consulta</div>
+                <x-nav-link :href="route('measurements.index')" icon="ruler" label="Mediciones" match="measurements.*" />
+                <x-nav-link :href="route('incidents.index')" icon="alert" label="Incidencias" match="incidents.*" />
+                <x-nav-link :href="route('couplings.index')" icon="truck" label="Enganches" match="couplings.*" />
                 <x-nav-link :href="route('reports.kilometers')" icon="chart" label="Km por cubierta" match="reports.kilometers" />
                 <x-nav-link :href="route('reports.cost-km')" icon="chart" label="Costo / km" match="reports.cost-km" />
                 <x-nav-link :href="route('reports.cost-attribution')" icon="chart" label="Costo unidad/posición" match="reports.cost-attribution" />
                 <x-nav-link :href="route('reports.inventory')" icon="boxes" label="Inventario teórico" match="reports.inventory" />
                 <x-nav-link :href="route('inventories.index')" icon="boxes" label="Inventario físico" match="inventories.*" />
                 <x-nav-link :href="route('reports.consumption')" icon="grid" label="Consumo" match="reports.consumption" />
-                <x-nav-link :href="route('reports.incidents')" icon="alert" label="Incidencias" match="reports.incidents" />
+                <x-nav-link :href="route('reports.incidents')" icon="alert" label="Incidencias (resumen)" match="reports.incidents" />
                 <x-nav-link :href="route('reports.predictive')" icon="chart" label="Predictivo" match="reports.predictive" />
                 <x-nav-link :href="route('reports.audit')" icon="shield" label="Movimientos" match="reports.audit" />
                 @if(auth()->user()->role->canViewTelemetry())

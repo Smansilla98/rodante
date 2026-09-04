@@ -39,6 +39,15 @@ class PurchaseService
 
             foreach ($data['items'] as $item) {
                 $this->assertItemMatchesCatalog($item);
+                $dot = Tire::normalizeDot($item['dot'] ?? null);
+                if ($dot && (int) $item['quantity'] !== 1) {
+                    throw new DomainException(
+                        'El DOT es por cubierta. Con cantidad mayor a 1, cargalo después en cada ficha.'
+                    );
+                }
+                if ($dot && Tire::where('company_id', $user->company_id)->where('dot', $dot)->exists()) {
+                    throw new DomainException("El DOT {$dot} ya está cargado en otra cubierta.");
+                }
                 $purchase->items()->create([
                     'tire_brand_id' => $item['tire_brand_id'],
                     'tire_model_id' => $item['tire_model_id'],
@@ -46,6 +55,7 @@ class PurchaseService
                     'quantity' => $item['quantity'],
                     'first_number' => $item['first_number'] ?? null,
                     'unit_cost' => $item['unit_cost'] ?? null,
+                    'dot' => $dot,
                 ]);
             }
 
@@ -102,9 +112,15 @@ class PurchaseService
                         throw new DomainException("El número individual {$number} ya existe en la empresa.");
                     }
 
+                    $dot = $item->quantity === 1 ? Tire::normalizeDot($item->dot) : null;
+                    if ($dot && Tire::where('company_id', $purchase->company_id)->where('dot', $dot)->exists()) {
+                        throw new DomainException("El DOT {$dot} ya está cargado en otra cubierta.");
+                    }
+
                     $tire = Tire::create([
                         'company_id' => $purchase->company_id ?? $user->company_id,
                         'individual_number' => $number,
+                        'dot' => $dot,
                         'tire_brand_id' => $item->tire_brand_id,
                         'tire_model_id' => $item->tire_model_id,
                         'tire_size_id' => $item->tire_size_id,

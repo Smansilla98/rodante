@@ -75,10 +75,11 @@ class TireApiController extends Controller
 
         return response()->json([
             'tire' => $history->only([
-                'id', 'individual_number', 'status', 'condition', 'accumulated_km',
+                'id', 'individual_number', 'dot', 'status', 'condition', 'accumulated_km',
                 'current_tread_min', 'purchased_at', 'retired_at',
             ]),
             'display' => $history->displayName(),
+            'manufacture' => $history->manufactureWeekYear(),
             'timeline' => $reports->timeline($tire),
             'forecast' => $predictive->forecast($history),
             'photos' => $history->photos->where('kind', 'RETIRE')->values()->map(fn ($photo) => [
@@ -180,7 +181,12 @@ class TireApiController extends Controller
         $data = $request->validated();
 
         try {
-            return response()->json($operations->returnToStock($tire, $request->user(), $data['notes'] ?? null));
+            return response()->json($operations->returnToStock(
+                $tire,
+                $request->user(),
+                $data['notes'] ?? null,
+                (bool) ($data['as_recap'] ?? false),
+            ));
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }

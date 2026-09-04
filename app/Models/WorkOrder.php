@@ -6,6 +6,8 @@ use App\Enums\WorkOrderStatus;
 use App\Enums\WorkOrderType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 class WorkOrder extends Model
 {
@@ -45,5 +47,36 @@ class WorkOrder extends Model
     public function closer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'closed_by');
+    }
+
+    public function items(): HasMany
+    {
+        return $this->hasMany(WorkOrderItem::class);
+    }
+
+    public function tiresOnOrder(): Collection
+    {
+        $this->loadMissing(['items.tire.model', 'items.tire.brand', 'tire.model', 'tire.brand']);
+
+        if ($this->items->isNotEmpty()) {
+            return $this->items->map->tire->filter()->values();
+        }
+
+        return collect([$this->tire])->filter()->values();
+    }
+
+    public function tireSummary(): string
+    {
+        $tires = $this->tiresOnOrder();
+        if ($tires->isEmpty()) {
+            return '—';
+        }
+        if ($tires->count() === 1) {
+            return $tires->first()->displayName();
+        }
+
+        $names = $tires->take(2)->map->displayName()->implode(', ');
+
+        return $tires->count().' cubiertas · '.$names.($tires->count() > 2 ? '…' : '');
     }
 }

@@ -10,7 +10,7 @@ class TirePurchaseItem extends Model
 {
     protected $fillable = [
         'tire_purchase_id', 'tire_brand_id', 'tire_model_id', 'tire_size_id',
-        'quantity', 'first_number', 'last_number', 'unit_cost',
+        'quantity', 'first_number', 'last_number', 'unit_cost', 'dot',
     ];
 
     public function purchase(): BelongsTo

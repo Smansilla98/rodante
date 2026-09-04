@@ -30,20 +30,29 @@ class BaseTransferService
             || (int) $toBase->company_id !== (int) $user->company_id) {
             throw new DomainException('La cubierta y la base destino deben pertenecer a tu empresa.');
         }
+        if ($tire->status === TireStatus::Instalada || $tire->openAssignment) {
+            throw new DomainException('No se traslada una cubierta instalada. Primero retirála a stock.');
+        }
+        if ($tire->status === TireStatus::DeBaja) {
+            throw new DomainException('Una cubierta de baja no se traslada.');
+        }
         if (! in_array($tire->status, self::TRANSFERABLE, true)) {
-            throw new DomainException('Solo se transfieren cubiertas en stock, reserva o reparación.');
+            throw new DomainException('Solo se traslada una cubierta en stock, reserva o reparación.');
         }
 
         return DB::transaction(function () use ($tire, $toBase, $user, $notes) {
             $tire = Tire::query()->whereKey($tire->id)->lockForUpdate()->firstOrFail();
             if (! in_array($tire->status, self::TRANSFERABLE, true)) {
-                throw new DomainException('El estado de la cubierta cambió y ya no permite transferirla.');
+                throw new DomainException('El estado de la cubierta cambió y ya no permite trasladarla.');
             }
 
             $tire->load('currentLocation');
             $fromBaseId = $tire->currentLocation?->base_id;
-            $kind = LocationKind::from($tire->status->value);
+            if ((int) $fromBaseId === (int) $toBase->id) {
+                throw new DomainException('La cubierta ya está en esa base.');
+            }
 
+            $kind = LocationKind::from($tire->status->value);
             $this->locations->place($tire, $kind, $toBase->id);
             $tire->movements()->create([
                 'type' => MovementType::TransferBase,
@@ -51,7 +60,7 @@ class BaseTransferService
                 'from_base_id' => $fromBaseId,
                 'to_base_id' => $toBase->id,
                 'user_id' => $user->id,
-                'notes' => $notes,
+                'notes' => $notes ?? 'Cambio de base.',
                 'created_at' => now(),
             ]);
             $this->audit->log('tire.base_transferred', $tire, [

@@ -13,6 +13,13 @@
     subtitle="Hola, {{ auth()->user()->name }}."
 />
 
+@if(auth()->user()->role->canWrite())
+    <div class="grid sm:grid-cols-3 gap-3 mb-8">
+        <a href="{{ route('odometers.index') }}" class="btn btn-primary btn-touch">Cargar km</a>
+        <a href="{{ route('field.index') }}" class="btn btn-dark btn-touch">Medición / incidencia</a>
+        <a href="{{ route('units.index') }}" class="btn btn-ghost btn-touch">Abrir planilla</a>
+    </div>
+@endif
 <div class="kpi-grid mb-8">
     @if(in_array('total', $kpis, true))
     <a class="kpi kpi--blue" href="{{ route('tires.index') }}">

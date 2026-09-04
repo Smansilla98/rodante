@@ -2,8 +2,11 @@
 @section('kicker', 'Consulta')
 @section('title', 'Consumo por modelo')
 @section('content')
-<x-page-header kicker="Consulta" title="Consumo por modelo" subtitle="Compradas, instaladas, stock y km promedio." />
-<x-panel :flush="true">
+<x-page-header kicker="Consulta" title="Consumo por modelo" subtitle="Compradas, instaladas, stock y km promedio.">
+    <x-slot:actions>
+        <x-export-csv :href="route('exports.report-consumption')" />
+    </x-slot:actions>
+</x-page-header><x-panel :flush="true">
     <x-content-table>
         <thead>
             <tr>

@@ -19,7 +19,7 @@ class Tire extends Model
     use BelongsToCompany, HasFactory;
 
     protected $fillable = [
-        'company_id', 'public_token', 'individual_number', 'tire_brand_id', 'tire_model_id', 'tire_size_id',
+        'company_id', 'public_token', 'individual_number', 'dot', 'tire_brand_id', 'tire_model_id', 'tire_size_id',
         'tire_purchase_item_id', 'current_lifecycle_id', 'status', 'condition',
         'accumulated_km', 'current_tread_min', 'purchased_at', 'retired_at',
     ];
@@ -40,6 +40,50 @@ class Tire extends Model
         $code = $this->model?->code ?? 'S/M';
 
         return $code.' Nº'.$this->individual_number;
+    }
+
+    /**
+     * Normaliza el DOT de fábrica (garantía): mayúsculas, sin espacios ni guiones.
+     */
+    public static function normalizeDot(?string $dot): ?string
+    {
+        if ($dot === null) {
+            return null;
+        }
+        $clean = strtoupper(preg_replace('/[\s\-]+/', '', trim($dot)) ?? '');
+
+        return $clean === '' ? null : $clean;
+    }
+
+    /**
+     * Semana y año de fabricación a partir de los últimos 4 dígitos del DOT (WWYY).
+     *
+     * @return array{week: int, year: int}|null
+     */
+    public function manufactureWeekYear(): ?array
+    {
+        $dot = (string) ($this->dot ?? '');
+        if (strlen($dot) < 4 || ! preg_match('/(\d{4})$/', $dot, $m)) {
+            return null;
+        }
+        $week = (int) substr($m[1], 0, 2);
+        $year = (int) substr($m[1], 2, 2);
+        if ($week < 1 || $week > 53) {
+            return null;
+        }
+        $fullYear = $year >= 70 ? 1900 + $year : 2000 + $year;
+
+        return ['week' => $week, 'year' => $fullYear];
+    }
+
+    public function manufactureLabel(): ?string
+    {
+        $parsed = $this->manufactureWeekYear();
+        if (! $parsed) {
+            return null;
+        }
+
+        return 'Semana '.$parsed['week'].' / '.$parsed['year'];
     }
 
     public function auditLabel(): string

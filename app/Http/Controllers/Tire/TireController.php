@@ -12,11 +12,13 @@ use App\Http\Requests\ReturnTireToStockRequest;
 use App\Http\Requests\StoreTireIncidentRequest;
 use App\Http\Requests\StoreTireMeasurementRequest;
 use App\Http\Requests\UpdateTireRequest;
+use App\Models\Base;
 use App\Models\MovementReason;
 use App\Models\Tire;
 use App\Models\TireBrand;
 use App\Models\TireModel;
 use App\Models\TireSize;
+use App\Services\BaseTransferService;
 use App\Services\IncidentService;
 use App\Services\MeasurementService;
 use App\Services\PredictiveWearService;
@@ -59,12 +61,16 @@ class TireController extends Controller
                 }))
             ->when($request->q, function ($q, $term) {
                 $digits = preg_replace('/\D+/', '', $term);
-                $q->where(function ($inner) use ($term, $digits) {
+                $dot = Tire::normalizeDot($term);
+                $q->where(function ($inner) use ($term, $digits, $dot) {
                     $inner->where('individual_number', 'like', "%{$term}%")
                         ->orWhereHas('model', fn ($m) => $m->where('code', 'like', "%{$term}%"))
                         ->orWhereHas('currentLocation.unit', fn ($u) => $u->where('plate', 'like', "%{$term}%"));
                     if ($digits) {
                         $inner->orWhere('individual_number', $digits);
+                    }
+                    if ($dot) {
+                        $inner->orWhere('dot', 'like', "%{$dot}%");
                     }
                 });
             })
@@ -106,6 +112,14 @@ class TireController extends Controller
             'sizes' => TireSize::orderBy('code')->get(),
             'conditions' => TireCondition::cases(),
             'numberChanges' => $tire->numberChanges()->with('user')->limit(20)->get(),
+            'bases' => Base::query()
+                ->when(! AccessScope::seesEverything($request->user()), function ($q) use ($request) {
+                    $ids = AccessScope::visibleBaseIds($request->user());
+                    $q->whereIn('id', $ids ?: [0]);
+                })
+                ->where('is_active', true)
+                ->orderBy('name')
+                ->get(),
         ]);
     }
 
@@ -132,6 +146,7 @@ class TireController extends Controller
             'tire_model_id' => $data['tire_model_id'],
             'tire_size_id' => $data['tire_size_id'],
             'condition' => $data['condition'],
+            'dot' => $data['dot'] ?? null,
         ]);
 
         return redirect()->route('tires.show', $tire)->with('success', 'Cubierta actualizada.');
@@ -177,13 +192,41 @@ class TireController extends Controller
     public function returnToStock(ReturnTireToStockRequest $request, Tire $tire, TireOperationService $operations)
     {
         $data = $request->validated();
+        $asRecap = (bool) ($data['as_recap'] ?? false);
 
         try {
-            $operations->returnToStock($tire, $request->user(), $data['notes'] ?? null);
+            $operations->returnToStock($tire, $request->user(), $data['notes'] ?? null, $asRecap);
         } catch (DomainException $e) {
             return back()->withErrors(['stock' => $e->getMessage()]);
         }
 
-        return back()->with('success', 'La cubierta volvió a stock. La reparación (parche) queda en la ficha; no se abrió una vida nueva.');
+        $msg = $asRecap
+            ? 'La cubierta volvió a stock recapada. Se abrió una vida nueva.'
+            : 'La cubierta volvió a stock. La reparación (parche) queda en la ficha; no se abrió una vida nueva.';
+
+        return back()->with('success', $msg);
+    }
+
+    public function transferBase(Request $request, Tire $tire, BaseTransferService $transfers)
+    {
+        $this->authorizeVisible('view', $tire);
+        abort_unless($request->user()->role->canWrite(), 403);
+
+        $data = $request->validate([
+            'base_id' => 'required|exists:bases,id',
+            'notes' => 'nullable|string|max:255',
+        ], [
+            'base_id.required' => 'Elegí la base destino.',
+        ]);
+
+        $base = Base::findOrFail($data['base_id']);
+
+        try {
+            $transfers->transfer($tire, $base, $request->user(), $data['notes'] ?? null);
+        } catch (DomainException $e) {
+            return back()->withErrors(['transfer' => $e->getMessage()])->withInput();
+        }
+
+        return back()->with('success', 'Cubierta trasladada a '.$base->name.'.');
     }
 }

@@ -6,8 +6,11 @@
     kicker="Consulta"
     title="Movimientos"
     subtitle="Historial de la flota: montajes, rotaciones, acoples, mediciones y compras."
-/>
-<x-panel :flush="true">
+>
+    <x-slot:actions>
+        <x-export-csv :href="route('exports.audit')" />
+    </x-slot:actions>
+</x-page-header><x-panel :flush="true">
     <x-content-table>
         <thead>
             <tr>

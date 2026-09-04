@@ -36,7 +36,7 @@ class ApiSurfaceController extends Controller
 
     public function workOrders(Request $request): JsonResponse
     {
-        $query = WorkOrder::with('tire.brand', 'tire.model', 'shop')->latest();
+        $query = WorkOrder::with('tire.brand', 'tire.model', 'items.tire.model', 'items.tire.brand', 'shop')->latest();
         AccessScope::workOrders($query, $request->user());
 
         return response()->json($query->paginate(50));
@@ -48,7 +48,7 @@ class ApiSurfaceController extends Controller
         try {
             $order = $service->open(
                 $request->user(),
-                Tire::findOrFail($data['tire_id']),
+                Tire::query()->whereIn('id', $request->tireIds())->get(),
                 RetreadShop::findOrFail($data['retread_shop_id']),
                 WorkOrderType::from($data['type']),
                 $data['notes'] ?? null,
@@ -57,7 +57,7 @@ class ApiSurfaceController extends Controller
             return response()->json(['message' => $e->getMessage()], 422);
         }
 
-        return response()->json($order->load('tire', 'shop'), 201);
+        return response()->json($order->load('tire', 'items.tire', 'shop'), 201);
     }
 
     public function inventorySessions(Request $request): JsonResponse

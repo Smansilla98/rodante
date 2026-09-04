@@ -87,6 +87,17 @@
                 @endif
             </div>
             <div><span>Alta</span>{{ $tire->purchased_at?->format('d/m/Y') ?? '—' }}</div>
+            <div>
+                <span>DOT</span>
+                @if($tire->dot)
+                    <span class="mono">{{ $tire->dot }}</span>
+                    @if($tire->manufactureLabel())
+                        <span class="hint"> · fabricación {{ $tire->manufactureLabel() }}</span>
+                    @endif
+                @else
+                    <span class="hint">Sin cargar — clave para garantía</span>
+                @endif
+            </div>
             @if($tire->public_token)
                 <div>
                     <span>QR</span>
@@ -111,12 +122,36 @@
             </div>
         @endif
         @if($canReturn)
-            <form method="POST" action="{{ route('tires.return-stock', $tire) }}" class="mt-6 space-y-3 border-t border-slate-100 pt-4" data-confirm="La cubierta vuelve a stock. El parche queda en la ficha y no se abre una vida nueva. ¿Continuar?">
+            <form method="POST" action="{{ route('tires.return-stock', $tire) }}" class="mt-6 space-y-3 border-t border-slate-100 pt-4" data-confirm="La cubierta vuelve a stock. ¿Continuar?">
                 @csrf
                 <h3 class="font-semibold">Volver a stock</h3>
                 <p class="hint">Desde stock se puede reinstalar. Un parche no es recapado.</p>
                 <label class="field"><span>Observaciones</span><textarea name="notes" rows="2" placeholder="Parche interno, queda lista"></textarea></label>
+                @if(auth()->user()->role->canRetireOrRecap() && $tire->status->value === 'EN_REPARACION')
+                    <label class="field field--check">
+                        <input type="checkbox" name="as_recap" value="1">
+                        <span>Volvió recapada (abre vida nueva)</span>
+                    </label>
+                @endif
+                <x-field-error name="stock" />
                 <button class="btn btn-dark btn-sm">Devolver a stock</button>
+            </form>
+        @endif
+        @if(auth()->user()->role->canWrite() && $tire->status->value === 'STOCK' && isset($bases) && $bases->isNotEmpty())
+            <form method="POST" action="{{ route('tires.transfer-base', $tire) }}" class="mt-6 space-y-3 border-t border-slate-100 pt-4" data-confirm="¿Trasladar esta cubierta a otra base?">
+                @csrf
+                <h3 class="font-semibold">Cambio de base</h3>
+                <p class="hint">Solo cubiertas en stock. Queda movimiento TransferBase en el historial.</p>
+                <label class="field"><span>Base destino</span>
+                    <select name="base_id" required>
+                        @foreach($bases as $base)
+                            <option value="{{ $base->id }}" @selected((int) $tire->currentLocation?->base_id === (int) $base->id)>{{ $base->name }}</option>
+                        @endforeach
+                    </select>
+                </label>
+                <label class="field"><span>Observaciones</span><input name="notes" value="{{ old('notes') }}"></label>
+                <x-field-error name="transfer" />
+                <button class="btn btn-dark btn-sm">Trasladar</button>
             </form>
         @endif
         @if(auth()->user()->role->canManageAbm() && request('edit'))
@@ -126,6 +161,12 @@
                 <h3 class="font-semibold">Editar ficha</h3>
                 <label class="field"><span>Nº individual</span><input name="individual_number" type="number" min="1" value="{{ old('individual_number', $tire->individual_number) }}" required @error('individual_number') aria-invalid="true" @enderror><x-field-error name="individual_number" /></label>
                 <label class="field"><span>Motivo del cambio de número</span><input name="number_reason" value="{{ old('number_reason') }}" placeholder="Obligatorio si cambiás el número"><x-field-error name="number_reason" /></label>
+                <label class="field">
+                    <span>DOT (garantía)</span>
+                    <input name="dot" value="{{ old('dot', $tire->dot) }}" maxlength="20" placeholder="Ej. 1A3B4C0524" autocomplete="off" @error('dot') aria-invalid="true" @enderror>
+                    <span class="hint">Código de fábrica en el flanco. Los últimos 4 dígitos son semana y año de fabricación.</span>
+                    <x-field-error name="dot" />
+                </label>
                 <label class="field"><span>Marca</span>
                     <select name="tire_brand_id" required>
                         @foreach($brands as $brand)

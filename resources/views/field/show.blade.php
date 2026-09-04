@@ -13,6 +13,17 @@
             <div><span>Estado</span>{{ $tire->status->label() }}</div>
             <div><span>Condición</span>{{ $tire->condition->label() }}</div>
             <div><span>Km</span><span class="mono">{{ number_format($tire->accumulated_km) }}</span></div>
+            <div>
+                <span>DOT</span>
+                @if($tire->dot)
+                    <span class="mono">{{ $tire->dot }}</span>
+                    @if($tire->manufactureLabel())
+                        <span class="hint"> · {{ $tire->manufactureLabel() }}</span>
+                    @endif
+                @else
+                    —
+                @endif
+            </div>
             @if(!empty($forecast['narrative']))
                 <div class="col-span-full">
                     <span>Pronóstico</span>

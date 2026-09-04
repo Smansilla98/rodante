@@ -2,7 +2,11 @@
 @section('kicker', 'Consulta')
 @section('title', 'Kilómetros por cubierta')
 @section('content')
-<x-page-header kicker="Consulta" title="Kilómetros por cubierta" subtitle="Km acumulados, vidas, recapados y reparaciones." />
+<x-page-header kicker="Consulta" title="Kilómetros por cubierta" subtitle="Km acumulados, vidas, recapados y reparaciones.">
+    <x-slot:actions>
+        <x-export-csv :href="route('exports.report-kilometers')" />
+    </x-slot:actions>
+</x-page-header>
 <x-panel :flush="true">
     <x-content-table>
         <thead>

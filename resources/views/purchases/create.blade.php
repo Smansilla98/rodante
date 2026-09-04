@@ -23,11 +23,11 @@
             </label>
         </div>
         <h3 class="font-semibold mb-3">Líneas</h3>
-        <p class="hint mb-3">Primero la marca, después el diseño de esa marca, después la medida en la que se fabrica.</p>
+        <p class="hint mb-3">Primero la marca, después el diseño de esa marca, después la medida en la que se fabrica. El DOT (garantía) se carga si la cantidad es 1; si son varias, después en cada ficha.</p>
         <script type="application/json" id="tireCatalog">@json($catalog)</script>
         <div class="space-y-3 mb-4">
             @for($i=0;$i<3;$i++)
-                <div class="grid md:grid-cols-6 gap-2" data-catalog-row>
+                <div class="grid md:grid-cols-7 gap-2" data-catalog-row>
                     <select name="items[{{ $i }}][tire_brand_id]" class="inp" data-catalog="brand" aria-label="Marca">
                         <option value="">Marca</option>
                         @foreach($catalog['brands'] as $brand)
@@ -43,6 +43,7 @@
                     <input name="items[{{ $i }}][quantity]" type="number" min="1" class="inp" placeholder="Cantidad" aria-label="Cantidad">
                     <input name="items[{{ $i }}][first_number]" type="number" min="1" class="inp" placeholder="Desde Nº" aria-label="Número inicial">
                     <input name="items[{{ $i }}][unit_cost]" type="number" min="0" step="0.01" class="inp" placeholder="Costo" aria-label="Costo unitario">
+                    <input name="items[{{ $i }}][dot]" class="inp" maxlength="20" placeholder="DOT" aria-label="DOT garantía" autocomplete="off">
                 </div>
             @endfor
         </div>
@@ -56,7 +57,7 @@
     @csrf
     <div class="panel__body space-y-3">
         <h3 class="font-semibold">Importar CSV</h3>
-        <p class="hint">Columnas: Marca;Modelo;Medida;Cantidad;Desde Nº;Costo unitario. El catálogo tiene que existir. Las filas inválidas se rechazan.</p>
+        <p class="hint">Columnas: Marca;Modelo;Medida;Cantidad;Desde Nº;Costo unitario;DOT (opcional, solo con cantidad 1). El catálogo tiene que existir. Las filas inválidas se rechazan.</p>
         <label class="field"><span>Archivo</span><input type="file" name="file" accept=".csv,text/csv" required><x-field-error name="file" /></label>
         <label class="field"><span>Proveedor</span>
             <select name="supplier_id" required>@foreach($suppliers as $supplier)<option value="{{ $supplier->id }}">{{ $supplier->name }}</option>@endforeach</select>

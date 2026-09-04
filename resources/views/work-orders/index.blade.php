@@ -23,7 +23,7 @@
         @forelse($orders as $order)
             <tr>
                 <td><a href="{{ route('work-orders.show', $order) }}">{{ $order->number }}</a></td>
-                <td>{{ $order->tire?->displayName() }}</td>
+                <td>{{ $order->tireSummary() }}</td>
                 <td>{{ $order->type->label() }}</td>
                 <td>{{ $order->shop?->name }}</td>
                 <td>{{ $order->status->label() }}</td>

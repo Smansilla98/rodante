@@ -94,4 +94,47 @@ class CriticalFlowE2ETest extends TestCase
         ]);
         $this->assertSame(1, WorkOrder::count());
     }
+
+    public function test_open_recap_work_order_with_multiple_tires_from_form(): void
+    {
+        $this->seedDomain();
+        $this->get('/login');
+        $csrf = csrf_token();
+        $this->post('/login', ['username' => 'admin-test', 'password' => 'password', '_token' => $csrf])
+            ->assertRedirect(route('dashboard'));
+        $csrf = csrf_token();
+
+        [$a, $b] = app(\App\Services\PurchaseService::class)->confirm(
+            app(\App\Services\PurchaseService::class)->create([
+                'supplier_id' => Supplier::firstOrFail()->id,
+                'base_id' => Base::firstOrFail()->id,
+                'purchased_at' => now()->toDateString(),
+                'items' => [[
+                    'tire_brand_id' => TireModel::with('sizes')->firstOrFail()->tire_brand_id,
+                    'tire_model_id' => TireModel::with('sizes')->firstOrFail()->id,
+                    'tire_size_id' => TireModel::with('sizes')->firstOrFail()->sizes->first()->id,
+                    'quantity' => 2,
+                    'first_number' => 88100,
+                ]],
+            ], $this->admin),
+            $this->admin
+        )->items->flatMap->tires->values()->all();
+
+        $shop = RetreadShop::create([
+            'company_id' => $this->admin->company_id,
+            'name' => 'Taller E2E lote',
+            'is_active' => true,
+        ]);
+
+        $this->post('/ordenes', [
+            '_token' => $csrf,
+            'tire_ids' => [$a->id, $b->id],
+            'retread_shop_id' => $shop->id,
+            'type' => 'RECAPADO',
+            'notes' => 'Lote de prueba',
+        ])->assertRedirect();
+
+        $order = WorkOrder::latest('id')->firstOrFail();
+        $this->assertSame(2, $order->items()->count());
+    }
 }

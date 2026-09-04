@@ -55,8 +55,21 @@ class PurchaseController extends Controller
             'items.*.quantity' => 'nullable|integer|min:1|max:200',
             'items.*.first_number' => 'nullable|integer|min:1',
             'items.*.unit_cost' => 'nullable|numeric|min:0',
+            'items.*.dot' => 'nullable|string|max:20|regex:/^[A-Za-z0-9\s\-]{8,20}$/',
         ]);
         $data['items'] = collect($data['items'])->filter(fn ($item) => ! empty($item['tire_brand_id']) && ! empty($item['quantity']))->values()->all();
+        foreach ($data['items'] as &$item) {
+            if (! empty($item['dot'])) {
+                $normalized = \App\Models\Tire::normalizeDot($item['dot']);
+                if ($normalized === null || ! preg_match('/^[A-Za-z0-9]{8,20}$/', $normalized)) {
+                    return back()->withErrors(['items' => 'El DOT debe tener entre 8 y 20 caracteres (letras y números).'])->withInput();
+                }
+                $item['dot'] = $normalized;
+            } else {
+                $item['dot'] = null;
+            }
+        }
+        unset($item);
         if ($data['items'] === []) {
             return back()->withErrors(['items' => 'Cargá al menos una línea de compra.'])->withInput();
         }

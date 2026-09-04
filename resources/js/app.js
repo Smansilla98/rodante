@@ -251,6 +251,9 @@ const recambio = () => {
     const cambioTire = document.getElementById('cambioTire');
     const cambioEmpty = document.getElementById('cambioEmpty');
     const cambioSubmit = document.getElementById('cambioSubmit');
+    const cambioModal = document.getElementById('cambioModal');
+    const cambioSaleSelect = document.getElementById('cambioSaleSelect');
+    const cambioExpectedTire = document.getElementById('cambioExpectedTire');
     const rotatePosition = document.getElementById('rotatePosition');
     const rotateEmpty = document.getElementById('rotateEmpty');
     const rotateSubmit = document.getElementById('rotateSubmit');
@@ -262,7 +265,6 @@ const recambio = () => {
         patterns = [];
     }
     const forms = {
-        cambio: document.getElementById('formCambio'),
         pinchadura: document.getElementById('formPinchadura'),
         rotacion: document.getElementById('formRotacion'),
         retirar: document.getElementById('formRetirar'),
@@ -378,14 +380,102 @@ const recambio = () => {
         const sale = document.getElementById('cambioSale');
         const entra = document.getElementById('cambioEntra');
         const lugar = document.getElementById('cambioLugar');
-        if (!sale || !currentSlot) {
+        const slot = cambioSaleSelect?.value ? byId[String(cambioSaleSelect.value)] : currentSlot;
+        if (!sale || !slot?.tire) {
             return;
         }
-        sale.textContent = currentSlot.tire?.name || '—';
-        lugar.textContent = `${currentSlot.code} · ${currentSlot.name}`;
+        sale.textContent = slot.tire.name;
+        lugar.textContent = `${slot.code} · ${slot.name}`;
         const chosen = cambioTire?.selectedOptions?.[0];
         entra.textContent = chosen?.value ? chosen.textContent : 'Elegí la cubierta nueva';
     };
+
+    const mountedSlots = () => slots.filter((slot) => !slot.empty && slot.tire);
+
+    const populateCambioSaleSelect = (preferredId) => {
+        if (!cambioSaleSelect) {
+            return;
+        }
+        const items = mountedSlots().map((slot) => ({
+            id: slot.id,
+            label: `${slot.code} · ${slot.tire.name}`,
+            tire_id: slot.tire.id,
+        }));
+        fillSelect(cambioSaleSelect, items, 'Elegí la cubierta que sale');
+        const pick = preferredId && items.some((item) => String(item.id) === String(preferredId))
+            ? String(preferredId)
+            : (items[0] ? String(items[0].id) : '');
+        if (pick) {
+            cambioSaleSelect.value = pick;
+        }
+    };
+
+    const syncCambioFromSale = async () => {
+        const slot = cambioSaleSelect?.value ? byId[String(cambioSaleSelect.value)] : null;
+        if (!slot?.tire) {
+            paintStockSelect(cambioTire, cambioEmpty, cambioSubmit, [], 'Elegir cubierta nueva');
+            paintCambioTicket();
+            return;
+        }
+        currentSlot = slot;
+        document.getElementById('cambioPosition').value = slot.id;
+        if (cambioExpectedTire) {
+            cambioExpectedTire.value = String(slot.tire.id);
+        }
+        document.querySelectorAll('.tire-box--action.is-selected').forEach((box) => box.classList.remove('is-selected'));
+        document.querySelector(`.tire-box--action[data-slot="${slot.id}"]`)?.classList.add('is-selected');
+        const hint = document.getElementById('cambioHint');
+        if (hint) {
+            hint.textContent = 'Buscando cubiertas del mismo tipo…';
+        }
+        const q = document.getElementById('cambioSearch')?.value?.trim() || '';
+        const result = await loadSlotStock(slot, q);
+        paintStockSelect(cambioTire, cambioEmpty, cambioSubmit, result.data, 'Elegir cubierta nueva');
+        if (hint) {
+            hint.textContent = result.hint || 'Solo cubiertas del mismo tipo que la montada.';
+        }
+        paintCambioTicket();
+    };
+
+    const openCambioModal = (slotId) => {
+        if (!cambioModal) {
+            return;
+        }
+        const mounted = mountedSlots();
+        if (mounted.length === 0) {
+            window.alert('No hay cubiertas montadas para cambiar.');
+            return;
+        }
+        populateCambioSaleSelect(slotId || currentSlot?.id);
+        syncCambioFromSale();
+        cambioModal.hidden = false;
+        cambioModal.setAttribute('aria-hidden', 'false');
+        cambioModal.classList.add('is-open');
+        document.body.classList.add('sheet-modal-open');
+        window.setTimeout(() => {
+            document.getElementById('cambioSearch')?.focus();
+        }, 80);
+    };
+
+    const closeCambioModal = () => {
+        if (!cambioModal) {
+            return;
+        }
+        cambioModal.hidden = true;
+        cambioModal.setAttribute('aria-hidden', 'true');
+        cambioModal.classList.remove('is-open');
+        document.body.classList.remove('sheet-modal-open');
+    };
+
+    cambioSaleSelect?.addEventListener('change', () => syncCambioFromSale());
+    cambioModal?.querySelectorAll('[data-close-cambio-modal]').forEach((el) => {
+        el.addEventListener('click', closeCambioModal);
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && cambioModal?.classList.contains('is-open')) {
+            closeCambioModal();
+        }
+    });
 
     const showAction = (name) => {
         Object.entries(forms).forEach(([key, form]) => {
@@ -396,24 +486,16 @@ const recambio = () => {
         dock.querySelectorAll('.slot-actions__btn').forEach((btn) => {
             btn.classList.toggle('is-on', btn.dataset.action === name);
         });
-        if (name === 'cambio' && currentSlot && !currentSlot.empty) {
-            const hint = document.getElementById('cambioHint');
-            const q = document.getElementById('cambioSearch')?.value?.trim() || '';
-            if (hint) {
-                hint.textContent = 'Buscando cubiertas del mismo tipo…';
-            }
-            loadSlotStock(currentSlot, q).then((result) => {
-                paintStockSelect(cambioTire, cambioEmpty, cambioSubmit, result.data, 'Elegir cubierta nueva');
-                if (hint) {
-                    hint.textContent = result.hint || 'Solo cubiertas del mismo tipo que la montada.';
-                }
-                paintCambioTicket();
-            });
-        }
     };
 
     dock.querySelectorAll('.slot-actions__btn').forEach((btn) => {
-        btn.addEventListener('click', () => showAction(btn.dataset.action));
+        btn.addEventListener('click', () => {
+            if (btn.dataset.action === 'cambio') {
+                openCambioModal(currentSlot?.id);
+                return;
+            }
+            showAction(btn.dataset.action);
+        });
     });
 
     const selectSlot = (id) => {
@@ -440,6 +522,9 @@ const recambio = () => {
             dock.querySelectorAll('.expected-tire').forEach((el) => {
                 el.value = tireId ? String(tireId) : '';
             });
+            if (cambioExpectedTire && tireId) {
+                cambioExpectedTire.value = String(tireId);
+            }
         };
         const syncExpectedTo = () => {
             const dest = document.getElementById('expectedToTire');
@@ -488,18 +573,6 @@ const recambio = () => {
         rotatePosition.hidden = !canRotate;
         rotateSubmit.hidden = !canRotate;
         rotatePosition.required = canRotate;
-        const cambioSearch = document.getElementById('cambioSearch');
-        if (cambioSearch) {
-            cambioSearch.value = '';
-        }
-        fillSelect(cambioTire, [], 'Elegí Cambio para ver el stock');
-        paintCambioTicket();
-        cambioEmpty.hidden = true;
-        cambioTire.hidden = false;
-        cambioTire.required = false;
-        if (cambioSubmit) {
-            cambioSubmit.hidden = true;
-        }
         showAction(null);
     };
 
@@ -573,7 +646,7 @@ const recambio = () => {
                     return;
                 }
                 if (mode === 'cambio') {
-                    showAction('cambio');
+                    syncCambioFromSale();
                     return;
                 }
                 if (mode === 'install' && currentSlot.empty) {
@@ -665,8 +738,13 @@ const recambio = () => {
                 window.location.href = slot.tire.url;
                 return;
             }
+            if (btn.dataset.menu === 'cambio') {
+                selectSlot(slot.id);
+                openCambioModal(slot.id);
+                return;
+            }
             selectSlot(slot.id);
-            const action = { quitar: 'retirar', rotar: 'rotacion', cambio: 'cambio', incidencia: 'incidencia', medicion: 'medicion' }[btn.dataset.menu];
+            const action = { quitar: 'retirar', rotar: 'rotacion', incidencia: 'incidencia', medicion: 'medicion' }[btn.dataset.menu];
             if (action) {
                 showAction(action);
             }
@@ -695,6 +773,41 @@ const recambio = () => {
 };
 
 recambio();
+
+const bindWorkOrderForm = () => {
+    const form = document.getElementById('workOrderForm');
+    const typeSelect = document.getElementById('woType');
+    const singleWrap = document.getElementById('woSingleWrap');
+    const multiWrap = document.getElementById('woMultiWrap');
+    const single = document.getElementById('woSingleTire');
+    const search = document.getElementById('woTireSearch');
+    if (!form || !typeSelect || !singleWrap || !multiWrap) {
+        return;
+    }
+
+    const sync = () => {
+        const batch = typeSelect.value === 'RECAPADO';
+        singleWrap.hidden = batch;
+        multiWrap.hidden = !batch;
+        if (single) {
+            single.required = !batch;
+            single.disabled = batch;
+        }
+        form.querySelectorAll('#woTirePick input[type="checkbox"]').forEach((box) => {
+            box.disabled = !batch;
+        });
+    };
+
+    typeSelect.addEventListener('change', sync);
+    search?.addEventListener('input', () => {
+        const q = search.value.trim().toLowerCase();
+        form.querySelectorAll('.wo-pick__row').forEach((row) => {
+            row.hidden = q !== '' && !row.dataset.label.includes(q);
+        });
+    });
+    sync();
+};
+bindWorkOrderForm();
 
 const bindSearchSuggest = () => {
     const form = document.querySelector('.top-search[data-suggest]');

@@ -17,7 +17,7 @@ class WorkOrderController extends Controller
 {
     public function index(Request $request)
     {
-        $query = WorkOrder::with('tire.model', 'tire.brand', 'shop')->latest();
+        $query = WorkOrder::with('tire.model', 'tire.brand', 'items.tire.model', 'items.tire.brand', 'shop')->latest();
         AccessScope::workOrders($query, $request->user());
 
         return view('work-orders.index', [
@@ -47,7 +47,7 @@ class WorkOrderController extends Controller
         try {
             $order = $service->open(
                 $request->user(),
-                Tire::findOrFail($data['tire_id']),
+                Tire::query()->whereIn('id', $request->tireIds())->get(),
                 RetreadShop::findOrFail($data['retread_shop_id']),
                 WorkOrderType::from($data['type']),
                 $data['notes'] ?? null,
@@ -64,7 +64,7 @@ class WorkOrderController extends Controller
         $this->authorizeVisible('view', $workOrder);
 
         return view('work-orders.show', [
-            'order' => $workOrder->load('tire.model', 'tire.brand', 'shop', 'opener', 'closer'),
+            'order' => $workOrder->load('tire.model', 'tire.brand', 'items.tire.model', 'items.tire.brand', 'shop', 'opener', 'closer'),
         ]);
     }
 
@@ -78,7 +78,7 @@ class WorkOrderController extends Controller
             return back()->withErrors(['error' => $e->getMessage()]);
         }
 
-        return back()->with('success', 'La cubierta quedó en taller.');
+        return back()->with('success', 'Las cubiertas quedaron en taller.');
     }
 
     public function close(CloseWorkOrderRequest $request, WorkOrder $workOrder, WorkOrderService $service)

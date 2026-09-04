@@ -1822,6 +1822,131 @@ textarea.inp,
     color: #fff;
 }
 
+.slot-actions__btn--primary {
+    grid-column: 1 / -1;
+    background: var(--g-purple);
+    border-color: transparent;
+    color: #fff;
+    font-size: 0.8rem;
+}
+
+.sheet-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 140;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 0;
+}
+
+.sheet-modal[hidden] {
+    display: none;
+}
+
+.sheet-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgb(0 0 0 / 0.58);
+}
+
+.sheet-modal__panel {
+    position: relative;
+    width: min(100%, 28rem);
+    max-height: min(92dvh, 720px);
+    margin: 0;
+    background: var(--card-2);
+    border: 1px solid var(--line);
+    border-radius: 16px 16px 0 0;
+    box-shadow: var(--shadow);
+    overflow: auto;
+    animation: sheet-modal-in 0.22s ease-out;
+}
+
+.sheet-modal__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 1rem 1rem 0.5rem;
+    border-bottom: 1px solid var(--line);
+}
+
+.sheet-modal__kicker {
+    margin: 0;
+    font-size: 0.68rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #c8102e;
+}
+
+.sheet-modal__head h2 {
+    margin: 0.15rem 0 0;
+    font-size: 1.15rem;
+}
+
+.sheet-modal__close {
+    appearance: none;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--ink);
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 10px;
+    font-size: 1.35rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.sheet-modal__body {
+    padding: 0.85rem 1rem 1rem;
+    display: grid;
+    gap: 0.65rem;
+}
+
+.sheet-modal__actions {
+    display: flex;
+    gap: 0.6rem;
+    margin-top: 0.35rem;
+}
+
+.sheet-modal__actions .btn {
+    flex: 1;
+    min-height: var(--tap);
+}
+
+.ot-ticket--modal {
+    margin-bottom: 0.35rem;
+}
+
+body.sheet-modal-open {
+    overflow: hidden;
+}
+
+@keyframes sheet-modal-in {
+    from {
+        transform: translateY(12%);
+        opacity: 0.4;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@media (min-width: 720px) {
+    .sheet-modal {
+        align-items: center;
+        padding: 1.25rem;
+    }
+
+    .sheet-modal__panel {
+        border-radius: var(--r);
+        max-height: min(88vh, 720px);
+    }
+}
+
 .stock-rail {
     background: #17192b;
     border-right: 1px solid var(--line);
@@ -3225,6 +3350,61 @@ textarea.inp,
 
 .forecast-card--ok {
     border-color: #34d399;
+}
+
+.wo-pick {
+    max-height: 18rem;
+    overflow: auto;
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    background: var(--card);
+    margin-top: 0.5rem;
+}
+
+.wo-pick__row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-height: var(--tap);
+    padding: 0.55rem 0.8rem;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+}
+
+.wo-pick__row:last-child {
+    border-bottom: 0;
+}
+
+.wo-pick__row input {
+    width: 1.15rem;
+    height: 1.15rem;
+    accent-color: var(--primary);
+}
+
+.wo-pick__row span {
+    display: grid;
+    gap: 0.1rem;
+}
+
+.wo-pick__row em {
+    font-style: normal;
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+.wo-tires {
+    display: grid;
+    gap: 0.25rem;
+}
+
+.btn-touch {
+    min-height: 56px;
+    font-size: 1.05rem;
+    justify-content: center;
+}
+
+tr.row-alert td {
+    background: color-mix(in srgb, var(--warn, #f59e0b) 12%, transparent);
 }
 
 @media (max-width: 768px) {

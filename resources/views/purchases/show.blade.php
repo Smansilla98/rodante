@@ -60,6 +60,7 @@
                 <th scope="col">Modelo</th>
                 <th scope="col">Medida</th>
                 <th scope="col">Cantidad</th>
+                <th scope="col">DOT</th>
                 <th scope="col">Números</th>
                 <th scope="col">Cubiertas</th>
             </tr>
@@ -71,6 +72,7 @@
                 <td class="mono">{{ $item->model->code }}</td>
                 <td>{{ $item->size->displayName() }}</td>
                 <td class="mono">{{ $item->quantity }}</td>
+                <td class="mono">{{ $item->dot ?: '—' }}</td>
                 <td class="mono">
                     @if($item->first_number)
                         Nº {{ $item->first_number }} a {{ $item->last_number }}
@@ -81,13 +83,13 @@
                 <td>
                     <div class="flex flex-wrap gap-2">
                         @foreach($item->tires as $tire)
-                            <a class="chip-link" href="{{ route('tires.show', $tire) }}">{{ $tire->displayName() }}</a>
+                            <a class="chip-link" href="{{ route('tires.show', $tire) }}">{{ $tire->displayName() }}@if($tire->dot) · {{ $tire->dot }}@endif</a>
                         @endforeach
                     </div>
                 </td>
             </tr>
         @empty
-            <tr><td colspan="6"><x-empty title="Sin ítems" /></td></tr>
+            <tr><td colspan="7"><x-empty title="Sin ítems" /></td></tr>
         @endforelse
         </tbody>
     </x-content-table>

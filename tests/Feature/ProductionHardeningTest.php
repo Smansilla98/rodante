@@ -5,12 +5,18 @@ namespace Tests\Feature;
 use App\Enums\UserRole;
 use App\Enums\WorkOrderType;
 use App\Exceptions\DomainException;
+use App\Models\Base;
 use App\Models\Company;
 use App\Models\RetreadShop;
+use App\Models\Supplier;
+use App\Models\Tire;
 use App\Models\TireAssignment;
+use App\Models\TireModel;
+use App\Models\TireSize;
 use App\Models\User;
 use App\Services\DocumentNumberService;
 use App\Services\MovementCorrectionService;
+use App\Services\PurchaseService;
 use App\Services\TireIdentityService;
 use App\Services\WorkOrderService;
 use Illuminate\Database\QueryException;
@@ -81,6 +87,62 @@ class ProductionHardeningTest extends TestCase
         $this->assertTrue($tire->movements()->exists());
     }
 
+    public function test_tire_dot_is_saved_normalized_for_warranty(): void
+    {
+        [$tire] = $this->purchaseTires(1, 88110);
+        $this->actingAs($this->admin)
+            ->put(route('tires.update', $tire), [
+                'individual_number' => $tire->individual_number,
+                'dot' => '1b3c 4d-0524',
+                'tire_brand_id' => $tire->tire_brand_id,
+                'tire_model_id' => $tire->tire_model_id,
+                'tire_size_id' => $tire->tire_size_id,
+                'condition' => $tire->condition->value,
+            ])
+            ->assertRedirect(route('tires.show', $tire));
+
+        $tire->refresh();
+        $this->assertSame('1B3C4D0524', $tire->dot);
+        $this->assertSame(['week' => 5, 'year' => 2024], $tire->manufactureWeekYear());
+        $this->assertSame('Semana 5 / 2024', $tire->manufactureLabel());
+
+        [$other] = $this->purchaseTires(1, 88111);
+        $this->actingAs($this->admin)
+            ->from(route('tires.show', [$other, 'edit' => 1]))
+            ->put(route('tires.update', $other), [
+                'individual_number' => $other->individual_number,
+                'dot' => '1B3C4D0524',
+                'tire_brand_id' => $other->tire_brand_id,
+                'tire_model_id' => $other->tire_model_id,
+                'tire_size_id' => $other->tire_size_id,
+                'condition' => $other->condition->value,
+            ])
+            ->assertSessionHasErrors('dot');
+    }
+
+    public function test_purchase_qty_one_carries_dot_into_tire(): void
+    {
+        $model = TireModel::with('brand', 'sizes')->firstOrFail();
+        $size = $model->sizes->first() ?: TireSize::firstOrFail();
+        $purchase = app(PurchaseService::class)->create([
+            'supplier_id' => Supplier::firstOrFail()->id,
+            'base_id' => Base::firstOrFail()->id,
+            'purchased_at' => now()->toDateString(),
+            'items' => [[
+                'tire_brand_id' => $model->tire_brand_id,
+                'tire_model_id' => $model->id,
+                'tire_size_id' => $size->id,
+                'quantity' => 1,
+                'first_number' => 88120,
+                'dot' => 'xy9876 1223',
+            ]],
+        ], $this->admin);
+        app(PurchaseService::class)->confirm($purchase, $this->admin);
+        $tire = Tire::where('individual_number', 88120)->firstOrFail();
+        $this->assertSame('XY98761223', $tire->dot);
+        $this->assertSame(['week' => 12, 'year' => 2023], $tire->manufactureWeekYear());
+    }
+
     public function test_purchase_numbers_are_sequential_per_company(): void
     {
         $numbers = app(DocumentNumberService::class);
@@ -143,6 +205,49 @@ class ProductionHardeningTest extends TestCase
             'company_id' => $this->admin->company_id,
             'category' => 'REPAIR',
         ]);
+    }
+
+    public function test_work_order_recap_can_group_multiple_tires(): void
+    {
+        [$a, $b] = $this->purchaseTires(2, 88060);
+        $shop = RetreadShop::create([
+            'company_id' => $this->admin->company_id,
+            'name' => 'Taller lote',
+            'is_active' => true,
+        ]);
+
+        $order = app(WorkOrderService::class)->open(
+            $this->admin,
+            collect([$a, $b]),
+            $shop,
+            WorkOrderType::Recapado,
+            'Lote de recapado'
+        );
+
+        $this->assertSame(2, $order->items()->count());
+        $this->assertDatabaseHas('work_order_items', ['work_order_id' => $order->id, 'tire_id' => $a->id]);
+        $this->assertDatabaseHas('work_order_items', ['work_order_id' => $order->id, 'tire_id' => $b->id]);
+    }
+
+    public function test_work_order_repair_rejects_multiple_tires(): void
+    {
+        [$a, $b] = $this->purchaseTires(2, 88080);
+        $shop = RetreadShop::create([
+            'company_id' => $this->admin->company_id,
+            'name' => 'Taller unitario',
+            'is_active' => true,
+        ]);
+
+        $this->expectException(DomainException::class);
+        $this->expectExceptionMessage('La reparación es de una sola cubierta');
+
+        app(WorkOrderService::class)->open(
+            $this->admin,
+            collect([$a, $b]),
+            $shop,
+            WorkOrderType::Reparacion,
+            'No debe permitir lote'
+        );
     }
 
     public function test_password_requires_letters_and_numbers(): void

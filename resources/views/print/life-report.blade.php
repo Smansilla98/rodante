@@ -22,6 +22,10 @@
         <div><span>Km acumulados</span><div class="mono">{{ number_format($tire->accumulated_km) }}</div></div>
         <div><span>Profundidad mín.</span><div>{{ $tire->current_tread_min !== null ? $tire->current_tread_min.' mm' : '—' }}</div></div>
         <div><span>Alta</span><div class="mono">{{ $tire->purchased_at?->format('d/m/Y') ?? '—' }}</div></div>
+        <div><span>DOT</span><div class="mono">{{ $tire->dot ?: '—' }}</div></div>
+        @if($tire->manufactureLabel())
+            <div><span>Fabricación (DOT)</span><div>{{ $tire->manufactureLabel() }}</div></div>
+        @endif
         <div><span>Baja</span><div class="mono">{{ $tire->retired_at?->format('d/m/Y') ?? 'En servicio' }}</div></div>
         <div><span>Costo acumulado</span><div class="mono">{{ ($costTotal ?? 0) ? '$ '.number_format($costTotal, 2, ',', '.') : '—' }}</div></div>
         <div><span>$ / km</span><div class="mono">{{ (($costTotal ?? 0) && $tire->accumulated_km) ? number_format($costTotal / $tire->accumulated_km, 4, ',', '.') : '—' }}</div></div>

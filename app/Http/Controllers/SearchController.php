@@ -75,15 +75,19 @@ class SearchController extends Controller
         $user = $request->user();
         $digits = preg_replace('/\D+/', '', $term) ?: null;
         $plate = mb_strtoupper(preg_replace('/\s+/', '', $term));
+        $dot = Tire::normalizeDot($term);
 
         $tires = Tire::query()->with(['brand', 'model', 'size', 'currentLocation.unit']);
         AccessScope::tires($tires, $user);
-        $tires->where(function ($q) use ($term, $digits) {
+        $tires->where(function ($q) use ($term, $digits, $dot) {
             $q->where('individual_number', 'like', "%{$term}%")
                 ->orWhereHas('model', fn ($m) => $m->where('code', 'like', "%{$term}%"))
                 ->orWhere('public_token', $term);
             if ($digits) {
                 $q->orWhere('individual_number', 'like', "%{$digits}%");
+            }
+            if ($dot) {
+                $q->orWhere('dot', 'like', "%{$dot}%");
             }
         })->orderBy('individual_number')->limit($limit);
 

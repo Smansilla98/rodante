@@ -2,8 +2,12 @@
 @section('kicker', 'Consulta')
 @section('title', 'Incidencias')
 @section('content')
-<x-page-header kicker="Consulta" title="Incidencias" subtitle="Recapados, pinchaduras, desgaste irregular y más." />
-<x-panel :flush="true">
+<x-page-header kicker="Consulta" title="Incidencias" subtitle="Recapados, pinchaduras, desgaste irregular y más.">
+    <x-slot:actions>
+        <x-export-csv :href="route('exports.report-incidents')" />
+        <a href="{{ route('incidents.index') }}" class="btn btn-ghost">Listado detalle</a>
+    </x-slot:actions>
+</x-page-header><x-panel :flush="true">
     <x-content-table>
         <thead>
             <tr>

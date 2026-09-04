@@ -23,6 +23,7 @@ class ReturnTireToStockRequest extends FormRequest
     {
         return [
             'notes' => 'nullable|string|max:255',
+            'as_recap' => 'sometimes|boolean',
         ];
     }
 }

@@ -30,6 +30,7 @@ fi
 
 if [ "${SEED_DEMO:-0}" = "1" ] || [ "${SEED_DEMO:-0}" = "true" ]; then
   php artisan db:seed --force
+  php artisan db:seed --class=Database\\Seeders\\CompletePlateMapSeeder --force || true
 fi
 
 PORT="${PORT:-8080}"

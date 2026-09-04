@@ -47,7 +47,7 @@ class PrintController extends Controller
     public function workOrder(Request $request, WorkOrder $workOrder)
     {
         AccessScope::abortUnlessWorkOrder($request->user(), $workOrder->id);
-        $order = $workOrder->load(['tire.model', 'tire.brand', 'shop', 'opener', 'closer', 'company']);
+        $order = $workOrder->load(['tire.model', 'tire.brand', 'items.tire.model', 'items.tire.brand', 'shop', 'opener', 'closer', 'company']);
 
         return view('print.work-order', $this->printContext($request, [
             'order' => $order,

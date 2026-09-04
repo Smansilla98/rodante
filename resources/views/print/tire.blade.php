@@ -25,6 +25,10 @@
             @endif
         </div></div>
         <div><span>Alta</span><div class="mono">{{ $tire->purchased_at?->format('d/m/Y') ?? '—' }}</div></div>
+        <div><span>DOT</span><div class="mono">{{ $tire->dot ?: '—' }}</div></div>
+        @if($tire->manufactureLabel())
+            <div><span>Fabricación (DOT)</span><div>{{ $tire->manufactureLabel() }}</div></div>
+        @endif
     </div>
 </section>
 @if($tire->numberChanges->isNotEmpty())

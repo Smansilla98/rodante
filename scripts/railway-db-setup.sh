@@ -147,6 +147,8 @@ php artisan migrate --force
 if [[ "${SEED_DEMO}" == "1" || "${SEED_DEMO}" == "true" || "${SEED_DEMO}" == "yes" ]]; then
   log "Cargando catálogo y demo (php artisan db:seed --force)..."
   php artisan db:seed --force
+  log "Completando mapas por patente (CompletePlateMapSeeder)..."
+  php artisan db:seed --class=Database\\Seeders\\CompletePlateMapSeeder --force
   log "Demo lista. Usuarios: admin / jefe / logistica / operario / consulta — password"
 else
   log "SEED_DEMO=${SEED_DEMO}: se omitió el seed"

@@ -204,11 +204,15 @@ paths:
           application/json:
             schema:
               type: object
-              required: [tire_id, retread_shop_id, type]
+              required: [retread_shop_id, type]
               properties:
-                tire_id: { type: integer }
+                tire_id: { type: integer, description: Una cubierta. Obligatorio en reparación. }
+                tire_ids:
+                  type: array
+                  items: { type: integer }
+                  description: Varias cubiertas. Solo recapado.
                 retread_shop_id: { type: integer }
-                type: { type: string }
+                type: { type: string, enum: [RECAPADO, REPARACION] }
                 notes: { type: string, nullable: true }
       responses:
         '201': { description: Orden abierta }

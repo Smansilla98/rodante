@@ -10,7 +10,7 @@ SEED_DEMO=1 docker compose up --build
 
 Demo: http://localhost:8093 — usuarios `admin` / `jefe` / `logistica` / `operario` / `consulta`, contraseña `password`.
 
-`SEED_DEMO=1` corre `php artisan db:seed` en el entrypoint del contenedor `app` (después de migrar). El seeder es idempotente: si ya existe la unidad `HKH 448` no duplica el lote, pero sí asegura usuarios y recapadora demo.
+`SEED_DEMO=1` corre `php artisan db:seed` en el entrypoint del contenedor `app` (después de migrar). El seeder es idempotente: si ya existe la unidad `HKH 448` no duplica el lote, pero sí asegura usuarios, recapadora demo y **mapas completos por patente** (`CompletePlateMapSeeder`). Para sólo completar mapas en una base ya seedada: `php artisan db:seed --class=CompletePlateMapSeeder`.
 
 ## Railway (producción)
 

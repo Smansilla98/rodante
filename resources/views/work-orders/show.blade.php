@@ -11,7 +11,14 @@
     <x-panel title="Orden">
         <div class="dl">
             <div><span>Estado</span>{{ $order->status->label() }}</div>
-            <div><span>Cubierta</span><a href="{{ route('tires.show', $order->tire) }}">{{ $order->tire->displayName() }}</a></div>
+            <div>
+                <span>{{ $order->tiresOnOrder()->count() > 1 ? 'Cubiertas' : 'Cubierta' }}</span>
+                <div class="wo-tires">
+                    @foreach($order->tiresOnOrder() as $tire)
+                        <a href="{{ route('tires.show', $tire) }}">{{ $tire->displayName() }}</a>
+                    @endforeach
+                </div>
+            </div>
             <div><span>Taller</span>{{ $order->shop->name }}</div>
             <div><span>Abierta por</span>{{ $order->opener?->name }}</div>
             <div><span>Costo</span>{{ $order->cost !== null ? '$ '.number_format($order->cost, 2, ',', '.') : '—' }}</div>
@@ -21,7 +28,7 @@
     @if(auth()->user()->role->canWrite() && $order->status->isOpen())
         <x-panel title="Acciones">
             @if($order->status->value === 'ABIERTA')
-                <form method="POST" action="{{ route('work-orders.send', $order) }}" class="mb-4" data-confirm="La cubierta pasa a taller (EN_REPARACION). ¿Continuar?">
+                <form method="POST" action="{{ route('work-orders.send', $order) }}" class="mb-4" data-confirm="{{ $order->tiresOnOrder()->count() > 1 ? 'Las cubiertas pasan a taller. ¿Continuar?' : 'La cubierta pasa a taller (EN_REPARACION). ¿Continuar?' }}">
                     @csrf
                     <button class="btn btn-dark">Enviar al taller</button>
                 </form>

@@ -5,10 +5,10 @@
 <x-page-header
     kicker="Operación"
     :title="request()->routeIs('tires.stock') ? 'Stock' : 'Neumáticos'"
-    :subtitle="request()->routeIs('tires.stock') ? 'Cubiertas disponibles para instalar.' : 'Buscá por modelo o número individual.'"
+    :subtitle="request()->routeIs('tires.stock') ? 'Cubiertas disponibles para instalar.' : 'Buscá por modelo, número individual o DOT.'"
 >
     <x-slot:actions>
-            <a href="{{ route('exports.tires') }}" class="btn btn-ghost">Exportar CSV</a>
+        <x-export-csv :href="route('exports.tires', array_merge(request()->query(), request()->routeIs('tires.stock') ? ['stock_only' => 1, 'status' => 'STOCK'] : []))" />
         @if(auth()->user()->role->canWrite())
             <a href="{{ route('purchases.create') }}" class="btn btn-primary"><x-icon name="plus" class="w-4 h-4" /> Nueva compra</a>
         @endif
@@ -19,7 +19,7 @@
     <x-slot:toolbar>
         <form class="toolbar" method="GET" data-catalog-row>
             <script type="application/json" id="tireCatalog">@json($catalog)</script>
-            <input name="q" value="{{ request('q') }}" placeholder="FH:01 o 30363" aria-label="Buscar cubierta">
+            <input name="q" value="{{ request('q') }}" placeholder="FH:01, 30363 o DOT" aria-label="Buscar cubierta">
             <select name="brand_id" data-catalog="brand" data-empty="Todas las marcas" aria-label="Marca">
                 <option value="">Todas las marcas</option>
                 @foreach($catalog['brands'] as $brand)
@@ -64,7 +64,7 @@
             <tr>
                 <td>
                     <a href="{{ route('tires.show', $tire) }}">{{ $tire->displayName() }}</a>
-                    <div class="text-xs text-slate-500">{{ $tire->brand->name }}</div>
+                    <div class="text-xs text-slate-500">{{ $tire->brand->name }}@if($tire->dot) · DOT {{ $tire->dot }}@endif</div>
                 </td>
                 <td>{{ $tire->size->displayName() }}</td>
                 <td><x-status :tone="$tire->status->tone()">{{ $tire->status->label() }}</x-status></td>

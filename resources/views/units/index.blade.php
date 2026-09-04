@@ -4,6 +4,7 @@
 @section('content')
 <x-page-header kicker="Operación" title="Unidades" subtitle="Planilla por tractor y acoplado. El historial vive en cada cubierta.">
     <x-slot:actions>
+        <x-export-csv :href="route('exports.units', request()->query())" />
         @if(auth()->user()->role->canWrite())
             <a href="{{ route('units.create') }}" class="btn btn-primary">
                 <x-icon name="plus" class="w-4 h-4" /> Nueva unidad

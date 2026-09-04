@@ -125,6 +125,7 @@ class RoleQaRunner
     {
         $pages = [
             'Tablero' => route('dashboard'),
+            'Campo' => route('field.index'),
             'Unidades' => route('units.index'),
             'Planilla' => route('units.show', $this->browseUnit),
             'Stock' => route('tires.stock'),
@@ -132,12 +133,17 @@ class RoleQaRunner
             'Ficha cubierta' => route('tires.show', $this->browseTire),
             'Compras' => route('purchases.index'),
             'Odómetros' => route('odometers.index'),
+            'Mediciones' => route('measurements.index'),
+            'Incidencias listado' => route('incidents.index'),
+            'Enganches' => route('couplings.index'),
             'Km por cubierta' => route('reports.kilometers'),
             'Consumo' => route('reports.consumption'),
-            'Incidencias' => route('reports.incidents'),
+            'Incidencias resumen' => route('reports.incidents'),
             'Predictivo' => route('reports.predictive'),
             'Informe de vida' => route('tires.life-report', $this->browseTire),
             'Movimientos' => route('reports.audit'),
+            'Export cubiertas' => route('exports.tires'),
+            'Export mediciones' => route('exports.measurements'),
             'Ayuda por rol' => route('help.index'),
             'Manual' => route('help.manual'),
         ];

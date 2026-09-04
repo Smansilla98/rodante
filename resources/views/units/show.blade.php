@@ -71,7 +71,7 @@
     @if($canOperate)
         <aside class="recambio-dock no-print" id="recambioDock" data-stock-url="{{ route('units.stock', $unit) }}" data-last-km="{{ $lastKm }}">
             <h2 class="recambio-dock__title">Ubicación</h2>
-            <p class="recambio-dock__idle" id="recambioIdle">Tocá una cubierta del mapa. El stock aparece recién cuando elegís <strong>Cambio</strong> o una ubicación vacía, y solo del mismo tipo.</p>
+            <p class="recambio-dock__idle" id="recambioIdle">Tocá una cubierta del mapa. Para <strong>Cambio</strong> se abre un modal con la que sale y la que entra. En ubicación vacía, instalá desde acá.</p>
 
             <div id="recambioPanel" hidden>
                 <p class="recambio-dock__slot" id="recambioSlot"></p>
@@ -104,41 +104,13 @@
                     </div>
 
                     <div class="slot-actions" id="slotActions">
-                        <button type="button" class="slot-actions__btn" data-action="cambio">Cambio</button>
+                        <button type="button" class="slot-actions__btn slot-actions__btn--primary" data-action="cambio">Cambio</button>
                         <button type="button" class="slot-actions__btn" data-action="pinchadura">Pinchadura</button>
                         <button type="button" class="slot-actions__btn" data-action="rotacion">Rotación</button>
                         <button type="button" class="slot-actions__btn" data-action="retirar">Retirar</button>
                         <button type="button" class="slot-actions__btn" data-action="incidencia">Incidencia</button>
                         <button type="button" class="slot-actions__btn" data-action="medicion">Medición</button>
                     </div>
-
-                    <form method="POST" action="{{ route('units.slot', $unit) }}" id="formCambio" hidden>
-                        @csrf
-                        <input type="hidden" name="action" value="cambio">
-                        <input type="hidden" name="position_id" id="cambioPosition">
-                        <input type="hidden" name="expected_tire_id" class="expected-tire">
-                        <dl class="ot-ticket" aria-label="Orden de recambio">
-                            <div><dt>Sale</dt><dd id="cambioSale">—</dd></div>
-                            <div><dt>Entra</dt><dd id="cambioEntra">Elegí la cubierta nueva</dd></div>
-                            <div><dt>Lugar</dt><dd id="cambioLugar">—</dd></div>
-                        </dl>
-                        <p class="recambio-dock__hint" id="cambioHint">El stock se carga al elegir Cambio y coincide con el tipo de esta cubierta.</p>
-                        <label class="field">
-                            <span>Buscar recambio</span>
-                            <input type="search" id="cambioSearch" class="inp" placeholder="Nº o modelo" autocomplete="off">
-                        </label>
-                        <label class="field">
-                            <span>Cubierta que entra</span>
-                            <select name="tire_id" id="cambioTire" class="inp" required></select>
-                        </label>
-                        <p class="recambio-dock__empty" id="cambioEmpty" hidden>No hay cubiertas del mismo tipo en stock.</p>
-                        <x-slot-odometer :last-km="$lastKm" id="cambioOdometer" />
-                        <label class="field mt-2">
-                            <span>Nota</span>
-                            <input name="notes" class="inp" placeholder="Opcional. Ej. se cambió 1 cubierta eje portador">
-                        </label>
-                        <button class="btn btn-primary w-full mt-3" id="cambioSubmit">Confirmar cambio</button>
-                    </form>
 
                     <form method="POST" action="{{ route('units.slot', $unit) }}" id="formPinchadura" hidden>
                         @csrf
@@ -272,6 +244,63 @@
             <button type="button" data-menu="quitar">Quitar cubierta</button>
             <button type="button" data-menu="incidencia">Incidencia</button>
             <button type="button" data-menu="medicion">Medición</button>
+        </div>
+
+        <div id="cambioModal" class="sheet-modal" hidden aria-hidden="true">
+            <div class="sheet-modal__backdrop" data-close-cambio-modal tabindex="-1"></div>
+            <div class="sheet-modal__panel" role="dialog" aria-modal="true" aria-labelledby="cambioModalTitle">
+                <header class="sheet-modal__head">
+                    <div>
+                        <p class="sheet-modal__kicker">Recambio</p>
+                        <h2 id="cambioModalTitle">Cambio de cubierta</h2>
+                    </div>
+                    <button type="button" class="sheet-modal__close" data-close-cambio-modal aria-label="Cerrar">×</button>
+                </header>
+
+                <form method="POST" action="{{ route('units.slot', $unit) }}" id="formCambio" class="sheet-modal__body">
+                    @csrf
+                    <input type="hidden" name="action" value="cambio">
+                    <input type="hidden" name="position_id" id="cambioPosition">
+                    <input type="hidden" name="expected_tire_id" id="cambioExpectedTire">
+
+                    <dl class="ot-ticket ot-ticket--modal" aria-label="Resumen del cambio">
+                        <div><dt>Lugar</dt><dd id="cambioLugar">—</dd></div>
+                        <div><dt>Sale</dt><dd id="cambioSale">—</dd></div>
+                        <div><dt>Entra</dt><dd id="cambioEntra">Elegí la cubierta nueva</dd></div>
+                    </dl>
+
+                    <label class="field">
+                        <span>Cubierta que sale</span>
+                        <select id="cambioSaleSelect" class="inp" required></select>
+                    </label>
+
+                    <p class="recambio-dock__hint" id="cambioHint">Solo cubiertas del mismo tipo que la montada.</p>
+
+                    <label class="field">
+                        <span>Buscar en stock</span>
+                        <input type="search" id="cambioSearch" class="inp" placeholder="Nº o modelo" autocomplete="off">
+                    </label>
+
+                    <label class="field">
+                        <span>Cubierta que entra</span>
+                        <select name="tire_id" id="cambioTire" class="inp" required></select>
+                    </label>
+
+                    <p class="recambio-dock__empty" id="cambioEmpty" hidden>No hay cubiertas del mismo tipo en stock.</p>
+
+                    <x-slot-odometer :last-km="$lastKm" id="cambioOdometer" />
+
+                    <label class="field">
+                        <span>Nota</span>
+                        <input name="notes" class="inp" placeholder="Opcional. Ej. se cambió 1 cubierta eje portador">
+                    </label>
+
+                    <div class="sheet-modal__actions">
+                        <button type="button" class="btn btn-ghost" data-close-cambio-modal>Cancelar</button>
+                        <button type="submit" class="btn btn-primary" id="cambioSubmit">Confirmar cambio</button>
+                    </div>
+                </form>
+            </div>
         </div>
     @endif
 </div>

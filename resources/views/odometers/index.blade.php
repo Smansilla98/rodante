@@ -3,8 +3,11 @@
 @section('title', 'Odómetros')
 @section('content')
 @php $editing = $editing ?? null; @endphp
-<x-page-header kicker="Operación" title="Odómetros" subtitle="La lectura se asienta al operar. Si hubo un error, se corrige acá." />
-
+<x-page-header kicker="Operación" title="Odómetros" subtitle="La lectura se asienta al operar. Si hubo un error, se corrige acá.">
+    <x-slot:actions>
+        <x-export-csv :href="route('exports.odometers', request()->query())" />
+    </x-slot:actions>
+</x-page-header>
 @if($editing && auth()->user()->role->canValidateOdometer())
     <x-panel title="Corregir lectura de {{ $editing->unit->plate }}">
         <form method="POST" action="{{ route('odometers.update', $editing) }}" class="toolbar">

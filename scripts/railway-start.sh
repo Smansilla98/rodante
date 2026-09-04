@@ -40,6 +40,8 @@ if [[ -f artisan ]]; then
   if [[ "${SEED_DEMO:-1}" == "1" || "${SEED_DEMO:-1}" == "true" ]]; then
     echo "[railway-start] seeders (usuarios de prueba)"
     php artisan db:seed --force --no-interaction || true
+    echo "[railway-start] mapeo completo por patente"
+    php artisan db:seed --class=Database\\Seeders\\CompletePlateMapSeeder --force --no-interaction || true
   fi
 fi
 

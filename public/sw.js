@@ -1,5 +1,5 @@
-const CACHE = 'rodante-shell-v2';
-const SHELL = ['/', '/campo', '/manifest.webmanifest', '/favicon.png'];
+const CACHE = 'rodante-shell-v3';
+const SHELL = ['/', '/dashboard', '/campo', '/stock', '/manifest.webmanifest', '/favicon.png'];
 
 async function builtAssets() {
   try {

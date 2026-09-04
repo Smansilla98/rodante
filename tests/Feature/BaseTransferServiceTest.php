@@ -52,6 +52,20 @@ class BaseTransferServiceTest extends TestCase
         ]);
     }
 
+    public function test_rejects_transfer_for_installed_tire(): void
+    {
+        $unit = $this->createTractor();
+        [$tire] = $this->purchaseTires(1, 97003, 'FH:01');
+        $steer = $unit->configuration->positions()->where('axle_number', 1)->where('is_spare', false)->first();
+        app(\App\Services\TireOperationService::class)->execute($unit, [
+            'odometer' => 150000,
+            'installations' => [['tire_id' => $tire->id, 'position_id' => $steer->id]],
+        ], $this->admin);
+
+        $this->expectException(DomainException::class);
+        app(BaseTransferService::class)->transfer($tire->fresh(), Base::firstOrFail(), $this->admin);
+    }
+
     public function test_rejects_transfer_for_non_stockable_status(): void
     {
         [$tire] = $this->purchaseTires(1, 97002);

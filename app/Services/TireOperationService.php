@@ -13,6 +13,7 @@ use App\Models\Tire;
 use App\Models\TireAssignment;
 use App\Models\TireAssignmentSegment;
 use App\Models\TireCurrentLocation;
+use App\Models\TireLifecycle;
 use App\Models\TireOperation;
 use App\Models\UnitPosition;
 use App\Models\User;
@@ -429,7 +430,7 @@ class TireOperationService
         ]);
     }
 
-    public function returnToStock(Tire $tire, User $user, ?string $notes = null): Tire
+    public function returnToStock(Tire $tire, User $user, ?string $notes = null, bool $asRecap = false): Tire
     {
         if (! $user->role->canWrite()) {
             throw new DomainException('No tiene permiso para devolver cubiertas a stock.');
@@ -442,15 +443,37 @@ class TireOperationService
         if ($tire->openAssignment) {
             throw new DomainException('Retirá la cubierta de la unidad antes de devolverla a stock.');
         }
+        if ($asRecap && ! $user->role->canRetireOrRecap()) {
+            throw new DomainException('Solo el jefe de sector o un administrador pueden marcar el retorno como recapado.');
+        }
+        if ($asRecap && $status !== TireStatus::EnReparacion) {
+            throw new DomainException('El recapado se registra al volver de reparación, no desde reserva.');
+        }
 
-        return DB::transaction(function () use ($tire, $user, $notes, $status) {
+        return DB::transaction(function () use ($tire, $user, $notes, $status, $asRecap) {
             $tire = Tire::lockForUpdate()->findOrFail($tire->id);
             $baseId = $tire->currentLocation?->base_id;
             $type = $status === TireStatus::EnReparacion ? MovementType::FromRepair : MovementType::FromReserva;
 
             $this->locations->place($tire, LocationKind::Stock, $baseId);
 
-            if ($status === TireStatus::EnReparacion && $tire->condition !== TireCondition::Recapada) {
+            if ($asRecap) {
+                $current = $tire->currentLifecycle;
+                if ($current && $current->ended_at === null) {
+                    $current->update(['ended_at' => now()]);
+                }
+                $life = TireLifecycle::create([
+                    'tire_id' => $tire->id,
+                    'life_number' => ((int) $tire->lifecycles()->max('life_number')) + 1,
+                    'started_by' => 'RECAPADO',
+                    'started_at' => now(),
+                    'condition_at_start' => TireCondition::Recapada->value,
+                ]);
+                $tire->update([
+                    'current_lifecycle_id' => $life->id,
+                    'condition' => TireCondition::Recapada,
+                ]);
+            } elseif ($status === TireStatus::EnReparacion && $tire->condition !== TireCondition::Recapada) {
                 $tire->update(['condition' => TireCondition::Reparada]);
             }
 
@@ -460,14 +483,17 @@ class TireOperationService
                 'from_base_id' => $baseId,
                 'to_base_id' => $baseId,
                 'user_id' => $user->id,
-                'notes' => $notes ?? ($status === TireStatus::EnReparacion
-                    ? 'Vuelta a stock después de reparación (parche). Misma vida.'
-                    : 'Salida de reserva a stock.'),
+                'notes' => $notes ?? ($asRecap
+                    ? 'Vuelta a stock después de recapado. Vida nueva.'
+                    : ($status === TireStatus::EnReparacion
+                        ? 'Vuelta a stock después de reparación (parche). Misma vida.'
+                        : 'Salida de reserva a stock.')),
                 'created_at' => now(),
             ]);
 
             $this->audit->log('tire.returned_stock', $tire, null, [
                 'from' => $status->value,
+                'as_recap' => $asRecap,
                 'tire' => $tire->auditLabel(),
             ]);
 
