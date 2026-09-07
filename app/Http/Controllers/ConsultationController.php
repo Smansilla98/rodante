@@ -96,8 +96,8 @@ class ConsultationController extends Controller
 
         return view('consultations.couplings', [
             'couplings' => $query->latest('coupled_at')->paginate(40)->withQueryString(),
-            'tractors' => $tractors->whereHas('type', fn ($t) => $t->where('is_powered', true))->orderBy('plate')->get(),
-            'trailers' => $trailers->whereHas('type', fn ($t) => $t->where('is_powered', false))->orderBy('plate')->get(),
+            'tractors' => $tractors->whereHas('type', fn ($t) => $t->where('has_odometer', true))->orderBy('plate')->get(),
+            'trailers' => $trailers->whereHas('type', fn ($t) => $t->where('has_odometer', false))->orderBy('plate')->get(),
         ]);
     }
 
