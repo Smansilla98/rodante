@@ -138,7 +138,21 @@ class UnitController extends Controller
 
         $layout = $unit->tireLayout();
         $canOperate = $request->user()->role->canWrite();
-        $openTrailerIds = UnitCoupling::whereNull('uncoupled_at')->pluck('trailer_id');
+        $ownTrailerIds = $unit->hasOdometer()
+            ? $unit->currentCouplingsAsTractor->pluck('trailer_id')->filter()->all()
+            : [];
+
+        $trailersQuery = FleetUnit::query()
+            ->with(['type', 'currentCouplingAsTrailer.tractor'])
+            ->whereHas('type', fn ($q) => $q->where('has_odometer', false))
+            ->when($ownTrailerIds !== [], fn ($q) => $q->whereNotIn('id', $ownTrailerIds))
+            ->orderBy('plate');
+        AccessScope::units($trailersQuery, $request->user());
+
+        $tractorsQuery = FleetUnit::query()
+            ->whereHas('type', fn ($q) => $q->where('has_odometer', true))
+            ->orderBy('plate');
+        AccessScope::units($tractorsQuery, $request->user());
 
         return view('units.show', [
             'unit' => $unit,
@@ -161,13 +175,8 @@ class UnitController extends Controller
                 ->values(),
             'reasons' => MovementReason::where('applies_to', 'RETIRO')->orderBy('name')->get(),
             'destinations' => [TireStatus::Stock, TireStatus::Reserva, TireStatus::EnReparacion],
-            'tractors' => tap(FleetUnit::whereHas('type', fn ($q) => $q->where('has_odometer', true))->orderBy('plate'), fn ($q) => AccessScope::units($q, $request->user()))->get(),
-            'trailers' => tap(
-                FleetUnit::whereHas('type', fn ($q) => $q->where('has_odometer', false))
-                    ->whereNotIn('id', $openTrailerIds)
-                    ->orderBy('plate'),
-                fn ($q) => AccessScope::units($q, $request->user())
-            )->get(),
+            'tractors' => $tractorsQuery->get(),
+            'trailers' => $trailersQuery->get(),
             'configurations' => UnitConfiguration::where('is_active', true)->orderBy('code')->get()
                 ->filter(fn ($cfg) => $cfg->isCompatibleWith($unit->type))
                 ->values(),

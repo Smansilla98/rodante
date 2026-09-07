@@ -358,17 +358,34 @@
 
     @if(auth()->user()->role->canManageCouplings())
     <x-panel title="Acoplar / bitrén">
-        <p class="hint mb-3">Podés sumar hasta {{ \App\Models\FleetUnit::MAX_BITREN_TRAILERS }} acoplados al mismo tractor (bitren / multi-tanque).</p>
-        <form method="POST" action="{{ route('units.couple', $unit) }}" class="flex flex-wrap gap-2 mb-3">
-            @csrf
-            <select name="other_unit_id" class="inp flex-1 min-w-32">
-                @foreach(($unit->hasOdometer() ? $trailers : $tractors) as $other)
-                    <option value="{{ $other->id }}">{{ $other->plate }}</option>
-                @endforeach
-            </select>
-            <input name="odometer" type="number" class="inp w-28" placeholder="Km" required>
-            <button class="btn btn-dark btn-sm">Acoplar</button>
-        </form>
+        @php
+            $coupleOptions = $unit->hasOdometer() ? $trailers : $tractors;
+            $atBitrenCap = $unit->hasOdometer() && ($openCouplings?->count() ?? 0) >= \App\Models\FleetUnit::MAX_BITREN_TRAILERS;
+        @endphp
+        <p class="hint mb-3">Puede sumar hasta {{ \App\Models\FleetUnit::MAX_BITREN_TRAILERS }} acoplados al mismo tractor (bitren / multi-tanque). Si elige un acoplado de otro tractor, se reasigna a esta formación.</p>
+        @if($atBitrenCap)
+            <p class="hint mb-3">Este tractor ya alcanzó el máximo de acoplados.</p>
+        @elseif($coupleOptions->isEmpty())
+            <p class="hint mb-3">No hay unidades disponibles para acoplar.</p>
+        @else
+            <form method="POST" action="{{ route('units.couple', $unit) }}" class="flex flex-wrap gap-2 mb-3">
+                @csrf
+                <select name="other_unit_id" class="inp flex-1 min-w-32" required>
+                    <option value="">{{ $unit->hasOdometer() ? 'Elegir acoplado…' : 'Elegir tractor…' }}</option>
+                    @foreach($coupleOptions as $other)
+                        @php
+                            $otherTractor = $other->currentCouplingAsTrailer?->tractor;
+                            $suffix = $unit->hasOdometer() && $otherTractor
+                                ? ' (ahora con '.$otherTractor->plate.')'
+                                : '';
+                        @endphp
+                        <option value="{{ $other->id }}">{{ $other->plate }}{{ $suffix }}</option>
+                    @endforeach
+                </select>
+                <input name="odometer" type="number" class="inp w-28" placeholder="Km" required>
+                <button class="btn btn-dark btn-sm">Acoplar</button>
+            </form>
+        @endif
         @foreach($openCouplings ?? [] as $coupling)
             <form method="POST" action="{{ route('units.uncouple', $unit) }}" class="flex flex-wrap gap-2 mb-2 items-center">
                 @csrf
