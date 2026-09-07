@@ -29,7 +29,11 @@ use App\Http\Controllers\User\UserController;
 use App\Http\Controllers\WorkOrderController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', fn () => redirect()->route('login'));
+Route::get('/', function () {
+    return auth()->check()
+        ? redirect()->route('dashboard')
+        : redirect()->route('login');
+});
 Route::get('/qr/{token}', [QrController::class, 'show'])->name('qr.resolve');
 
 Route::middleware('guest')->group(function () {

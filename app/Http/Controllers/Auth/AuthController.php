@@ -37,12 +37,13 @@ class AuthController extends Controller
         }
 
         $request->session()->regenerate();
+        $request->session()->forget('url.intended');
         $user->update(['last_login_at' => now()]);
         app(\App\Services\TelemetryService::class)->record('auth.login', $user, [
             'username' => $user->username,
         ]);
 
-        return redirect()->intended(route('dashboard'));
+        return redirect()->route('dashboard');
     }
 
     public function logout(Request $request)

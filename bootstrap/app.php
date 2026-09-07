@@ -22,6 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Railway (y cualquier reverse proxy) termina TLS afuera: hace falta
         // confiar en X-Forwarded-* para URL HTTPS y cookies secure.
         $middleware->trustProxies(at: '*');
+        $middleware->redirectGuestsTo('/login');
+        $middleware->redirectUsersTo('/dashboard');
         $middleware->appendToGroup('web', EnsureUserIsActive::class);
         $middleware->appendToGroup('api', EnsureUserIsActive::class);
 
