@@ -58,6 +58,7 @@ class DemoSeeder extends Seeder
                     'role' => $role,
                     'company_id' => $company->id,
                     'is_active' => true,
+                    'is_super_admin' => $username === 'admin',
                 ]
             );
             $user->fleets()->sync($fleets->pluck('id'));

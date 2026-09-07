@@ -64,6 +64,12 @@
                 <x-nav-link :href="route('notifications.index')" icon="alert" label="Avisos" match="notifications.*" />
                 <x-nav-link :href="route('help.index')" icon="book" label="Ayuda" match="help.*" />
             </div>
+            @if(auth()->user()->is_super_admin)
+                <div class="sb-group">
+                    <div class="sb-lbl">Plataforma</div>
+                    <x-nav-link :href="route('admin.companies.index')" icon="shield" label="Empresas" match="admin.companies.*" />
+                </div>
+            @endif
             @if(auth()->user()->role->canManageCatalogs())
                 <div class="sb-group">
                     <div class="sb-lbl">Catálogo</div>

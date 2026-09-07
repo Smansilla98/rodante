@@ -51,7 +51,27 @@ class QaRolesCommand extends Command
         $this->info('Corrida '.$tag);
         $this->info('Logs en '.$dir);
 
-        $summary = (new RoleQaRunner($http, $dir, $tag))->run($users);
+        $company = $users->first()->company;
+        app(\App\Support\Tenancy\TenantContext::class)->set($company);
+
+        $otherUsers = collect();
+        try {
+            $provisioned = app(\App\Services\CompanyProvisioningService::class)->provision(
+                ['name' => 'QA Empresa B', 'slug' => 'qa-b-'.strtolower(substr($tag, -5))],
+                ['name' => 'Admin B', 'username' => 'admin', 'password' => 'Password123a']
+            );
+            $otherAdmin = $provisioned['admin'];
+            $otherAdmin->forceFill(['must_change_password' => false])->save();
+            \App\Support\Tenancy\TenantContext::for($provisioned['company'], function () use ($otherAdmin, &$otherUsers) {
+                $otherAdmin->fleets()->sync(\App\Models\Fleet::pluck('id'));
+                $otherAdmin->bases()->sync(\App\Models\Base::pluck('id'));
+            });
+            $otherUsers->push($otherAdmin);
+        } catch (\Throwable $e) {
+            $this->warn('No se pudo armar empresa B para aislamiento: '.$e->getMessage());
+        }
+
+        $summary = (new RoleQaRunner($http, $dir, $tag))->run($users, $otherUsers->isNotEmpty() ? $otherUsers : null);
 
         $this->info("OK {$summary['ok']} · FAIL {$summary['fail']}");
         if ($summary['fail'] > 0) {

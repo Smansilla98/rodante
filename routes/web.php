@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Controllers\Admin\CompanyController;
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Auth\ForcePasswordChangeController;
 use App\Http\Controllers\Auth\PasswordResetController;
 use App\Http\Controllers\Catalog\BrandController;
 use App\Http\Controllers\Catalog\ModelController;
@@ -48,6 +50,14 @@ Route::middleware('guest')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/cambiar-contrasena', [ForcePasswordChangeController::class, 'edit'])->name('password.force.edit');
+    Route::post('/cambiar-contrasena', [ForcePasswordChangeController::class, 'update'])->name('password.force.update');
+
+    Route::get('/admin/empresas', [CompanyController::class, 'index'])->name('admin.companies.index');
+    Route::get('/admin/empresas/nueva', [CompanyController::class, 'create'])->name('admin.companies.create');
+    Route::post('/admin/empresas', [CompanyController::class, 'store'])->name('admin.companies.store');
+    Route::post('/admin/empresas/{company}/toggle', [CompanyController::class, 'toggle'])->name('admin.companies.toggle');
+
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/buscar/sugerencias', [SearchController::class, 'suggest'])->name('search.suggest');
     Route::get('/buscar', [SearchController::class, '__invoke'])->name('search');

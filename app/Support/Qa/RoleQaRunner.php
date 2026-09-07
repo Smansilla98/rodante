@@ -45,9 +45,10 @@ class RoleQaRunner
 
     /**
      * @param  Collection<int, User>  $users
+     * @param  Collection<int, User>|null  $otherCompanyUsers  Si se pasa, verifica 404 cruzado entre empresas.
      * @return array{ok: int, fail: int, steps: list<array<string, mixed>>, files: list<string>}
      */
-    public function run(Collection $users): array
+    public function run(Collection $users, ?Collection $otherCompanyUsers = null): array
     {
         File::ensureDirectoryExists($this->logDir);
         $this->bootstrapBrowse($users->first(fn (User $user) => $user->role === UserRole::Administrador) ?? $users->first());
@@ -62,13 +63,47 @@ class RoleQaRunner
 
         foreach ($ordered as $user) {
             $this->http->actingAs($user);
+            app(\App\Support\Tenancy\TenantContext::class)->setId((int) $user->company_id);
             $this->runRole($user);
             $this->writeUserLog($user);
+        }
+
+        if ($otherCompanyUsers && $otherCompanyUsers->isNotEmpty()) {
+            $this->assertCrossTenantIsolation($users, $otherCompanyUsers);
         }
 
         $summary = $this->writeSummary();
 
         return $summary;
+    }
+
+    /**
+     * @param  Collection<int, User>  $usersA
+     * @param  Collection<int, User>  $usersB
+     */
+    private function assertCrossTenantIsolation(Collection $usersA, Collection $usersB): void
+    {
+        $adminA = $usersA->first(fn (User $u) => $u->role === UserRole::Administrador) ?? $usersA->first();
+        $adminB = $usersB->first(fn (User $u) => $u->role === UserRole::Administrador) ?? $usersB->first();
+        $tireB = Tire::withoutTenant()->where('company_id', $adminB->company_id)->orderBy('id')->first();
+        if (! $tireB) {
+            return;
+        }
+
+        $this->http->actingAs($adminA);
+        app(\App\Support\Tenancy\TenantContext::class)->setId((int) $adminA->company_id);
+        $response = $this->http->get('/neumaticos/'.$tireB->id);
+        $this->steps[] = [
+            'user' => $adminA->username,
+            'role' => $adminA->role->value,
+            'action' => 'cross-tenant tire show',
+            'method' => 'GET',
+            'path' => '/neumaticos/'.$tireB->id,
+            'status' => $response->status(),
+            'expected' => '404',
+            'ok' => $response->status() === 404,
+            'detail' => 'Aislamiento multiempresa',
+        ];
     }
 
     private function bootstrapBrowse(User $admin): void

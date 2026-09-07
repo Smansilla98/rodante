@@ -54,15 +54,6 @@ trait BelongsToCompany
 
                 return;
             }
-            // Migraciones Eloquent legadas (antes de companies / tenant context).
-            if (app()->runningInConsole() && Schema::hasTable('companies')) {
-                $fallback = Company::query()->orderBy('id')->value('id');
-                if ($fallback) {
-                    $model->setAttribute('company_id', (int) $fallback);
-
-                    return;
-                }
-            }
             throw new \RuntimeException(
                 'No hay empresa en contexto. Usá TenantContext::for() en comandos, colas o seeders.'
             );

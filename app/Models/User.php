@@ -27,6 +27,8 @@ class User extends Authenticatable implements CanResetPasswordContract
         'password',
         'role',
         'is_active',
+        'is_super_admin',
+        'must_change_password',
         'last_login_at',
     ];
 
@@ -41,6 +43,8 @@ class User extends Authenticatable implements CanResetPasswordContract
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'is_super_admin' => 'boolean',
+            'must_change_password' => 'boolean',
             'last_login_at' => 'datetime',
             'role' => UserRole::class,
         ];

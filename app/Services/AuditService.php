@@ -38,6 +38,6 @@ class AuditService
             return (int) $entity->company_id;
         }
 
-        return Company::query()->value('id');
+        return app(\App\Support\Tenancy\TenantContext::class)->id();
     }
 }

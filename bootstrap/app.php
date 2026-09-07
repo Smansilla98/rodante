@@ -3,6 +3,7 @@
 use App\Exceptions\DomainException;
 use App\Exceptions\SheetConflictException;
 use App\Http\Middleware\EnsureCapability;
+use App\Http\Middleware\EnsurePasswordIsCurrent;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\SecurityHeaders;
@@ -30,6 +31,7 @@ return Application::configure(basePath: dirname(__DIR__))
             SecurityHeaders::class,
             SetTenantContext::class,
             EnsureUserIsActive::class,
+            EnsurePasswordIsCurrent::class,
         ]);
         $middleware->appendToGroup('api', [
             SecurityHeaders::class,
