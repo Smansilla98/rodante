@@ -170,8 +170,9 @@ body.nav-lock {
 .sb-mark-img {
     width: 36px;
     height: 36px;
-    border-radius: 9px;
+    border-radius: 22%;
     object-fit: cover;
+    object-position: center;
     flex-shrink: 0;
     box-shadow: 0 8px 18px rgb(200 16 46 / 0.28);
 }
@@ -2288,12 +2289,14 @@ body.sheet-modal-open {
 }
 
 .brand-logo--auth {
-    width: min(100%, 168px);
+    width: min(100%, 200px);
     height: auto;
     aspect-ratio: 1;
     display: block;
     margin-bottom: 28px;
-    border-radius: 28px;
+    border-radius: 22%;
+    object-fit: cover;
+    object-position: center;
     box-shadow: 0 14px 32px rgb(0 0 0 / 0.35);
 }
 
@@ -2339,10 +2342,11 @@ body.sheet-modal-open {
 }
 
 .auth-panel__icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 12px;
+    width: 64px;
+    height: 64px;
+    border-radius: 22%;
     object-fit: cover;
+    object-position: center;
     margin-bottom: 8px;
     box-shadow: 0 8px 18px rgb(200 16 46 / 0.28);
 }
