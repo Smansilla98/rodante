@@ -24,7 +24,7 @@
                 <div class="auth-panel__brand">
                     <p class="auth-kicker">Seguridad</p>
                     <h2 id="forgot-title">Olvidé mi contraseña</h2>
-                    <p class="auth-lead">Ingresá tu usuario o email. Si la cuenta está activa y tiene email, vas a recibir instrucciones.</p>
+                    <p class="auth-lead">Ingresá tu usuario o email para recibir el enlace.</p>
                 </div>
                 @if(session('status'))
                     <div class="flash flash--ok" role="status">{{ session('status') }}</div>

@@ -19,17 +19,16 @@
             <x-brand-logo variant="auth" />
             <p class="auth-hero__k">Rodante</p>
             <h1>Gestión inteligente de neumáticos</h1>
-            <p>Historial por cubierta, no por patente. Stock, rotación y planilla en un mismo lugar.</p>
+            <p>Historial por cubierta. Stock, rotación y planilla juntos.</p>
         </section>
 
         <section class="auth-panel" aria-labelledby="login-title">
             <form method="POST" action="{{ route('login') }}" class="auth-form">
                 @csrf
                 <div class="auth-panel__brand">
-                    <img src="{{ asset('brand/rodante-app-icon.png') }}" alt="{{ config('app.name', 'Rodante') }}" class="auth-panel__icon" width="72" height="72" decoding="async">
-                    <p class="auth-kicker">Bienvenido a Rodante</p>
+                    <img src="{{ asset('brand/rodante-app-icon.png') }}" alt="{{ config('app.name', 'Rodante') }}" class="auth-panel__icon" width="56" height="56" decoding="async">
+                    <p class="auth-kicker">Acceso</p>
                     <h2 id="login-title">Ingresar</h2>
-                    <p class="auth-lead">Escribí tu usuario y contraseña. Las letras son grandes para leer con comodidad.</p>
                 </div>
 
                 <div class="field">

@@ -11,8 +11,8 @@
     <img
         src="{{ $src }}"
         alt="{{ $alt }}"
-        width="280"
-        height="280"
+        width="176"
+        height="176"
         decoding="async"
         {{ $attributes->class('brand-logo brand-logo--auth') }}
     >
