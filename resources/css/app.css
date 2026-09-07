@@ -168,9 +168,9 @@ body.nav-lock {
 }
 
 .sb-mark-img {
-    width: 36px;
-    height: 36px;
-    border-radius: 22%;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
     object-fit: cover;
     object-position: center;
     flex-shrink: 0;
@@ -2289,12 +2289,12 @@ body.sheet-modal-open {
 }
 
 .brand-logo--auth {
-    width: min(100%, 200px);
+    width: min(100%, 280px);
     height: auto;
     aspect-ratio: 1;
     display: block;
     margin-bottom: 28px;
-    border-radius: 22%;
+    border-radius: 22px;
     object-fit: cover;
     object-position: center;
     box-shadow: 0 14px 32px rgb(0 0 0 / 0.35);
@@ -2342,12 +2342,12 @@ body.sheet-modal-open {
 }
 
 .auth-panel__icon {
-    width: 64px;
-    height: 64px;
-    border-radius: 22%;
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
     object-fit: cover;
     object-position: center;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     box-shadow: 0 8px 18px rgb(200 16 46 / 0.28);
 }
 
@@ -3056,6 +3056,8 @@ body.sheet-modal-open {
     height: 56px;
     margin: 0 auto 1rem;
     border-radius: 14px;
+    object-fit: cover;
+    object-position: center;
 }
 
 .err-kicker {

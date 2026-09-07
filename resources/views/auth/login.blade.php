@@ -26,7 +26,7 @@
             <form method="POST" action="{{ route('login') }}" class="auth-form">
                 @csrf
                 <div class="auth-panel__brand">
-                    <img src="{{ asset('brand/rodante-app-icon.png') }}" alt="{{ config('app.name', 'Rodante') }}" class="auth-panel__icon">
+                    <img src="{{ asset('brand/rodante-app-icon.png') }}" alt="{{ config('app.name', 'Rodante') }}" class="auth-panel__icon" width="72" height="72" decoding="async">
                     <p class="auth-kicker">Bienvenido a Rodante</p>
                     <h2 id="login-title">Ingresar</h2>
                     <p class="auth-lead">Escribí tu usuario y contraseña. Las letras son grandes para leer con comodidad.</p>

@@ -46,7 +46,9 @@
         .brand img {
             width: 48px;
             height: 48px;
-            object-fit: contain;
+            border-radius: 10px;
+            object-fit: cover;
+            object-position: center;
         }
         .brand-name {
             font-size: 22px;
