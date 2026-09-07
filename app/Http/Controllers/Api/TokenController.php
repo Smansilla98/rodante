@@ -13,10 +13,31 @@ class TokenController extends Controller
         $data = $request->validate([
             'username' => 'required|string',
             'password' => 'required|string',
+            'company_id' => 'nullable|integer|exists:companies,id',
             'device' => 'nullable|string|max:80',
         ]);
 
-        if (! Auth::attempt(['username' => trim($data['username']), 'password' => $data['password']])) {
+        $username = trim($data['username']);
+        $matches = \App\Models\User::query()->where('username', $username)->get();
+        if ($matches->isEmpty()) {
+            return response()->json(['message' => 'Credenciales incorrectas.'], 422);
+        }
+        if ($matches->count() > 1 && empty($data['company_id'])) {
+            return response()->json([
+                'message' => 'Indicá company_id: ese usuario existe en más de una empresa.',
+                'companies' => $matches->map(fn ($u) => [
+                    'id' => $u->company_id,
+                    'name' => $u->company?->name,
+                ])->unique('id')->values(),
+            ], 422);
+        }
+        $companyId = (int) ($data['company_id'] ?? $matches->first()->company_id);
+
+        if (! Auth::attempt([
+            'username' => $username,
+            'password' => $data['password'],
+            'company_id' => $companyId,
+        ])) {
             return response()->json(['message' => 'Credenciales incorrectas.'], 422);
         }
 
@@ -25,6 +46,11 @@ class TokenController extends Controller
             Auth::logout();
 
             return response()->json(['message' => 'La cuenta está desactivada.'], 403);
+        }
+        if (! $user->company?->is_active) {
+            Auth::logout();
+
+            return response()->json(['message' => 'La empresa está desactivada.'], 403);
         }
 
         $token = $user->createToken($data['device'] ?? 'campo', ['*'], now()->addDays(30));

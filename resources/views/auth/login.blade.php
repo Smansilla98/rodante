@@ -35,6 +35,19 @@
                     <input id="username" class="inp" name="username" value="{{ old('username', app()->environment('local') ? 'admin' : '') }}" autocomplete="username" required @error('username') aria-invalid="true" aria-describedby="err-username" @enderror>
                     <x-field-error name="username" />
                 </div>
+                @php $loginCompanies = collect(session('login_companies', [])); @endphp
+                @if($loginCompanies->isNotEmpty() || old('company_id'))
+                    <div class="field">
+                        <label for="company_id">Empresa</label>
+                        <select id="company_id" class="inp" name="company_id" required @error('company_id') aria-invalid="true" @enderror>
+                            <option value="">Elegí la empresa</option>
+                            @foreach($loginCompanies as $company)
+                                <option value="{{ $company['id'] }}" @selected((string) old('company_id') === (string) $company['id'])>{{ $company['name'] }}</option>
+                            @endforeach
+                        </select>
+                        <x-field-error name="company_id" />
+                    </div>
+                @endif
                 <div class="field">
                     <label for="password">Contraseña</label>
                     <input id="password" class="inp" type="password" name="password" value="{{ app()->environment('local') ? 'password' : '' }}" autocomplete="current-password" required @error('password') aria-invalid="true" aria-describedby="err-password" @enderror>

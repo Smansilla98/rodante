@@ -102,8 +102,8 @@ class UserController extends Controller
 
         return $request->validate([
             'name' => 'required|string|max:80',
-            'username' => ['required', 'string', 'max:40', Rule::unique('users', 'username')->ignore($user)],
-            'email' => ['nullable', 'email', Rule::unique('users', 'email')->ignore($user)],
+            'username' => ['required', 'string', 'max:40', Rule::unique('users', 'username')->where(fn ($q) => $q->where('company_id', $request->user()->company_id))->ignore($user)],
+            'email' => ['nullable', 'email', Rule::unique('users', 'email')->where(fn ($q) => $q->where('company_id', $request->user()->company_id))->ignore($user)],
             'password' => $password,
             'role' => ['required', Rule::enum(UserRole::class)],
             'fleet_ids' => 'array',
