@@ -5,6 +5,7 @@ use App\Exceptions\SheetConflictException;
 use App\Http\Middleware\EnsureCapability;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\EnsureUserIsActive;
+use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -24,8 +25,14 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trustProxies(at: '*');
         $middleware->redirectGuestsTo('/login');
         $middleware->redirectUsersTo('/dashboard');
-        $middleware->appendToGroup('web', EnsureUserIsActive::class);
-        $middleware->appendToGroup('api', EnsureUserIsActive::class);
+        $middleware->appendToGroup('web', [
+            SecurityHeaders::class,
+            EnsureUserIsActive::class,
+        ]);
+        $middleware->appendToGroup('api', [
+            SecurityHeaders::class,
+            EnsureUserIsActive::class,
+        ]);
 
         $middleware->alias([
             'role' => EnsureRole::class,

@@ -1052,11 +1052,21 @@ document.addEventListener('submit', (event) => {
     }
 });
 
-(window.__rodanteFieldErrors || []).forEach((name) => {
-    document.querySelectorAll(`[name="${name}"]`).forEach((el) => {
-        el.setAttribute('aria-invalid', 'true');
-    });
-});
+document.getElementById('btnPrint')?.addEventListener('click', () => window.print());
+
+(function () {
+    try {
+        const raw = document.getElementById('rodanteFieldErrors')?.dataset.fields;
+        const names = raw ? JSON.parse(raw) : (window.__rodanteFieldErrors || []);
+        names.forEach((name) => {
+            document.querySelectorAll(`[name="${name}"]`).forEach((el) => {
+                el.setAttribute('aria-invalid', 'true');
+            });
+        });
+    } catch {
+        // ignore
+    }
+})();
 
 document.querySelectorAll('.flash.toast').forEach((el) => {
     window.setTimeout(() => {

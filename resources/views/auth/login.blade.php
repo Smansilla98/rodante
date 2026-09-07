@@ -5,12 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>Ingresar — {{ config('app.name', 'Rodante') }}</title>
     <meta name="theme-color" content="#c8102e">
+    <meta name="robots" content="noindex, nofollow">
     <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('brand/rodante-icon-180.png') }}">
-    <script>
-        document.documentElement.dataset.type = localStorage.getItem('rodante-scale') || localStorage.getItem('rodanta-scale') || localStorage.getItem('tn-scale') || 'md';
-    </script>
+    <script src="{{ asset('js/scale-boot.js') }}"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="auth-body">

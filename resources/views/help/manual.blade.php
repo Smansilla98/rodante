@@ -9,7 +9,7 @@
 >
     <x-slot:actions>
         <a class="btn btn-ghost" href="{{ route('help.index') }}">Qué hace cada rol</a>
-        <button class="btn btn-dark no-print" type="button" onclick="window.print()">Imprimir</button>
+        <button class="btn btn-dark no-print" type="button" id="btnPrint">Imprimir</button>
     </x-slot:actions>
 </x-page-header>
 

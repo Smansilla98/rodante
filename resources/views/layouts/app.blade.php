@@ -6,12 +6,11 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Inicio') — {{ config('app.name', 'Rodante') }}</title>
     <meta name="theme-color" content="#c8102e">
+    <meta name="robots" content="noindex, nofollow">
     <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
     <link rel="icon" type="image/png" href="{{ asset('favicon.png') }}">
     <link rel="apple-touch-icon" href="{{ asset('brand/rodante-icon-180.png') }}">
-    <script>
-        document.documentElement.dataset.type = localStorage.getItem('rodante-scale') || localStorage.getItem('rodanta-scale') || localStorage.getItem('tn-scale') || 'md';
-    </script>
+    <script src="{{ asset('js/scale-boot.js') }}"></script>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body>
@@ -80,16 +79,6 @@
                 </div>
             @endif
         </nav>
-        <script>
-            (function () {
-                var nav = document.querySelector('.sb-nav');
-                if (!nav) return;
-                try {
-                    var y = sessionStorage.getItem('rodante-sb-scroll');
-                    if (y !== null) nav.scrollTop = Number(y) || 0;
-                } catch (e) {}
-            })();
-        </script>
     </aside>
 
     <div class="app-main">
@@ -140,7 +129,7 @@
             @endif
             @if($errors->any())
                 <div class="flash flash--err toast" role="alert">{{ $errors->first() }}</div>
-                <script>window.__rodanteFieldErrors = @json(array_keys($errors->getMessages()));</script>
+                <div id="rodanteFieldErrors" hidden data-fields='@json(array_keys($errors->getMessages()))'></div>
             @endif
             @yield('content')
         </main>
