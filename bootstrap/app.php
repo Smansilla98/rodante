@@ -39,6 +39,13 @@ return Application::configure(basePath: dirname(__DIR__))
             EnsureUserIsActive::class,
         ]);
 
+        // El tenant tiene que estar seteado ANTES del route model binding;
+        // si no, BelongsToCompany filtra 1=0 y /unidades/{id} da 404 siempre.
+        $middleware->prependToPriorityList(
+            before: \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            prepend: SetTenantContext::class,
+        );
+
         $middleware->alias([
             'role' => EnsureRole::class,
             'capability' => EnsureCapability::class,
