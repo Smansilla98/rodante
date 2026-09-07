@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class UnitConfigurationChange extends Model
 {
+
+    use BelongsToCompany;
     protected $fillable = [
+        'company_id',
         'unit_id', 'from_configuration_id', 'to_configuration_id',
         'reason', 'user_id', 'occurred_at', 'notes',
     ];

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use App\Enums\MovementType;
 use App\Exceptions\DomainException;
 use Illuminate\Database\Eloquent\Model;
@@ -9,9 +10,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TireMovement extends Model
 {
+
+    use BelongsToCompany;
     public $timestamps = false;
 
     protected $fillable = [
+        'company_id',
         'tire_id', 'tire_operation_id', 'type', 'occurred_at',
         'from_unit_id', 'from_position_id', 'from_odometer',
         'to_unit_id', 'to_position_id', 'to_odometer',

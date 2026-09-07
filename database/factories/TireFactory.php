@@ -19,6 +19,7 @@ class TireFactory extends Factory
 
     public function definition(): array
     {
+        $company = Company::demo();
         $model = TireModel::query()->firstOrFail();
         $size = $model->sizes()->first() ?: TireSize::query()->firstOrFail();
 
@@ -29,7 +30,7 @@ class TireFactory extends Factory
             'tire_size_id' => $size->id,
             'status' => TireStatus::Stock,
             'condition' => TireCondition::Nueva,
-            'company_id' => Company::demo()->id,
+            'company_id' => $company->id,
             'accumulated_km' => 0,
             'purchased_at' => now()->toDateString(),
         ];

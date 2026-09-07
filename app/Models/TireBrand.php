@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TireBrand extends Model
 {
-    protected $fillable = ['name', 'is_active'];
+
+    use BelongsToCompany;
+    protected $fillable = [
+        'company_id','name', 'is_active'];
 
     protected function casts(): array
     {

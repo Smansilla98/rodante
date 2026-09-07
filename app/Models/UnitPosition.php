@@ -2,14 +2,18 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class UnitPosition extends Model
 {
+
+    use BelongsToCompany;
     public $timestamps = false;
 
     protected $fillable = [
+        'company_id',
         'unit_configuration_id', 'code', 'name', 'axle_number', 'axle_role',
         'side', 'dual', 'is_spare', 'is_liftable', 'is_self_steer',
         'grid_row', 'grid_col', 'sort_order',

@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\TireBrand;
 use App\Models\TireModel;
 use App\Models\TireSize;
+use Illuminate\Support\Facades\Schema;
 
 class TireProductCatalog
 {
@@ -94,22 +95,33 @@ class TireProductCatalog
         self::renameLegacyCodes();
 
         foreach (self::brands() as $brandName => $models) {
+            $companyId = app(\App\Support\Tenancy\TenantContext::class)->id();
+            if (! $companyId && Schema::hasTable('companies')) {
+                $companyId = \App\Models\Company::query()->orderBy('id')->value('id');
+            }
+            if (! $companyId) {
+                return;
+            }
             $brand = TireBrand::firstOrCreate(
-                ['name' => $brandName],
-                ['is_active' => true]
+                ['name' => $brandName, 'company_id' => $companyId],
+                ['is_active' => true, 'company_id' => $companyId]
             );
             $keep = [];
             foreach ($models as $row) {
                 $keep[] = $row['code'];
                 $model = TireModel::updateOrCreate(
-                    ['tire_brand_id' => $brand->id, 'code' => $row['code']],
+                    ['tire_brand_id' => $brand->id, 'code' => $row['code'], 'company_id' => $companyId],
                     [
                         'name' => $row['name'],
                         'application' => $row['application'],
                         'is_active' => true,
+                        'company_id' => $companyId,
                     ]
                 );
-                $model->sizes()->sync(TireSize::whereIn('code', $row['sizes'])->pluck('id'));
+                $sizeIds = TireSize::whereIn('code', $row['sizes'])->pluck('id');
+                $model->sizes()->sync(
+                    $sizeIds->mapWithKeys(fn ($id) => [(int) $id => ['company_id' => $companyId]])->all()
+                );
             }
 
             $brand->models()

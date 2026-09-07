@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use App\Enums\IncidentType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TireIncident extends Model
 {
+
+    use BelongsToCompany;
     protected $fillable = [
+        'company_id',
         'tire_id', 'type', 'occurred_at', 'unit_id', 'position_id',
         'odometer', 'user_id', 'description', 'notes',
     ];

@@ -16,14 +16,23 @@ class IntegrityCheckCommand extends Command
 
     public function handle(IntegrityService $integrity): int
     {
+        $tenant = app(\App\Support\Tenancy\TenantContext::class);
         $user = null;
         if ($this->option('company')) {
+            $tenant->setId((int) $this->option('company'));
             $user = new User([
                 'company_id' => (int) $this->option('company'),
                 'role' => UserRole::Administrador,
             ]);
+        } else {
+            $tenant->bypass(true);
         }
-        $findings = $integrity->findings($user);
+
+        try {
+            $findings = $integrity->findings($user);
+        } finally {
+            $tenant->clear();
+        }
         if ($findings->isEmpty()) {
             $this->info('Sin inconsistencias detectadas.');
 

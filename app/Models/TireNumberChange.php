@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TireNumberChange extends Model
 {
-    protected $fillable = ['tire_id', 'from_number', 'to_number', 'user_id', 'reason'];
+
+    use BelongsToCompany;
+    protected $fillable = [
+        'company_id','tire_id', 'from_number', 'to_number', 'user_id', 'reason'];
 
     public function tire(): BelongsTo
     {

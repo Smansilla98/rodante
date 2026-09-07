@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use App\Enums\TireApplication;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -10,7 +11,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TireModel extends Model
 {
-    protected $fillable = ['tire_brand_id', 'code', 'name', 'application', 'winter_capable', 'is_active'];
+
+    use BelongsToCompany;
+    protected $fillable = [
+        'company_id','tire_brand_id', 'code', 'name', 'application', 'winter_capable', 'is_active'];
 
     protected function casts(): array
     {
@@ -28,7 +32,7 @@ class TireModel extends Model
 
     public function sizes(): BelongsToMany
     {
-        return $this->belongsToMany(TireSize::class, 'tire_model_sizes');
+        return $this->belongsToMany(TireSize::class, 'tire_model_sizes')->withPivot('company_id');
     }
 
     public function tires(): HasMany

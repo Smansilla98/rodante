@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,7 +10,10 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TireAssignment extends Model
 {
+
+    use BelongsToCompany;
     protected $fillable = [
+        'company_id',
         'tire_id', 'tire_lifecycle_id', 'unit_id', 'start_position_id',
         'end_position_id', 'counts_km', 'started_at', 'ended_at', 'open_key',
     ];

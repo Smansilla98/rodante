@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use App\Enums\OdometerStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OdometerReading extends Model
 {
+
+    use BelongsToCompany;
     protected $fillable = [
+        'company_id',
         'unit_id', 'value', 'status', 'recorded_by', 'validated_by',
         'validation_source', 'recorded_at', 'validated_at',
         'tire_operation_id', 'notes',

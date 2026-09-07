@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class UnitConfiguration extends Model
 {
+
+    use BelongsToCompany;
     protected $fillable = [
+        'company_id',
         'code', 'name', 'family_code', 'applies_to', 'compatible_types',
         'description', 'axle_count', 'drive_axle_count', 'position_count', 'is_active',
     ];

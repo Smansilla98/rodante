@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TireSize extends Model
 {
+
+    use BelongsToCompany;
     protected $fillable = [
+        'company_id',
         'code', 'alias', 'width_mm', 'aspect_ratio', 'rim_inches',
         'uneven_wear_threshold_mm', 'is_active',
     ];

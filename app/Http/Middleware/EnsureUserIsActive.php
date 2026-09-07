@@ -25,6 +25,19 @@ class EnsureUserIsActive
             ]);
         }
 
+        if ($user && $user->company && ! $user->company->is_active && ! (bool) ($user->is_super_admin ?? false)) {
+            if ($request->is('api/*') || $request->expectsJson()) {
+                return response()->json(['message' => 'La empresa está desactivada.'], 403);
+            }
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return redirect()->route('login')->withErrors([
+                'username' => 'La empresa está desactivada.',
+            ]);
+        }
+
         return $next($request);
     }
 }

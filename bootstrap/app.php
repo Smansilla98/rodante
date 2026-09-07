@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureCapability;
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\SetTenantContext;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -27,10 +28,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectUsersTo('/dashboard');
         $middleware->appendToGroup('web', [
             SecurityHeaders::class,
+            SetTenantContext::class,
             EnsureUserIsActive::class,
         ]);
         $middleware->appendToGroup('api', [
             SecurityHeaders::class,
+            SetTenantContext::class,
             EnsureUserIsActive::class,
         ]);
 

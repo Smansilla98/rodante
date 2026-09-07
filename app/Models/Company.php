@@ -21,9 +21,12 @@ class Company extends Model
 
     public static function demo(): self
     {
-        return static::query()->firstOrCreate(
+        $company = static::query()->firstOrCreate(
             ['slug' => 'demo'],
             ['name' => 'Empresa demo', 'is_active' => true],
         );
+        app(\App\Support\Tenancy\TenantContext::class)->set($company);
+
+        return $company;
     }
 }

@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class AuditLog extends Model
 {
+
+    use BelongsToCompany;
+
     public $timestamps = false;
 
     protected $fillable = [
@@ -22,11 +26,6 @@ class AuditLog extends Model
             'new_values' => 'array',
             'created_at' => 'datetime',
         ];
-    }
-
-    public function company(): BelongsTo
-    {
-        return $this->belongsTo(Company::class);
     }
 
     public function user(): BelongsTo

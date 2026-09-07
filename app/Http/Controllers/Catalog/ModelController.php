@@ -27,11 +27,15 @@ class ModelController extends Controller
     {
         $this->authorize('manageCatalogs');
         $data = $this->validated($request);
+        $companyId = (int) $request->user()->company_id;
         $model = TireModel::create($data + [
             'is_active' => true,
             'winter_capable' => $request->boolean('winter_capable'),
+            'company_id' => $companyId,
         ]);
-        $model->sizes()->sync($data['size_ids'] ?? []);
+        $model->sizes()->sync(collect($data['size_ids'] ?? [])->mapWithKeys(
+            fn ($id) => [(int) $id => ['company_id' => $companyId]]
+        )->all());
 
         return back()->with('success', 'Modelo creado.');
     }
@@ -44,7 +48,10 @@ class ModelController extends Controller
             'is_active' => $request->boolean('is_active'),
             'winter_capable' => $request->boolean('winter_capable'),
         ]);
-        $model->sizes()->sync($data['size_ids'] ?? []);
+        $companyId = (int) $request->user()->company_id;
+        $model->sizes()->sync(collect($data['size_ids'] ?? [])->mapWithKeys(
+            fn ($id) => [(int) $id => ['company_id' => $companyId]]
+        )->all());
 
         return back()->with('success', 'Modelo actualizado.');
     }

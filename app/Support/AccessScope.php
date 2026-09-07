@@ -21,13 +21,8 @@ class AccessScope
 
     public static function applyCompany(Builder $query, User $user, string $column = 'company_id'): Builder
     {
-        $companyId = self::companyId($user);
-        $table = $query->getModel()->getTable();
-        if (! $companyId) {
-            return $query->whereRaw('1 = 0');
-        }
-        $query->where($table.'.'.$column, $companyId);
-
+        // El global scope BelongsToCompany + SetTenantContext ya aíslan por empresa.
+        // Se mantiene el método por compatibilidad con llamadas existentes.
         return $query;
     }
 

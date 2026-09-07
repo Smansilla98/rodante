@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use App\Enums\LocationKind;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TireCurrentLocation extends Model
 {
+
+    use BelongsToCompany;
     protected $fillable = [
+        'company_id',
         'tire_id', 'location_kind', 'base_id', 'unit_id', 'position_id',
     ];
 

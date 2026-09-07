@@ -14,6 +14,7 @@ use App\Models\UnitConfiguration;
 use App\Models\UnitType;
 use App\Models\User;
 use App\Services\PurchaseService;
+use App\Support\Tenancy\TenantContext;
 use Database\Seeders\CatalogSeeder;
 
 trait CreatesDomain
@@ -23,13 +24,18 @@ trait CreatesDomain
     protected function seedDomain(): void
     {
         $this->seed(CatalogSeeder::class);
+        $company = \App\Models\Company::demo();
+        app(TenantContext::class)->set($company);
+
         $this->admin = User::factory()->create([
             'username' => 'admin-test',
             'role' => UserRole::Administrador,
+            'company_id' => $company->id,
         ]);
         $this->admin->fleets()->sync(Fleet::pluck('id'));
         $this->admin->bases()->sync(Base::pluck('id'));
         $this->actingAs($this->admin);
+        app(TenantContext::class)->setId((int) $this->admin->company_id);
     }
 
     protected function createTractor(int $odometer = 100000): FleetUnit

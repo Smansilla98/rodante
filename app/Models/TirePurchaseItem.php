@@ -2,13 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TirePurchaseItem extends Model
 {
+
+    use BelongsToCompany;
     protected $fillable = [
+        'company_id',
         'tire_purchase_id', 'tire_brand_id', 'tire_model_id', 'tire_size_id',
         'quantity', 'first_number', 'last_number', 'unit_cost', 'dot',
     ];

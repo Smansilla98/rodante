@@ -20,6 +20,7 @@ class FleetUnitFactory extends Factory
 
     public function definition(): array
     {
+        Company::demo();
         $type = UnitType::query()->where('code', 'TRACTOR')->first()
             ?: UnitType::query()->firstOrFail();
         $config = UnitConfiguration::query()->where('code', '6X4')->first()

@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TireAssignmentSegment extends Model
 {
+
+    use BelongsToCompany;
     protected $fillable = [
+        'company_id',
         'tire_assignment_id', 'odometer_unit_id', 'start_odometer', 'end_odometer',
         'km_delta', 'counts_km', 'started_at', 'ended_at', 'open_key',
     ];

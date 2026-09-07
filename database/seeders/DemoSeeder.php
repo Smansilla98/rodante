@@ -21,6 +21,7 @@ use App\Services\ConfigurationChangeService;
 use App\Services\CouplingService;
 use App\Services\PurchaseService;
 use App\Services\TireOperationService;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\Seeder;
 
 class DemoSeeder extends Seeder
@@ -28,6 +29,14 @@ class DemoSeeder extends Seeder
     public function run(): void
     {
         $company = Company::demo();
+
+        TenantContext::for($company, function () use ($company) {
+            $this->seedDemo($company);
+        });
+    }
+
+    private function seedDemo(Company $company): void
+    {
         $fleets = Fleet::all();
         $bases = Base::all();
 
@@ -41,7 +50,7 @@ class DemoSeeder extends Seeder
 
         foreach ($users as [$username, $name, $role]) {
             $user = User::query()->firstOrCreate(
-                ['username' => $username],
+                ['username' => $username, 'company_id' => $company->id],
                 [
                     'name' => $name,
                     'email' => $username.'@flota.test',

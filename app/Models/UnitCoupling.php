@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class UnitCoupling extends Model
 {
+
+    use BelongsToCompany;
     protected $fillable = [
+        'company_id',
         'tractor_id', 'trailer_id', 'slot_order', 'tractor_odometer_start', 'tractor_odometer_end',
         'coupled_at', 'uncoupled_at', 'user_id', 'notes',
         'open_trailer_key', 'open_tractor_key',
