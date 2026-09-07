@@ -425,19 +425,33 @@ const recambio = () => {
         const preferredApp = preferred?.tire?.application_code
             || preferred?.needed_application
             || null;
+        const freeRolling = new Set(['DIRECCION', 'ARRASTRE']);
         let candidates = mountedSlots();
         if (preferredApp) {
             const sameType = candidates.filter((slot) => {
                 const app = slot.tire?.application_code || slot.needed_application;
-                return app === preferredApp || String(slot.id) === String(preferred?.id);
+                if (String(slot.id) === String(preferred?.id)) {
+                    return true;
+                }
+                if (!app) {
+                    return false;
+                }
+                if (app === preferredApp) {
+                    return true;
+                }
+                // Dirección y Arrastre (all-position) se consideran la misma familia.
+                if (freeRolling.has(preferredApp) && freeRolling.has(app)) {
+                    return true;
+                }
+                return false;
             });
             if (sameType.length > 0) {
                 candidates = sameType;
             }
         }
-        const appLabel = preferred?.tire?.application
-            || preferred?.needed_application_label
-            || '';
+        const appLabel = freeRolling.has(preferredApp)
+            ? 'Dirección / Arrastre'
+            : (preferred?.tire?.application || preferred?.needed_application_label || '');
         const items = candidates.map((slot) => ({
             id: slot.id,
             label: `${slot.code} · ${slot.tire.name}${slot.tire.application ? ` · ${slot.tire.application}` : ''}${slot.tire.size_code ? ` · ${slot.tire.size_code}` : ''}`,

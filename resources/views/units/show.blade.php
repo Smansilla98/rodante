@@ -273,7 +273,7 @@
                     <label class="field">
                         <span>Cubierta que sale</span>
                         <select id="cambioSaleSelect" class="inp" required></select>
-                        <span class="hint">Solo posiciones con la misma nomenclatura que la elegida (Dirección, Tracción o Arrastre).</span>
+                        <span class="hint">Dirección y Arrastre se consideran intercambiables. Tracción queda aparte.</span>
                     </label>
 
                     <p class="recambio-dock__hint" id="cambioHint">Solo cubiertas compatibles por nomenclatura, posición y medida.</p>

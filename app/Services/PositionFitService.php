@@ -34,20 +34,25 @@ class PositionFitService
         $isTrailer = $role === 'ARRASTRE';
         $isTagDrive = $isDrive && ($position->is_liftable || (int) $position->axle_number >= 3);
 
-        if ($application === TireApplication::Direccion) {
-            if ($isSteer) {
+        // Dirección y Arrastre (all-position) se aceptan entre sí en ejes libres / remolque.
+        if (in_array($application, [TireApplication::Direccion, TireApplication::Arrastre], true)) {
+            if ($isSteer || $isTrailer || $isTagDrive) {
                 return;
             }
-            if ($isDrive && ((int) $position->axle_number === 3 || $this->isRecapped($tire))) {
+            if ($application === TireApplication::Direccion
+                && $isDrive
+                && ((int) $position->axle_number === 3 || $this->isRecapped($tire))) {
                 return;
             }
             if ($isDrive) {
                 throw new DomainException(
-                    $tire->displayName().' es de dirección y no puede instalarse en tracción. Solo se permite en el 3.er eje o si está recapada.'
+                    $tire->displayName().' es de '.$application->label()
+                    .' y no puede instalarse en tracción motriz. Solo eje tag/elevable, 3.er eje o cubierta recapada (dirección).'
                 );
             }
             throw new DomainException(
-                $tire->displayName().' es de dirección y no puede instalarse en '.$this->roleLabel($role).'.'
+                $tire->displayName().' es de '.$application->label()
+                .' y no puede instalarse en '.$this->roleLabel($role).'.'
             );
         }
 
@@ -62,25 +67,6 @@ class PositionFitService
             }
             throw new DomainException(
                 $tire->displayName().' es de tracción y no puede instalarse en '.$this->roleLabel($role).'.'
-            );
-        }
-
-        if ($application === TireApplication::Arrastre) {
-            if ($isTrailer || $isTagDrive) {
-                return;
-            }
-            if ($isSteer) {
-                throw new DomainException(
-                    $tire->displayName().' es de arrastre y no puede instalarse en dirección.'
-                );
-            }
-            if ($isDrive) {
-                throw new DomainException(
-                    $tire->displayName().' es de arrastre y no puede instalarse en tracción motriz. Use eje tag/elevable o posición de arrastre.'
-                );
-            }
-            throw new DomainException(
-                $tire->displayName().' es de arrastre y no puede instalarse en '.$this->roleLabel($role).'.'
             );
         }
     }
@@ -115,6 +101,60 @@ class PositionFitService
         };
     }
 
+    /**
+     * Dirección y Arrastre son intercambiables (all-position). Mixta entra en todos.
+     *
+     * @return list<string>
+     */
+    public function compatibleApplicationValues(?TireApplication $needed): array
+    {
+        if (! $needed) {
+            return [
+                TireApplication::Direccion->value,
+                TireApplication::Traccion->value,
+                TireApplication::Arrastre->value,
+                TireApplication::Mixto->value,
+            ];
+        }
+
+        if ($needed === TireApplication::Mixto) {
+            return [TireApplication::Mixto->value];
+        }
+
+        if (in_array($needed, [TireApplication::Direccion, TireApplication::Arrastre], true)) {
+            return [
+                TireApplication::Direccion->value,
+                TireApplication::Arrastre->value,
+                TireApplication::Mixto->value,
+            ];
+        }
+
+        return [
+            $needed->value,
+            TireApplication::Mixto->value,
+        ];
+    }
+
+    public function applicationsAreCompatible(?TireApplication $needed, ?TireApplication $got): bool
+    {
+        if (! $needed || ! $got) {
+            return true;
+        }
+        if ($got === TireApplication::Mixto) {
+            return true;
+        }
+
+        return in_array($got->value, $this->compatibleApplicationValues($needed), true);
+    }
+
+    /** @return list<string> */
+    public function applicationFamilyValues(?string $applicationCode): array
+    {
+        $needed = $applicationCode ? TireApplication::tryFrom($applicationCode) : null;
+
+        return $this->compatibleApplicationValues($needed);
+    }
+
     public function assertReplacementFits(Tire $replacement, UnitPosition $position, ?FleetUnit $unit = null, ?Tire $current = null): void
     {
         $replacement->loadMissing('model', 'size', 'currentLifecycle');
@@ -125,9 +165,10 @@ class PositionFitService
 
         $needed = $this->neededApplication($current, $position);
         $got = $replacement->model?->application;
-        if ($needed && $got && $got !== TireApplication::Mixto && $got !== $needed) {
+        if ($needed && $got && ! $this->applicationsAreCompatible($needed, $got)) {
             throw new DomainException(
-                'El recambio tiene que ser de '.$needed->label().'. '.$replacement->displayName().' es de '.$got->label().'.'
+                'El recambio tiene que ser de '.$this->familyLabel($needed).'. '
+                .$replacement->displayName().' es de '.$got->label().'.'
             );
         }
     }
@@ -144,7 +185,7 @@ class PositionFitService
     }
 
     /**
-     * @return array{role: string, application: ?string, application_label: ?string, size: ?string, rules: list<string>}
+     * @return array{role: string, application: ?string, application_label: ?string, size: ?string, rules: list<string>, compatible_applications: list<string>}
      */
     public function fitGuide(?Tire $mounted, UnitPosition $position, ?FleetUnit $unit = null): array
     {
@@ -156,11 +197,11 @@ class PositionFitService
             $rules[] = 'Auxilio: acepta cualquier nomenclatura.';
         } else {
             $rules[] = match ($position->axle_role) {
-                'DIRECCION', 'DIRECCIONAL' => 'Dirección: solo cubiertas de Dirección (o Mixta).',
+                'DIRECCION', 'DIRECCIONAL' => 'Dirección: cubiertas de Dirección o Arrastre (all-position), o Mixta.',
                 'TRACCION' => $position->is_liftable || (int) $position->axle_number >= 3
-                    ? 'Eje tag/elevable: Tracción, Arrastre o Dirección recapada / 3.er eje.'
+                    ? 'Eje tag/elevable: Tracción, Arrastre/Dirección o Mixta.'
                     : 'Tracción: cubiertas de Tracción (o Mixta). Dirección solo si está recapada o es 3.er eje.',
-                'ARRASTRE' => 'Arrastre: cubiertas de Arrastre (o Mixta).',
+                'ARRASTRE' => 'Arrastre: cubiertas de Arrastre o Dirección (all-position), o Mixta.',
                 default => 'Respete la nomenclatura de la posición.',
             };
         }
@@ -175,9 +216,10 @@ class PositionFitService
         return [
             'role' => $position->axleRole(),
             'application' => $needed?->value,
-            'application_label' => $needed?->label(),
+            'application_label' => $needed ? $this->familyLabel($needed) : null,
             'size' => $size,
             'rules' => $rules,
+            'compatible_applications' => $this->compatibleApplicationValues($needed),
         ];
     }
 
@@ -189,6 +231,15 @@ class PositionFitService
     public function prefersWinter(?FleetUnit $unit): bool
     {
         return (bool) $unit?->duty?->prefersWinterTires();
+    }
+
+    private function familyLabel(TireApplication $needed): string
+    {
+        return match ($needed) {
+            TireApplication::Direccion, TireApplication::Arrastre => 'Dirección / Arrastre',
+            TireApplication::Traccion => 'Tracción',
+            TireApplication::Mixto => 'Mixta',
+        };
     }
 
     private function assertSizeFitsUnit(Tire $tire, FleetUnit $unit): void

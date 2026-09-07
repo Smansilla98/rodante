@@ -263,10 +263,7 @@ class UnitController extends Controller
             $query->where('size_id', $mounted->size_id);
         }
         if ($needed) {
-            $query->whereHas('model', fn ($m) => $m->whereIn('application', [
-                $needed->value,
-                TireApplication::Mixto->value,
-            ]));
+            $query->whereHas('model', fn ($m) => $m->whereIn('application', $fit->compatibleApplicationValues($needed)));
         }
         $winterPreferred = $fit->prefersWinter($unit);
         if ($winterPreferred) {
@@ -310,10 +307,7 @@ class UnitController extends Controller
                 $fallback->where('size_id', $mounted->size_id);
             }
             if ($needed) {
-                $fallback->whereHas('model', fn ($m) => $m->whereIn('application', [
-                    $needed->value,
-                    TireApplication::Mixto->value,
-                ]));
+                $fallback->whereHas('model', fn ($m) => $m->whereIn('application', $fit->compatibleApplicationValues($needed)));
             }
             $items = $fallback->limit(80)->get()
                 ->filter(fn (Tire $tire) => $fit->canReplace($tire, $position, $unit, $mounted))
