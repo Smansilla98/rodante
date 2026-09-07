@@ -80,6 +80,16 @@
                 </div>
             @endif
         </nav>
+        <script>
+            (function () {
+                var nav = document.querySelector('.sb-nav');
+                if (!nav) return;
+                try {
+                    var y = sessionStorage.getItem('rodante-sb-scroll');
+                    if (y !== null) nav.scrollTop = Number(y) || 0;
+                } catch (e) {}
+            })();
+        </script>
     </aside>
 
     <div class="app-main">

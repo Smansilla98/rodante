@@ -33,32 +33,32 @@
             <button class="btn btn-dark btn-sm">Filtrar</button>
         </form>
     </x-slot:toolbar>
-    <x-content-table>
+    <x-content-table class="table-enganches">
         <thead>
             <tr>
-                <th scope="col">Estado</th>
-                <th scope="col">Tractor</th>
-                <th scope="col">Acoplado</th>
-                <th scope="col">Desde</th>
-                <th scope="col">Hasta</th>
-                <th scope="col">Odómetro</th>
+                <th scope="col" class="col-estado">Estado</th>
+                <th scope="col" class="col-plate">Tractor</th>
+                <th scope="col" class="col-plate">Acoplado</th>
+                <th scope="col" class="col-fecha">Desde</th>
+                <th scope="col" class="col-fecha">Hasta</th>
+                <th scope="col" class="col-odo text-right">Odómetro</th>
             </tr>
         </thead>
         <tbody>
         @forelse($couplings as $coupling)
             <tr>
-                <td>
+                <td class="col-estado">
                     @if($coupling->isOpen())
                         <x-status tone="ok">Abierto</x-status>
                     @else
                         <x-status tone="slate">Cerrado</x-status>
                     @endif
                 </td>
-                <td><a href="{{ route('units.show', $coupling->tractor) }}">{{ $coupling->tractor?->plate }}</a></td>
-                <td><a href="{{ route('units.show', $coupling->trailer) }}">{{ $coupling->trailer?->plate }}</a></td>
-                <td class="mono">{{ $coupling->coupled_at?->format('d/m/Y H:i') }}</td>
-                <td class="mono">{{ $coupling->uncoupled_at?->format('d/m/Y H:i') ?? '—' }}</td>
-                <td class="mono">
+                <td class="col-plate"><a href="{{ route('units.show', $coupling->tractor) }}">{{ $coupling->tractor?->plate }}</a></td>
+                <td class="col-plate"><a href="{{ route('units.show', $coupling->trailer) }}">{{ $coupling->trailer?->plate }}</a></td>
+                <td class="col-fecha mono">{{ $coupling->coupled_at?->format('d/m/Y H:i') }}</td>
+                <td class="col-fecha mono">{{ $coupling->uncoupled_at?->format('d/m/Y H:i') ?? '—' }}</td>
+                <td class="col-odo mono text-right">
                     {{ number_format($coupling->tractor_odometer_start) }}
                     @if($coupling->tractor_odometer_end !== null)
                         → {{ number_format($coupling->tractor_odometer_end) }}

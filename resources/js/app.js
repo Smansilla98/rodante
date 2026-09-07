@@ -24,6 +24,49 @@ const openBtn = document.getElementById('navOpen');
 const closeBtn = document.getElementById('navClose');
 const backdrop = document.getElementById('navBackdrop');
 const sidebar = document.getElementById('sidebar');
+const sbNav = document.querySelector('.sb-nav');
+const SB_SCROLL_KEY = 'rodante-sb-scroll';
+
+const saveSbScroll = () => {
+    if (!sbNav) {
+        return;
+    }
+    try {
+        sessionStorage.setItem(SB_SCROLL_KEY, String(sbNav.scrollTop));
+    } catch {
+        // sessionStorage puede fallar en modo privado estricto
+    }
+};
+
+const restoreSbScroll = () => {
+    if (!sbNav) {
+        return;
+    }
+    try {
+        const y = sessionStorage.getItem(SB_SCROLL_KEY);
+        if (y !== null) {
+            sbNav.scrollTop = Number(y) || 0;
+        }
+    } catch {
+        // ignore
+    }
+
+    const active = sbNav.querySelector('.sb-link.is-active');
+    if (active) {
+        const navRect = sbNav.getBoundingClientRect();
+        const linkRect = active.getBoundingClientRect();
+        if (linkRect.top < navRect.top) {
+            sbNav.scrollTop -= navRect.top - linkRect.top;
+        } else if (linkRect.bottom > navRect.bottom) {
+            sbNav.scrollTop += linkRect.bottom - navRect.bottom;
+        }
+    }
+    saveSbScroll();
+};
+
+restoreSbScroll();
+sbNav?.addEventListener('scroll', saveSbScroll, { passive: true });
+window.addEventListener('pagehide', saveSbScroll);
 
 const setNav = (open) => {
     const wasOpen = shell?.classList.contains('is-nav');
@@ -41,7 +84,10 @@ openBtn?.addEventListener('click', () => setNav(true));
 closeBtn?.addEventListener('click', () => setNav(false));
 backdrop?.addEventListener('click', () => setNav(false));
 document.querySelectorAll('.sb-link').forEach((link) => {
-    link.addEventListener('click', () => setNav(false));
+    link.addEventListener('click', () => {
+        saveSbScroll();
+        setNav(false);
+    });
 });
 
 document.addEventListener('keydown', (event) => {

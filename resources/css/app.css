@@ -811,6 +811,7 @@ textarea.inp,
     margin-bottom: 0;
     caption-side: bottom;
     border-collapse: collapse;
+    table-layout: auto;
     vertical-align: middle;
     color: var(--bs-table-color);
     font-size: 1.02rem;
@@ -821,6 +822,7 @@ textarea.inp,
     background-color: var(--bs-table-bg);
     border-bottom: 1px solid var(--bs-table-border-color);
     vertical-align: middle;
+    text-align: left;
 }
 
 .table > thead {
@@ -836,6 +838,12 @@ textarea.inp,
     background-color: rgb(0 0 0 / 0.18);
     border-bottom-width: 2px;
     white-space: nowrap;
+    text-align: left;
+}
+
+.table th.text-right,
+.table td.text-right {
+    text-align: right;
 }
 
 .table-striped > tbody > tr:nth-of-type(odd) > * {
@@ -863,6 +871,26 @@ textarea.inp,
 
 .table .empty {
     padding: 28px 12px;
+}
+
+.table-responsive.table-enganches > .table {
+    table-layout: fixed;
+}
+
+.table-responsive.table-enganches .col-estado {
+    width: 8.5rem;
+}
+
+.table-responsive.table-enganches .col-plate {
+    width: 8rem;
+}
+
+.table-responsive.table-enganches .col-fecha {
+    width: 10.5rem;
+}
+
+.table-responsive.table-enganches .col-odo {
+    width: 11rem;
 }
 
 .mono {
