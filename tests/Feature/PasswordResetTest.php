@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\UserRole;
 use App\Models\Company;
 use App\Models\User;
 use App\Notifications\ResetPasswordNotification;
@@ -23,13 +24,41 @@ class PasswordResetTest extends TestCase
             ->post($route, array_merge(['_token' => $token], $data));
     }
 
-    public function test_forgot_form_renders(): void
+    public function test_login_hides_forgot_link_when_disabled(): void
     {
+        config(['rodante.password_reset_enabled' => false]);
+
+        $this->get(route('login'))
+            ->assertOk()
+            ->assertDontSee('Olvidé mi contraseña')
+            ->assertSee('administrador de tu empresa', false);
+    }
+
+    public function test_password_routes_return_404_when_disabled(): void
+    {
+        config(['rodante.password_reset_enabled' => false]);
+
+        $this->get(route('password.request'))->assertNotFound();
+        $this->postWithCsrf(route('password.email'), ['login' => 'x'])->assertNotFound();
+        $this->get(route('password.reset', ['token' => 'x']))->assertNotFound();
+        $this->postWithCsrf(route('password.update'), [
+            'token' => 'x',
+            'email' => 'a@b.c',
+            'password' => 'NuevaClave99',
+            'password_confirmation' => 'NuevaClave99',
+        ])->assertNotFound();
+    }
+
+    public function test_forgot_form_renders_when_enabled(): void
+    {
+        config(['rodante.password_reset_enabled' => true]);
+
         $this->get(route('password.request'))->assertOk()->assertSee('Olvidé mi contraseña');
     }
 
     public function test_request_does_not_reveal_missing_user(): void
     {
+        config(['rodante.password_reset_enabled' => true]);
         Notification::fake();
         $this->postWithCsrf(route('password.email'), ['login' => 'no-existe'])
             ->assertRedirect()
@@ -39,6 +68,7 @@ class PasswordResetTest extends TestCase
 
     public function test_active_user_with_email_receives_reset_notification(): void
     {
+        config(['rodante.password_reset_enabled' => true]);
         Notification::fake();
         Company::create(['name' => 'Demo', 'slug' => 'demo-pw', 'is_active' => true]);
         $user = User::factory()->create([
@@ -56,6 +86,7 @@ class PasswordResetTest extends TestCase
 
     public function test_inactive_user_does_not_receive_mail_but_same_message(): void
     {
+        config(['rodante.password_reset_enabled' => true]);
         Notification::fake();
         Company::create(['name' => 'Demo2', 'slug' => 'demo-pw2', 'is_active' => true]);
         User::factory()->create([
@@ -71,6 +102,7 @@ class PasswordResetTest extends TestCase
 
     public function test_reset_with_valid_token_changes_password(): void
     {
+        config(['rodante.password_reset_enabled' => true]);
         Company::create(['name' => 'Demo3', 'slug' => 'demo-pw3', 'is_active' => true]);
         $user = User::factory()->create([
             'email' => 'ok@example.com',
@@ -93,6 +125,7 @@ class PasswordResetTest extends TestCase
 
     public function test_invalid_token_is_rejected(): void
     {
+        config(['rodante.password_reset_enabled' => true]);
         Company::create(['name' => 'Demo4', 'slug' => 'demo-pw4', 'is_active' => true]);
         User::factory()->create(['email' => 'x@example.com', 'is_active' => true]);
         $this->postWithCsrf(route('password.update'), [
@@ -101,5 +134,39 @@ class PasswordResetTest extends TestCase
             'password' => 'NuevaClave99',
             'password_confirmation' => 'NuevaClave99',
         ])->assertSessionHasErrors('email');
+    }
+
+    public function test_admin_can_reset_user_password_from_users(): void
+    {
+        $company = Company::create(['name' => 'Demo5', 'slug' => 'demo-pw5', 'is_active' => true]);
+        $admin = User::factory()->create([
+            'company_id' => $company->id,
+            'username' => 'admin-reset',
+            'role' => UserRole::Administrador,
+            'is_active' => true,
+            'password' => Hash::make('password123a'),
+        ]);
+        $target = User::factory()->create([
+            'company_id' => $company->id,
+            'username' => 'operario-reset',
+            'role' => UserRole::Operario,
+            'is_active' => true,
+            'password' => Hash::make('oldpassword1'),
+        ]);
+
+        $this->actingAs($admin)
+            ->withSession(['_token' => 'test-csrf-token'])
+            ->put(route('users.update', $target), [
+                '_token' => 'test-csrf-token',
+                'name' => $target->name,
+                'username' => $target->username,
+                'email' => $target->email,
+                'role' => $target->role->value,
+                'is_active' => '1',
+                'password' => 'NuevaClave99',
+            ])
+            ->assertRedirect();
+
+        $this->assertTrue(Hash::check('NuevaClave99', $target->fresh()->password));
     }
 }

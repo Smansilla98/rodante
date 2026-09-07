@@ -42,7 +42,10 @@
                 </div>
 
                 <button class="btn btn-primary w-full" type="submit">Ingresar</button>
-                <p class="auth-hint"><a href="{{ route('password.request') }}">Olvidé mi contraseña</a></p>
+                <p class="auth-hint">Si olvidaste la contraseña, pedile al administrador de tu empresa que la restablezca desde <strong>Usuarios</strong>.</p>
+                @if(config('rodante.password_reset_enabled'))
+                    <p class="auth-hint"><a href="{{ route('password.request') }}">Olvidé mi contraseña</a></p>
+                @endif
                 @if(session('status'))
                     <div class="flash flash--ok" role="status">{{ session('status') }}</div>
                 @endif

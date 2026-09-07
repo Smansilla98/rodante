@@ -15,11 +15,15 @@ class PasswordResetController extends Controller
 {
     public function showForgotForm()
     {
+        $this->ensureEnabled();
+
         return view('auth.forgot-password');
     }
 
     public function sendResetLink(Request $request)
     {
+        $this->ensureEnabled();
+
         $data = $request->validate([
             'login' => ['required', 'string', 'max:120'],
         ]);
@@ -43,6 +47,8 @@ class PasswordResetController extends Controller
 
     public function showResetForm(Request $request, string $token)
     {
+        $this->ensureEnabled();
+
         return view('auth.reset-password', [
             'token' => $token,
             'email' => $request->string('email')->toString(),
@@ -51,6 +57,8 @@ class PasswordResetController extends Controller
 
     public function reset(Request $request)
     {
+        $this->ensureEnabled();
+
         $data = $request->validate([
             'token' => ['required', 'string'],
             'email' => ['required', 'email'],
@@ -83,5 +91,10 @@ class PasswordResetController extends Controller
 
         // Token inválido/expirado: no revelar si el email existe.
         return back()->withErrors(['email' => 'El enlace no es válido o expiró. Pedí uno nuevo.'])->withInput($request->only('email'));
+    }
+
+    private function ensureEnabled(): void
+    {
+        abort_unless(config('rodante.password_reset_enabled'), 404);
     }
 }

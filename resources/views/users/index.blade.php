@@ -10,7 +10,7 @@
         @if($editing) @method('PUT') @endif
         <label class="field"><span>Nombre</span><input name="name" value="{{ old('name', $editing?->name) }}" required @error('name') aria-invalid="true" @enderror><x-field-error name="name" /></label>
         <label class="field"><span>Usuario</span><input name="username" value="{{ old('username', $editing?->username) }}" required @error('username') aria-invalid="true" @enderror><x-field-error name="username" /></label>
-        <label class="field"><span>Contraseña</span><input name="password" type="password" {{ $editing ? '' : 'required' }} placeholder="{{ $editing ? 'Dejar vacía para no cambiar' : 'Mínimo 8 caracteres' }}" @error('password') aria-invalid="true" @enderror><x-field-error name="password" /></label>
+        <label class="field"><span>Contraseña</span><input name="password" type="password" {{ $editing ? '' : 'required' }} placeholder="{{ $editing ? 'Nueva clave (vacío = no cambiar)' : 'Mínimo 10 caracteres' }}" @error('password') aria-invalid="true" @enderror><x-field-error name="password" /></label>
         <label class="field"><span>Email</span><input name="email" type="email" value="{{ old('email', $editing?->email) }}"></label>
         <label class="field"><span>Rol</span>
             <select name="role">
