@@ -421,12 +421,32 @@ const recambio = () => {
         if (!cambioSaleSelect) {
             return;
         }
-        const items = mountedSlots().map((slot) => ({
+        const preferred = preferredId ? byId[String(preferredId)] : currentSlot;
+        const preferredApp = preferred?.tire?.application_code
+            || preferred?.needed_application
+            || null;
+        let candidates = mountedSlots();
+        if (preferredApp) {
+            const sameType = candidates.filter((slot) => {
+                const app = slot.tire?.application_code || slot.needed_application;
+                return app === preferredApp || String(slot.id) === String(preferred?.id);
+            });
+            if (sameType.length > 0) {
+                candidates = sameType;
+            }
+        }
+        const appLabel = preferred?.tire?.application
+            || preferred?.needed_application_label
+            || '';
+        const items = candidates.map((slot) => ({
             id: slot.id,
             label: `${slot.code} · ${slot.tire.name}${slot.tire.application ? ` · ${slot.tire.application}` : ''}${slot.tire.size_code ? ` · ${slot.tire.size_code}` : ''}`,
             tire_id: slot.tire.id,
         }));
-        fillSelect(cambioSaleSelect, items, 'Elegí la cubierta que sale');
+        const placeholder = appLabel
+            ? `Cubiertas montadas de ${appLabel}`
+            : 'Elegí la cubierta que sale';
+        fillSelect(cambioSaleSelect, items, placeholder);
         const pick = preferredId && items.some((item) => String(item.id) === String(preferredId))
             ? String(preferredId)
             : (items[0] ? String(items[0].id) : '');
