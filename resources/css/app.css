@@ -1740,6 +1740,18 @@ textarea.inp,
     margin: 0 0 0.7rem;
 }
 
+.recambio-dock__rules {
+    margin: -0.35rem 0 0.85rem;
+    padding-left: 1.1rem;
+    color: var(--muted);
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+
+.recambio-dock__rules li {
+    margin-bottom: 0.25rem;
+}
+
 .ot-ticket {
     margin: 0 0 0.75rem;
     padding: 0.65rem 0.75rem;

@@ -24,34 +24,65 @@ class PositionFitService
         }
 
         $application = $tire->model?->application;
-        $role = $position->axle_role;
-        $isSteerPosition = in_array($role, ['DIRECCION', 'DIRECCIONAL'], true);
+        if (! $application || $application === TireApplication::Mixto) {
+            return;
+        }
 
-        if ($application === TireApplication::Traccion && $isSteerPosition) {
+        $role = (string) $position->axle_role;
+        $isSteer = in_array($role, ['DIRECCION', 'DIRECCIONAL'], true);
+        $isDrive = $role === 'TRACCION';
+        $isTrailer = $role === 'ARRASTRE';
+        $isTagDrive = $isDrive && ($position->is_liftable || (int) $position->axle_number >= 3);
+
+        if ($application === TireApplication::Direccion) {
+            if ($isSteer) {
+                return;
+            }
+            if ($isDrive && ((int) $position->axle_number === 3 || $this->isRecapped($tire))) {
+                return;
+            }
+            if ($isDrive) {
+                throw new DomainException(
+                    $tire->displayName().' es de dirección y no puede instalarse en tracción. Solo se permite en el 3.er eje o si está recapada.'
+                );
+            }
             throw new DomainException(
-                $tire->displayName().' es de tracción y no puede instalarse en dirección.'
+                $tire->displayName().' es de dirección y no puede instalarse en '.$this->roleLabel($role).'.'
             );
         }
 
-        if ($application !== TireApplication::Direccion) {
-            return;
+        if ($application === TireApplication::Traccion) {
+            if ($isDrive) {
+                return;
+            }
+            if ($isSteer) {
+                throw new DomainException(
+                    $tire->displayName().' es de tracción y no puede instalarse en dirección.'
+                );
+            }
+            throw new DomainException(
+                $tire->displayName().' es de tracción y no puede instalarse en '.$this->roleLabel($role).'.'
+            );
         }
 
-        if ($role !== 'TRACCION') {
-            return;
+        if ($application === TireApplication::Arrastre) {
+            if ($isTrailer || $isTagDrive) {
+                return;
+            }
+            if ($isSteer) {
+                throw new DomainException(
+                    $tire->displayName().' es de arrastre y no puede instalarse en dirección.'
+                );
+            }
+            if ($isDrive) {
+                throw new DomainException(
+                    $tire->displayName().' es de arrastre y no puede instalarse en tracción motriz. Use eje tag/elevable o posición de arrastre.'
+                );
+            }
+            throw new DomainException(
+                $tire->displayName().' es de arrastre y no puede instalarse en '.$this->roleLabel($role).'.'
+            );
         }
-
-        if ((int) $position->axle_number === 3) {
-            return;
-        }
-
-        if ($this->isRecapped($tire)) {
-            return;
-        }
-
-        throw new DomainException(
-            $tire->displayName().' es de dirección y no puede instalarse en tracción. Solo se permite en el 3.er eje o si está recapada.'
-        );
     }
 
     public function canMount(Tire $tire, UnitPosition $position, ?FleetUnit $unit = null): bool
@@ -86,7 +117,11 @@ class PositionFitService
 
     public function assertReplacementFits(Tire $replacement, UnitPosition $position, ?FleetUnit $unit = null, ?Tire $current = null): void
     {
+        $replacement->loadMissing('model', 'size', 'currentLifecycle');
+        $current?->loadMissing('model', 'size');
+
         $this->assertCanMount($replacement, $position, $unit);
+        $this->assertSizeMatchesMounted($replacement, $current);
 
         $needed = $this->neededApplication($current, $position);
         $got = $replacement->model?->application;
@@ -106,6 +141,44 @@ class PositionFitService
         } catch (DomainException) {
             return false;
         }
+    }
+
+    /**
+     * @return array{role: string, application: ?string, application_label: ?string, size: ?string, rules: list<string>}
+     */
+    public function fitGuide(?Tire $mounted, UnitPosition $position, ?FleetUnit $unit = null): array
+    {
+        $needed = $this->neededApplication($mounted, $position);
+        $size = $mounted?->size?->code ?? ($unit?->allowedTireWidth() ? (string) $unit->allowedTireWidth() : null);
+        $rules = [];
+
+        if ($position->is_spare || $position->axle_role === 'AUXILIO') {
+            $rules[] = 'Auxilio: acepta cualquier nomenclatura.';
+        } else {
+            $rules[] = match ($position->axle_role) {
+                'DIRECCION', 'DIRECCIONAL' => 'Dirección: solo cubiertas de Dirección (o Mixta).',
+                'TRACCION' => $position->is_liftable || (int) $position->axle_number >= 3
+                    ? 'Eje tag/elevable: Tracción, Arrastre o Dirección recapada / 3.er eje.'
+                    : 'Tracción: cubiertas de Tracción (o Mixta). Dirección solo si está recapada o es 3.er eje.',
+                'ARRASTRE' => 'Arrastre: cubiertas de Arrastre (o Mixta).',
+                default => 'Respete la nomenclatura de la posición.',
+            };
+        }
+
+        if ($size) {
+            $rules[] = 'Medida requerida: '.$size.($mounted ? ' (igual a la que sale)' : '').'.';
+        }
+        if ($unit?->duty?->prefersWinterTires()) {
+            $rules[] = 'Unidad en nieve: priorice modelos aptos nieve/cadenas.';
+        }
+
+        return [
+            'role' => $position->axleRole(),
+            'application' => $needed?->value,
+            'application_label' => $needed?->label(),
+            'size' => $size,
+            'rules' => $rules,
+        ];
     }
 
     public function dutyHint(?FleetUnit $unit): ?string
@@ -133,6 +206,20 @@ class PositionFitService
         }
     }
 
+    private function assertSizeMatchesMounted(Tire $replacement, ?Tire $current): void
+    {
+        if (! $current?->size_id) {
+            return;
+        }
+
+        if ((int) $replacement->size_id !== (int) $current->size_id) {
+            throw new DomainException(
+                'El recambio tiene que ser medida '.($current->size?->code ?? 'igual').'. '
+                .$replacement->displayName().' es '.($replacement->size?->code ?? 'otra medida').'.'
+            );
+        }
+    }
+
     private function isRecapped(Tire $tire): bool
     {
         if ($tire->condition === TireCondition::Recapada) {
@@ -140,5 +227,15 @@ class PositionFitService
         }
 
         return (int) ($tire->currentLifecycle?->life_number ?? 1) > 1;
+    }
+
+    private function roleLabel(string $role): string
+    {
+        return match ($role) {
+            'DIRECCION', 'DIRECCIONAL' => 'dirección',
+            'TRACCION' => 'tracción',
+            'ARRASTRE' => 'arrastre',
+            default => strtolower($role),
+        };
     }
 }

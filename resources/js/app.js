@@ -222,9 +222,9 @@ const recambio = () => {
             const json = await res.json();
             const stock = json.data || [];
             slot.stock = stock;
-            return { data: stock, hint: json.hint || '', application: json.application_label || '' };
+            return { data: stock, hint: json.hint || '', application: json.application_label || '', size: json.size || '', role: json.role || '', rules: json.rules || [] };
         } catch {
-            return { data: slot.stock || [], hint: '' };
+            return { data: slot.stock || [], hint: '', rules: [] };
         }
     };
     const paintStockSelect = (select, emptyEl, submitEl, stock, placeholder) => {
@@ -380,14 +380,39 @@ const recambio = () => {
         const sale = document.getElementById('cambioSale');
         const entra = document.getElementById('cambioEntra');
         const lugar = document.getElementById('cambioLugar');
+        const requiere = document.getElementById('cambioRequiere');
         const slot = cambioSaleSelect?.value ? byId[String(cambioSaleSelect.value)] : currentSlot;
         if (!sale || !slot?.tire) {
             return;
         }
-        sale.textContent = slot.tire.name;
-        lugar.textContent = `${slot.code} · ${slot.name}`;
+        sale.textContent = `${slot.tire.name}${slot.tire.application ? ` · ${slot.tire.application}` : ''}`;
+        lugar.textContent = `${slot.code} · ${slot.name}${slot.role ? ` · ${slot.role}` : ''}`;
         const chosen = cambioTire?.selectedOptions?.[0];
         entra.textContent = chosen?.value ? chosen.textContent : 'Elegí la cubierta nueva';
+        if (requiere) {
+            const bits = [
+                slot.needed_application_label || slot.tire.application,
+                slot.tire.size_code || slot.tire.size,
+            ].filter(Boolean);
+            requiere.textContent = bits.length ? bits.join(' · ') : 'Según posición';
+        }
+    };
+
+    const paintFitRules = (rules, el) => {
+        if (!el) {
+            return;
+        }
+        el.innerHTML = '';
+        if (!rules?.length) {
+            el.hidden = true;
+            return;
+        }
+        rules.forEach((rule) => {
+            const li = document.createElement('li');
+            li.textContent = rule;
+            el.appendChild(li);
+        });
+        el.hidden = false;
     };
 
     const mountedSlots = () => slots.filter((slot) => !slot.empty && slot.tire);
@@ -398,7 +423,7 @@ const recambio = () => {
         }
         const items = mountedSlots().map((slot) => ({
             id: slot.id,
-            label: `${slot.code} · ${slot.tire.name}`,
+            label: `${slot.code} · ${slot.tire.name}${slot.tire.application ? ` · ${slot.tire.application}` : ''}${slot.tire.size_code ? ` · ${slot.tire.size_code}` : ''}`,
             tire_id: slot.tire.id,
         }));
         fillSelect(cambioSaleSelect, items, 'Elegí la cubierta que sale');
@@ -414,6 +439,7 @@ const recambio = () => {
         const slot = cambioSaleSelect?.value ? byId[String(cambioSaleSelect.value)] : null;
         if (!slot?.tire) {
             paintStockSelect(cambioTire, cambioEmpty, cambioSubmit, [], 'Elegir cubierta nueva');
+            paintFitRules([], document.getElementById('cambioRules'));
             paintCambioTicket();
             return;
         }
@@ -426,13 +452,14 @@ const recambio = () => {
         document.querySelector(`.tire-box--action[data-slot="${slot.id}"]`)?.classList.add('is-selected');
         const hint = document.getElementById('cambioHint');
         if (hint) {
-            hint.textContent = 'Buscando cubiertas del mismo tipo…';
+            hint.textContent = 'Buscando cubiertas compatibles por nomenclatura y medida…';
         }
         const q = document.getElementById('cambioSearch')?.value?.trim() || '';
         const result = await loadSlotStock(slot, q);
         paintStockSelect(cambioTire, cambioEmpty, cambioSubmit, result.data, 'Elegir cubierta nueva');
+        paintFitRules(result.rules || slot.fit_rules || [], document.getElementById('cambioRules'));
         if (hint) {
-            hint.textContent = result.hint || 'Solo cubiertas del mismo tipo que la montada.';
+            hint.textContent = result.hint || 'Solo cubiertas compatibles por nomenclatura, posición y medida.';
         }
         paintCambioTicket();
     };
@@ -546,7 +573,7 @@ const recambio = () => {
             loadSlotStock(slot, document.getElementById('installSearch')?.value?.trim() || '').then((result) => {
                 paintStockSelect(installTire, installEmpty, installSubmit, result.data, 'Elegir cubierta');
                 if (installHint) {
-                    installHint.textContent = result.hint || 'Elegí una cubierta compatible de stock.';
+                    installHint.textContent = result.hint || 'Elegí una cubierta compatible por nomenclatura y posición.';
                 }
             });
             return;

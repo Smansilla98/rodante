@@ -267,6 +267,7 @@
                         <div><dt>Lugar</dt><dd id="cambioLugar">—</dd></div>
                         <div><dt>Sale</dt><dd id="cambioSale">—</dd></div>
                         <div><dt>Entra</dt><dd id="cambioEntra">Elegí la cubierta nueva</dd></div>
+                        <div><dt>Requiere</dt><dd id="cambioRequiere">—</dd></div>
                     </dl>
 
                     <label class="field">
@@ -274,7 +275,8 @@
                         <select id="cambioSaleSelect" class="inp" required></select>
                     </label>
 
-                    <p class="recambio-dock__hint" id="cambioHint">Solo cubiertas del mismo tipo que la montada.</p>
+                    <p class="recambio-dock__hint" id="cambioHint">Solo cubiertas compatibles por nomenclatura, posición y medida.</p>
+                    <ul class="recambio-dock__rules" id="cambioRules" hidden></ul>
 
                     <label class="field">
                         <span>Buscar en stock</span>
@@ -286,7 +288,7 @@
                         <select name="tire_id" id="cambioTire" class="inp" required></select>
                     </label>
 
-                    <p class="recambio-dock__empty" id="cambioEmpty" hidden>No hay cubiertas del mismo tipo en stock.</p>
+                    <p class="recambio-dock__empty" id="cambioEmpty" hidden>No hay cubiertas compatibles en stock (misma nomenclatura y medida).</p>
 
                     <x-slot-odometer :last-km="$lastKm" id="cambioOdometer" />
 

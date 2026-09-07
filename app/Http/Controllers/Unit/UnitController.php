@@ -252,11 +252,15 @@ class UnitController extends Controller
         $position = $slot['position'];
         $mounted = $slot['tire'] ?? null;
         $needed = $fit->neededApplication($mounted, $position);
+        $guide = $fit->fitGuide($mounted, $position, $unit);
 
         $query = Tire::with('brand', 'model', 'size', 'currentLifecycle')->installable()->orderBy('individual_number');
         AccessScope::tires($query, $request->user());
         if ($width = $unit->allowedTireWidth()) {
             $query->whereHas('size', fn ($q) => $q->where('width_mm', $width));
+        }
+        if ($mounted?->size_id) {
+            $query->where('size_id', $mounted->size_id);
         }
         if ($needed) {
             $query->whereHas('model', fn ($m) => $m->whereIn('application', [
@@ -280,16 +284,20 @@ class UnitController extends Controller
             });
         }
 
+        $mapItem = fn (Tire $tire) => [
+            'id' => $tire->id,
+            'label' => $tire->displayName().' · '.($tire->model?->application?->label() ?? '').' · '.($tire->size?->code ?? '')
+                .($tire->model?->winter_capable ? ' · nieve' : ''),
+            'name' => $tire->displayName(),
+            'meta' => trim(($tire->model?->application?->label() ?? '').' · '.($tire->size?->code ?? '')),
+            'application' => $tire->model?->application?->value,
+            'application_label' => $tire->model?->application?->label(),
+            'size' => $tire->size?->code,
+        ];
+
         $items = $query->limit(80)->get()
             ->filter(fn (Tire $tire) => $fit->canReplace($tire, $position, $unit, $mounted))
-            ->map(fn (Tire $tire) => [
-                'id' => $tire->id,
-                'label' => $tire->displayName().' · '.($tire->model?->application?->label() ?? '').' · '.($tire->size?->code ?? '')
-                    .($tire->model?->winter_capable ? ' · nieve' : ''),
-                'name' => $tire->displayName(),
-                'meta' => trim(($tire->model?->application?->label() ?? '').' '.($tire->size?->code ?? '')),
-                'application' => $tire->model?->application?->value,
-            ])
+            ->map($mapItem)
             ->values();
 
         if ($winterPreferred && $items->isEmpty()) {
@@ -297,6 +305,9 @@ class UnitController extends Controller
             AccessScope::tires($fallback, $request->user());
             if ($width = $unit->allowedTireWidth()) {
                 $fallback->whereHas('size', fn ($q) => $q->where('width_mm', $width));
+            }
+            if ($mounted?->size_id) {
+                $fallback->where('size_id', $mounted->size_id);
             }
             if ($needed) {
                 $fallback->whereHas('model', fn ($m) => $m->whereIn('application', [
@@ -306,27 +317,31 @@ class UnitController extends Controller
             }
             $items = $fallback->limit(80)->get()
                 ->filter(fn (Tire $tire) => $fit->canReplace($tire, $position, $unit, $mounted))
-                ->map(fn (Tire $tire) => [
-                    'id' => $tire->id,
-                    'label' => $tire->displayName().' · '.($tire->model?->application?->label() ?? '').' · '.($tire->size?->code ?? ''),
-                    'name' => $tire->displayName(),
-                    'meta' => trim(($tire->model?->application?->label() ?? '').' '.($tire->size?->code ?? '')),
-                    'application' => $tire->model?->application?->value,
-                ])
+                ->map($mapItem)
                 ->values();
         }
 
-        $hint = $needed
-            ? 'Solo cubiertas de '.$needed->label().'.'
+        $hintParts = [];
+        if ($guide['application_label']) {
+            $hintParts[] = 'Nomenclatura: '.$guide['application_label'];
+        }
+        if ($guide['size']) {
+            $hintParts[] = 'medida '.$guide['size'];
+        }
+        $hint = $hintParts
+            ? 'Solo cubiertas compatibles ('.implode(' · ', $hintParts).').'
             : 'Cubiertas compatibles con esta ubicación.';
         if ($winterPreferred) {
-            $hint .= ' Unidad en '.($unit->duty?->label() ?? 'nieve').': priorizá modelos aptos nieve/cadenas.';
+            $hint .= ' Unidad en '.($unit->duty?->label() ?? 'nieve').': priorice modelos aptos nieve/cadenas.';
         }
 
         return response()->json([
             'data' => $items,
             'application' => $needed?->value,
             'application_label' => $needed?->label(),
+            'size' => $guide['size'],
+            'role' => $guide['role'],
+            'rules' => $guide['rules'],
             'hint' => $hint,
             'duty' => $unit->duty?->value,
             'duty_label' => $unit->duty?->label(),
@@ -632,12 +647,17 @@ class UnitController extends Controller
         return $layout->map(function (array $slot) use ($layout, $fit, $prefix, $unit) {
             $position = $slot['position'];
             $tire = $slot['tire'];
+            $guide = $fit->fitGuide($tire, $position, $unit);
 
             return [
                 'id' => $position->id,
                 'code' => $position->sheetCode($prefix),
                 'name' => $position->name,
                 'role' => $position->axleRole(),
+                'axle_role' => $position->axle_role,
+                'needed_application' => $guide['application'],
+                'needed_application_label' => $guide['application_label'],
+                'fit_rules' => $guide['rules'],
                 'empty' => $tire === null,
                 'tire' => $tire ? [
                     'id' => $tire->id,
@@ -647,7 +667,9 @@ class UnitController extends Controller
                     'code' => $tire->model?->code,
                     'modelName' => $tire->model?->name,
                     'application' => $tire->model?->application?->label(),
+                    'application_code' => $tire->model?->application?->value,
                     'size' => $tire->size?->displayName(),
+                    'size_code' => $tire->size?->code,
                     'condition' => $tire->condition->label(),
                     'status' => $tire->status->label(),
                     'life' => (int) ($tire->currentLifecycle?->life_number ?? 1),
