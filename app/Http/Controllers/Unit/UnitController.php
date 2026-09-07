@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Unit;
 use App\Enums\IncidentType;
 use App\Enums\TireApplication;
 use App\Enums\TireStatus;
+use App\Enums\UnitDuty;
 use App\Enums\UnitStatus;
 use App\Exceptions\DomainException;
 use App\Exceptions\SheetConflictException;
@@ -37,7 +38,14 @@ class UnitController extends Controller
 {
     public function index(Request $request)
     {
-        $units = FleetUnit::with('fleet', 'base', 'type', 'configuration', 'currentCouplingAsTractor.trailer', 'currentCouplingAsTrailer.tractor');
+        $units = FleetUnit::with(
+            'fleet',
+            'base',
+            'type',
+            'configuration',
+            'currentCouplingsAsTractor.trailer',
+            'currentCouplingAsTrailer.tractor'
+        );
         AccessScope::units($units, $request->user());
         $units = $units
             ->when($request->fleet_id, fn ($q, $id) => $q->where('fleet_id', $id))
@@ -68,6 +76,7 @@ class UnitController extends Controller
             'brand' => 'nullable|string|max:40',
             'model_name' => 'nullable|string|max:40',
             'current_odometer' => 'nullable|integer|min:0',
+            'duty' => ['nullable', Rule::enum(UnitDuty::class)],
             'notes' => 'nullable|string',
             'specs' => 'nullable|array',
             'specs.capacity_l' => 'nullable|integer|min:0',
@@ -85,6 +94,7 @@ class UnitController extends Controller
         $data['status'] = UnitStatus::Activa->value;
         $data['current_odometer'] = $type->has_odometer ? ($data['current_odometer'] ?? 0) : 0;
         $data['plate'] = strtoupper(trim($data['plate']));
+        $data['duty'] = $data['duty'] ?? null;
         if ($type->has_odometer) {
             $data['specs'] = null;
         } else {
@@ -105,17 +115,18 @@ class UnitController extends Controller
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $unit->load([
             'fleet', 'base', 'type', 'configuration.positions',
-            'currentCouplingAsTractor.trailer.type',
-            'currentCouplingAsTractor.trailer.base',
-            'currentCouplingAsTractor.trailer.configuration.positions',
-            'currentCouplingAsTractor.trailer.locations.tire.brand',
-            'currentCouplingAsTractor.trailer.locations.tire.model',
-            'currentCouplingAsTractor.trailer.locations.tire.size',
-            'currentCouplingAsTractor.trailer.locations.tire.openAssignment.openSegment',
-            'currentCouplingAsTractor.trailer.locations.position',
+            'currentCouplingsAsTractor.trailer.type',
+            'currentCouplingsAsTractor.trailer.base',
+            'currentCouplingsAsTractor.trailer.configuration.positions',
+            'currentCouplingsAsTractor.trailer.locations.tire.brand',
+            'currentCouplingsAsTractor.trailer.locations.tire.model',
+            'currentCouplingsAsTractor.trailer.locations.tire.size',
+            'currentCouplingsAsTractor.trailer.locations.tire.openAssignment.openSegment',
+            'currentCouplingsAsTractor.trailer.locations.position',
             'currentCouplingAsTrailer.tractor.type',
             'currentCouplingAsTrailer.tractor.base',
             'currentCouplingAsTrailer.tractor.configuration.positions',
+            'currentCouplingAsTrailer.tractor.currentCouplingsAsTractor.trailer',
             'currentCouplingAsTrailer.tractor.locations.tire.brand',
             'currentCouplingAsTrailer.tractor.locations.tire.model',
             'currentCouplingAsTrailer.tractor.locations.tire.size',
@@ -127,10 +138,14 @@ class UnitController extends Controller
 
         $layout = $unit->tireLayout();
         $canOperate = $request->user()->role->canWrite();
+        $openTrailerIds = UnitCoupling::whereNull('uncoupled_at')->pluck('trailer_id');
 
         return view('units.show', [
             'unit' => $unit,
             'sheetUnits' => $unit->sheetUnits(),
+            'openCouplings' => $unit->hasOdometer()
+                ? $unit->currentCouplingsAsTractor
+                : collect($unit->currentCouplingAsTrailer ? [$unit->currentCouplingAsTrailer] : []),
             'history' => $reports->unitHistory($unit),
             'slotMap' => $canOperate ? $this->slotMap($unit, $layout, $fit) : [],
             'rotationPatterns' => $canOperate ? $patterns->forLayout($layout, $fit, $unit) : [],
@@ -147,10 +162,16 @@ class UnitController extends Controller
             'reasons' => MovementReason::where('applies_to', 'RETIRO')->orderBy('name')->get(),
             'destinations' => [TireStatus::Stock, TireStatus::Reserva, TireStatus::EnReparacion],
             'tractors' => tap(FleetUnit::whereHas('type', fn ($q) => $q->where('has_odometer', true))->orderBy('plate'), fn ($q) => AccessScope::units($q, $request->user()))->get(),
-            'trailers' => tap(FleetUnit::whereHas('type', fn ($q) => $q->where('has_odometer', false))->orderBy('plate'), fn ($q) => AccessScope::units($q, $request->user()))->get(),
+            'trailers' => tap(
+                FleetUnit::whereHas('type', fn ($q) => $q->where('has_odometer', false))
+                    ->whereNotIn('id', $openTrailerIds)
+                    ->orderBy('plate'),
+                fn ($q) => AccessScope::units($q, $request->user())
+            )->get(),
             'configurations' => UnitConfiguration::where('is_active', true)->orderBy('code')->get()
                 ->filter(fn ($cfg) => $cfg->isCompatibleWith($unit->type))
                 ->values(),
+            'duties' => UnitDuty::cases(),
         ]);
     }
 
@@ -160,7 +181,7 @@ class UnitController extends Controller
         $this->authorize('operate', $unit);
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $data = $request->validate([
-            'odometer' => 'required|integer|min:0',
+            'odometer' => 'nullable|integer|min:0',
             'notes' => 'nullable|string',
             'removals' => 'array',
             'removals.*.tire_id' => 'nullable|exists:tires,id',
@@ -172,6 +193,7 @@ class UnitController extends Controller
             'installations.*.position_id' => 'nullable|exists:unit_positions,id',
             'installations.*.expect_empty' => 'nullable|boolean',
         ]);
+        $data = $this->withResolvedOdometer($data, $unit);
         $data['removals'] = collect($data['removals'] ?? [])->filter(fn ($row) => ! empty($row['tire_id']))->values()->all();
         $data['installations'] = collect($data['installations'] ?? [])->filter(fn ($row) => ! empty($row['tire_id']) && ! empty($row['position_id']))->values()->all();
 
@@ -233,6 +255,10 @@ class UnitController extends Controller
                 TireApplication::Mixto->value,
             ]));
         }
+        $winterPreferred = $fit->prefersWinter($unit);
+        if ($winterPreferred) {
+            $query->whereHas('model', fn ($m) => $m->where('winter_capable', true));
+        }
         if ($term = trim((string) ($data['q'] ?? ''))) {
             $digits = preg_replace('/\D+/', '', $term);
             $query->where(function ($inner) use ($term, $digits) {
@@ -249,22 +275,52 @@ class UnitController extends Controller
             ->filter(fn (Tire $tire) => $fit->canReplace($tire, $position, $unit, $mounted))
             ->map(fn (Tire $tire) => [
                 'id' => $tire->id,
-                'label' => $tire->displayName().' · '.($tire->model?->application?->label() ?? '').' · '.($tire->size?->code ?? ''),
+                'label' => $tire->displayName().' · '.($tire->model?->application?->label() ?? '').' · '.($tire->size?->code ?? '')
+                    .($tire->model?->winter_capable ? ' · nieve' : ''),
                 'name' => $tire->displayName(),
                 'meta' => trim(($tire->model?->application?->label() ?? '').' '.($tire->size?->code ?? '')),
                 'application' => $tire->model?->application?->value,
             ])
             ->values();
 
+        if ($winterPreferred && $items->isEmpty()) {
+            $fallback = Tire::with('brand', 'model', 'size', 'currentLifecycle')->installable()->orderBy('individual_number');
+            AccessScope::tires($fallback, $request->user());
+            if ($width = $unit->allowedTireWidth()) {
+                $fallback->whereHas('size', fn ($q) => $q->where('width_mm', $width));
+            }
+            if ($needed) {
+                $fallback->whereHas('model', fn ($m) => $m->whereIn('application', [
+                    $needed->value,
+                    TireApplication::Mixto->value,
+                ]));
+            }
+            $items = $fallback->limit(80)->get()
+                ->filter(fn (Tire $tire) => $fit->canReplace($tire, $position, $unit, $mounted))
+                ->map(fn (Tire $tire) => [
+                    'id' => $tire->id,
+                    'label' => $tire->displayName().' · '.($tire->model?->application?->label() ?? '').' · '.($tire->size?->code ?? ''),
+                    'name' => $tire->displayName(),
+                    'meta' => trim(($tire->model?->application?->label() ?? '').' '.($tire->size?->code ?? '')),
+                    'application' => $tire->model?->application?->value,
+                ])
+                ->values();
+        }
+
         $hint = $needed
             ? 'Solo cubiertas de '.$needed->label().'.'
             : 'Cubiertas compatibles con esta ubicación.';
+        if ($winterPreferred) {
+            $hint .= ' Unidad en '.($unit->duty?->label() ?? 'nieve').': priorizá modelos aptos nieve/cadenas.';
+        }
 
         return response()->json([
             'data' => $items,
             'application' => $needed?->value,
             'application_label' => $needed?->label(),
             'hint' => $hint,
+            'duty' => $unit->duty?->value,
+            'duty_label' => $unit->duty?->label(),
         ]);
     }
 
@@ -283,7 +339,7 @@ class UnitController extends Controller
         $mounted = ['cambio', 'pinchadura', 'rotacion', 'retirar', 'incidencia', 'medicion'];
         $data = $request->validate([
             'action' => 'required|in:install,cambio,pinchadura,rotacion,retirar,incidencia,medicion,patron',
-            'odometer' => 'required|integer|min:0',
+            'odometer' => 'nullable|integer|min:0',
             'position_id' => 'nullable|exists:unit_positions,id',
             'tire_id' => 'nullable|exists:tires,id',
             'expected_tire_id' => [
@@ -304,6 +360,7 @@ class UnitController extends Controller
             'readings.*.zone_id' => 'nullable|integer',
             'readings.*.millimeters' => 'nullable|numeric|min:0',
         ]);
+        $data = $this->withResolvedOdometer($data, $unit);
 
         try {
             DB::transaction(function () use ($unit, $data, $operations, $incidents, $measurements, $patterns, $fit, $request) {
@@ -381,7 +438,11 @@ class UnitController extends Controller
             return back()->withErrors(['coupling' => $e->getMessage()]);
         }
 
-        return back()->with('success', 'Acoplamiento registrado.');
+        $msg = $tractor->fresh()->coupledTrailers()->count() > 1
+            ? 'Acoplado agregado al bitrén.'
+            : 'Acoplamiento registrado.';
+
+        return back()->with('success', $msg);
     }
 
     public function uncouple(Request $request, FleetUnit $unit, CouplingService $couplings)
@@ -391,8 +452,20 @@ class UnitController extends Controller
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $data = $request->validate([
             'odometer' => 'required|integer|min:0',
+            'coupling_id' => 'nullable|exists:unit_couplings,id',
         ]);
-        $coupling = $unit->currentCouplingAsTractor ?: $unit->currentCouplingAsTrailer;
+
+        if (! empty($data['coupling_id'])) {
+            $coupling = UnitCoupling::where('id', $data['coupling_id'])
+                ->whereNull('uncoupled_at')
+                ->where(function ($q) use ($unit) {
+                    $q->where('tractor_id', $unit->id)->orWhere('trailer_id', $unit->id);
+                })
+                ->first();
+        } else {
+            $coupling = $unit->currentCouplingsAsTractor->first() ?: $unit->currentCouplingAsTrailer;
+        }
+
         if (! $coupling) {
             return back()->withErrors(['coupling' => 'La unidad no está acoplada.']);
         }
@@ -439,6 +512,16 @@ class UnitController extends Controller
         $this->authorizeVisible('view', $unit);
         $this->authorize('manage', $unit);
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
+
+        if ($request->has('duty')) {
+            $data = $request->validate([
+                'duty' => ['nullable', Rule::enum(UnitDuty::class)],
+            ]);
+            $unit->update(['duty' => $data['duty'] ?: null]);
+
+            return back()->with('success', 'Tipo de negocio actualizado.');
+        }
+
         if ($unit->hasOdometer()) {
             return back()->withErrors(['specs' => 'La medida lineal aplica a tanque, semi o batea.']);
         }
@@ -476,6 +559,7 @@ class UnitController extends Controller
             'brand' => 'nullable|string|max:40',
             'model_name' => 'nullable|string|max:40',
             'status' => 'required|in:ACTIVA,INACTIVA,SPARE',
+            'duty' => ['nullable', Rule::enum(UnitDuty::class)],
             'notes' => 'nullable|string',
             'specs' => 'nullable|array',
             'specs.capacity_l' => 'nullable|integer|min:0',
@@ -614,7 +698,7 @@ class UnitController extends Controller
         }
 
         $operations->execute($unit, [
-            'odometer' => (int) $data['odometer'],
+            ...$this->odometerPayload($data),
             'notes' => $data['notes'] ?? null,
             'installations' => [[
                 'tire_id' => (int) $data['tire_id'],
@@ -652,7 +736,7 @@ class UnitController extends Controller
             ], $user);
 
             $operations->execute($unit, [
-                'odometer' => (int) $data['odometer'],
+                ...$this->odometerPayload($data),
                 'notes' => $data['notes'] ?? 'Cambio',
                 'removals' => [[
                     'tire_id' => $current->id,
@@ -690,7 +774,7 @@ class UnitController extends Controller
             ], $user);
 
             $operations->execute($unit, [
-                'odometer' => (int) $data['odometer'],
+                ...$this->odometerPayload($data),
                 'notes' => $data['notes'] ?? 'Pinchadura',
                 'removals' => [[
                     'tire_id' => $current->id,
@@ -756,7 +840,7 @@ class UnitController extends Controller
 
         $current = $this->mountedTire($unit, $position, isset($data['expected_tire_id']) ? (int) $data['expected_tire_id'] : null);
         $operations->execute($unit, [
-            'odometer' => (int) $data['odometer'],
+            ...$this->odometerPayload($data),
             'notes' => $data['notes'] ?? 'Retiro',
             'removals' => [[
                 'tire_id' => $current->id,
@@ -813,6 +897,43 @@ class UnitController extends Controller
             'bases' => $bases->get(),
             'types' => UnitType::where('is_active', true)->orderBy('id')->get(),
             'configurations' => UnitConfiguration::where('is_active', true)->orderBy('id')->get(),
+            'duties' => UnitDuty::cases(),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    private function withResolvedOdometer(array $data, FleetUnit $unit): array
+    {
+        if (! array_key_exists('odometer', $data) || $data['odometer'] === null || $data['odometer'] === '') {
+            try {
+                $odometerUnit = app(CouplingService::class)->resolveOdometerUnit($unit);
+                $data['odometer'] = (int) $odometerUnit->current_odometer;
+            } catch (DomainException) {
+                $data['odometer'] = (int) ($unit->current_odometer ?? 0);
+            }
+            $data['odometer_provisional'] = true;
+
+            return $data;
+        }
+
+        $data['odometer'] = (int) $data['odometer'];
+        $data['odometer_provisional'] = false;
+
+        return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{odometer: int, odometer_provisional: bool}
+     */
+    private function odometerPayload(array $data): array
+    {
+        return [
+            'odometer' => (int) ($data['odometer'] ?? 0),
+            'odometer_provisional' => (bool) ($data['odometer_provisional'] ?? false),
         ];
     }
 }

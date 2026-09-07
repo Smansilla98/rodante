@@ -3,7 +3,7 @@
 @section('title', 'Odómetros')
 @section('content')
 @php $editing = $editing ?? null; @endphp
-<x-page-header kicker="Operación" title="Odómetros" subtitle="La lectura se asienta al operar. Si hubo un error, se corrige acá.">
+<x-page-header kicker="Operación" title="Odómetros" subtitle="La lectura se asienta al operar. Si gomería dejó el km vacío, aparece como provisional y se corrige acá.">
     <x-slot:actions>
         <x-export-csv :href="route('exports.odometers', request()->query())" />
     </x-slot:actions>

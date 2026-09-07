@@ -108,6 +108,16 @@ class PositionFitService
         }
     }
 
+    public function dutyHint(?FleetUnit $unit): ?string
+    {
+        return $unit?->duty?->hint();
+    }
+
+    public function prefersWinter(?FleetUnit $unit): bool
+    {
+        return (bool) $unit?->duty?->prefersWinterTires();
+    }
+
     private function assertSizeFitsUnit(Tire $tire, FleetUnit $unit): void
     {
         $width = $unit->allowedTireWidth();

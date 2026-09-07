@@ -52,19 +52,27 @@ class CouplingService
                 $this->uncouple($openTrailer, $odometer, $user, 'Reemplazo de acoplamiento');
             }
 
-            $openTractor = UnitCoupling::where('tractor_id', $tractor->id)->whereNull('uncoupled_at')->lockForUpdate()->first();
-            if ($openTractor) {
-                $this->uncouple($openTractor, $odometer, $user, 'El tractor cambia de acoplado');
+            $openCount = UnitCoupling::where('tractor_id', $tractor->id)->whereNull('uncoupled_at')->lockForUpdate()->count();
+            if ($openCount >= FleetUnit::MAX_BITREN_TRAILERS) {
+                throw new DomainException(
+                    'Este tractor ya tiene '.$openCount.' acoplados (máximo '.FleetUnit::MAX_BITREN_TRAILERS.' para bitrén).'
+                );
             }
+
+            $slotOrder = (int) (UnitCoupling::where('tractor_id', $tractor->id)
+                ->whereNull('uncoupled_at')
+                ->max('slot_order') ?? 0) + 1;
 
             $coupling = UnitCoupling::create([
                 'tractor_id' => $tractor->id,
                 'trailer_id' => $trailer->id,
+                'slot_order' => $slotOrder,
                 'tractor_odometer_start' => $odometer,
                 'coupled_at' => now(),
                 'user_id' => $user->id,
                 'notes' => $notes,
                 'open_trailer_key' => $trailer->id,
+                // Ya no es unique: marca tractor en acople abierto (varios en bitrén).
                 'open_tractor_key' => $tractor->id,
             ]);
 
@@ -75,6 +83,7 @@ class CouplingService
             $this->audit->log('coupling.created', $coupling, null, [
                 'tractor' => $tractor->plate,
                 'trailer' => $trailer->plate,
+                'slot_order' => $slotOrder,
                 'odometer' => $odometer,
             ]);
 
@@ -106,6 +115,8 @@ class CouplingService
                 'notes' => trim(($coupling->notes ? $coupling->notes.' | ' : '').($notes ?? '')),
             ]);
 
+            $this->reorderOpenSlots($tractor->id);
+
             $coupling->loadMissing('trailer');
             $this->odometers->record($tractor, $odometer, $user, null, 'Desacople de '.$coupling->trailer->plate);
             $this->audit->log('coupling.closed', $coupling, null, [
@@ -116,6 +127,24 @@ class CouplingService
 
             return $coupling->refresh();
         });
+    }
+
+    private function reorderOpenSlots(int $tractorId): void
+    {
+        $open = UnitCoupling::where('tractor_id', $tractorId)
+            ->whereNull('uncoupled_at')
+            ->orderBy('slot_order')
+            ->orderBy('id')
+            ->lockForUpdate()
+            ->get();
+
+        $order = 1;
+        foreach ($open as $row) {
+            if ((int) $row->slot_order !== $order) {
+                $row->update(['slot_order' => $order]);
+            }
+            $order++;
+        }
     }
 
     private function openSegmentsForTrailer(FleetUnit $trailer, FleetUnit $tractor, int $odometer): void

@@ -29,6 +29,15 @@
         </label>
         <label class="field"><span>Marca del equipo</span><input name="brand" value="{{ old('brand', $unit->brand) }}" placeholder="Scania, Volvo, Bonano…"></label>
         <label class="field"><span>Modelo</span><input name="model_name" value="{{ old('model_name', $unit->model_name) }}"></label>
+        <label class="field"><span>Tipo de negocio / recorrido</span>
+            <select name="duty" class="inp">
+                <option value="">Sin definir</option>
+                @foreach($duties ?? \App\Enums\UnitDuty::cases() as $duty)
+                    <option value="{{ $duty->value }}" @selected(old('duty', $unit->duty?->value) === $duty->value)>{{ $duty->label() }}</option>
+                @endforeach
+            </select>
+            <span class="hint">Nieve / cordillera prioriza cubiertas aptas para cadenas en el stock del recambio.</span>
+        </label>
         <label class="field"><span>Notas</span><textarea name="notes" rows="2">{{ old('notes', $unit->notes) }}</textarea></label>
 
         @unless($unit->hasOdometer())

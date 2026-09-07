@@ -1,11 +1,11 @@
 @extends('layouts.app')
 @section('kicker', 'Ayuda')
-@section('title', 'Qué hace cada parte')
+@section('title', 'Guía por rol')
 @section('content')
 <x-page-header
     kicker="Ayuda"
-    title="Qué hace cada parte, según tu rol"
-    subtitle="Estás como {{ $profile['role']->label() }}. Abajo ves qué podés hacer vos y, más abajo, la tabla completa de todos los roles."
+    title="Guía de permisos según el rol"
+    subtitle="Su rol actual es {{ $profile['role']->label() }}. A continuación se detallan las acciones habilitadas y, más abajo, la matriz completa de todos los roles."
 >
     <x-slot:actions>
         <a class="btn btn-primary" href="{{ route('help.manual') }}">Manual de uso</a>
@@ -13,21 +13,27 @@
 </x-page-header>
 
 <section class="help-you" aria-labelledby="helpYouTitle">
-    <p class="help-you__kicker">Tu rol</p>
+    <p class="help-you__kicker">Rol asignado</p>
     <h2 id="helpYouTitle">{{ $profile['role']->label() }}</h2>
     <p class="help-you__summary">{{ $profile['summary'] }}</p>
     <p class="help-you__day">{{ $profile['day'] }}</p>
     <div class="help-you__cols">
-        <div>
-            <h3>Podés</h3>
+        <div class="help-perm help-perm--can">
+            <h3>
+                <span class="help-perm__ico" aria-hidden="true"><x-icon name="shield" class="w-4 h-4" /></span>
+                Permisos habilitados
+            </h3>
             <ul>
                 @foreach($profile['can'] as $item)
                     <li>{{ $item }}</li>
                 @endforeach
             </ul>
         </div>
-        <div>
-            <h3>No podés</h3>
+        <div class="help-perm help-perm--cannot">
+            <h3>
+                <span class="help-perm__ico" aria-hidden="true"><x-icon name="alert" class="w-4 h-4" /></span>
+                Limitaciones del rol
+            </h3>
             <ul>
                 @foreach($profile['cannot'] as $item)
                     <li>{{ $item }}</li>
@@ -37,8 +43,8 @@
     </div>
 </section>
 
-<h2 class="help-h">Cada sección del menú</h2>
-<p class="help-lead">El recuadro marcado es lo que aplica a <strong>{{ $profile['role']->label() }}</strong>. Si dice No, esa acción no está habilitada para tu usuario.</p>
+<h2 class="help-h">Secciones del menú</h2>
+<p class="help-lead">El recuadro resaltado corresponde a <strong>{{ $profile['role']->label() }}</strong>. Si indica No, esa acción no está habilitada para su usuario.</p>
 
 <div class="help-mods">
     @foreach($modules as $module)
@@ -49,7 +55,7 @@
             <div class="help-mod__foot">
                 <span class="perm perm--{{ $module['perm'] }}">{{ \App\Support\SystemGuide::permLabel($module['perm']) }}</span>
                 @if($module['you'] && $module['route'])
-                    <a href="{{ route($module['route']) }}">Ir</a>
+                    <a href="{{ route($module['route']) }}">Abrir</a>
                 @endif
             </div>
         </article>
@@ -57,13 +63,13 @@
 </div>
 
 <h2 class="help-h" id="matriz">Matriz de permisos</h2>
-<p class="help-lead">Lectura de izquierda a derecha: qué puede hacer cada rol en cada parte. Tu columna está resaltada.</p>
+<p class="help-lead">Lectura de izquierda a derecha: qué puede realizar cada rol en cada módulo. Su columna aparece resaltada.</p>
 
 <div class="help-matrix-wrap">
     <table class="help-matrix">
         <thead>
             <tr>
-                <th scope="col">Parte del sistema</th>
+                <th scope="col">Módulo</th>
                 @foreach($matrixRoles as $colRole)
                     <th scope="col" @class(['is-you' => $colRole === $profile['role']])>{{ $colRole->label() }}</th>
                 @endforeach
@@ -88,11 +94,11 @@
     </table>
 </div>
 
-<h2 class="help-h">Los cinco roles</h2>
+<h2 class="help-h">Roles del sistema</h2>
 <div class="help-roles">
     @foreach($allRoles as $item)
         <article @class(['help-role', 'is-you' => $item['role'] === $profile['role']])>
-            <h3>{{ $item['role']->label() }}@if($item['role'] === $profile['role']) <span>Tu usuario</span>@endif</h3>
+            <h3>{{ $item['role']->label() }}@if($item['role'] === $profile['role']) <span>Su usuario</span>@endif</h3>
             <p>{{ $item['summary'] }}</p>
             <p class="help-role__day">{{ $item['day'] }}</p>
         </article>

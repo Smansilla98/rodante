@@ -33,7 +33,7 @@ class TireOperationService
     ) {}
 
     /**
-     * @param  array{odometer:int,occurred_at?:string,notes?:string,removals?:array,installations?:array}  $data
+     * @param  array{odometer?:int|null,odometer_provisional?:bool,occurred_at?:string,notes?:string,removals?:array,installations?:array}  $data
      */
     public function execute(FleetUnit $unit, array $data, User $user): TireOperation
     {
@@ -46,8 +46,18 @@ class TireOperationService
             $unit = FleetUnit::with('type', 'configuration.positions')->lockForUpdate()->findOrFail($unit->id);
             $odometerUnit = $this->couplings->resolveOdometerUnit($unit);
             $odometerUnit = FleetUnit::lockForUpdate()->findOrFail($odometerUnit->id);
-            $odometer = (int) $data['odometer'];
+            $provisional = (bool) ($data['odometer_provisional'] ?? false);
+            if (! array_key_exists('odometer', $data) || $data['odometer'] === null || $data['odometer'] === '') {
+                $provisional = true;
+                $odometer = (int) $odometerUnit->current_odometer;
+            } else {
+                $odometer = (int) $data['odometer'];
+            }
             $occurredAt = $data['occurred_at'] ?? now();
+            $notes = $data['notes'] ?? null;
+            if ($provisional) {
+                $notes = trim(($notes ? $notes.' | ' : '').'Km provisional — logística completa después');
+            }
 
             $removals = $data['removals'] ?? [];
             $installations = $data['installations'] ?? [];
@@ -72,11 +82,12 @@ class TireOperationService
                 'odometer_unit_id' => $odometerUnit->id,
                 'user_id' => $user->id,
                 'odometer' => $odometer,
+                'odometer_provisional' => $provisional,
                 'occurred_at' => $occurredAt,
-                'notes' => $data['notes'] ?? null,
+                'notes' => $notes,
             ]);
 
-            $this->odometers->record($odometerUnit, $odometer, $user, $operation->id);
+            $this->odometers->record($odometerUnit, $odometer, $user, $operation->id, null, $provisional);
 
             foreach ($removals as $removal) {
                 $this->removeToStock($unit, $operation, $removal, $odometerUnit, $odometer, $occurredAt, $user);

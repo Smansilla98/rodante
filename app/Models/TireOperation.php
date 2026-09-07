@@ -9,12 +9,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class TireOperation extends Model
 {
     protected $fillable = [
-        'unit_id', 'odometer_unit_id', 'user_id', 'odometer', 'occurred_at', 'notes',
+        'unit_id', 'odometer_unit_id', 'user_id', 'odometer', 'odometer_provisional', 'occurred_at', 'notes',
     ];
 
     protected function casts(): array
     {
-        return ['occurred_at' => 'datetime'];
+        return [
+            'occurred_at' => 'datetime',
+            'odometer_provisional' => 'boolean',
+        ];
     }
 
     public function unit(): BelongsTo

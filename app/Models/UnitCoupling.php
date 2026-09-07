@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class UnitCoupling extends Model
 {
     protected $fillable = [
-        'tractor_id', 'trailer_id', 'tractor_odometer_start', 'tractor_odometer_end',
+        'tractor_id', 'trailer_id', 'slot_order', 'tractor_odometer_start', 'tractor_odometer_end',
         'coupled_at', 'uncoupled_at', 'user_id', 'notes',
         'open_trailer_key', 'open_tractor_key',
     ];
@@ -18,6 +18,7 @@ class UnitCoupling extends Model
         return [
             'coupled_at' => 'datetime',
             'uncoupled_at' => 'datetime',
+            'slot_order' => 'integer',
         ];
     }
 

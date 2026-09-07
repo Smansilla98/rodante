@@ -10,12 +10,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TireModel extends Model
 {
-    protected $fillable = ['tire_brand_id', 'code', 'name', 'application', 'is_active'];
+    protected $fillable = ['tire_brand_id', 'code', 'name', 'application', 'winter_capable', 'is_active'];
 
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
+            'winter_capable' => 'boolean',
             'application' => TireApplication::class,
         ];
     }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\UnitStatus;
+use App\Enums\UnitDuty;
 use App\Models\Concerns\BelongsToCompany;
 use Database\Factories\FleetUnitFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,15 +18,18 @@ class FleetUnit extends Model
     /** @use HasFactory<FleetUnitFactory> */
     use BelongsToCompany, HasFactory;
 
+    public const MAX_BITREN_TRAILERS = 4;
+
     protected $fillable = [
         'company_id', 'fleet_id', 'base_id', 'unit_type_id', 'unit_configuration_id',
-        'plate', 'brand', 'model_name', 'current_odometer', 'status', 'notes', 'specs',
+        'plate', 'brand', 'model_name', 'current_odometer', 'status', 'duty', 'notes', 'specs',
     ];
 
     protected function casts(): array
     {
         return [
             'status' => UnitStatus::class,
+            'duty' => UnitDuty::class,
             'current_odometer' => 'integer',
             'specs' => 'array',
         ];
@@ -56,9 +60,21 @@ class FleetUnit extends Model
         return $this->hasOne(UnitCoupling::class, 'trailer_id')->whereNull('uncoupled_at');
     }
 
+    /** Primer acoplado (compat). Preferí currentCouplingsAsTractor para bitrén. */
     public function currentCouplingAsTractor(): HasOne
     {
-        return $this->hasOne(UnitCoupling::class, 'tractor_id')->whereNull('uncoupled_at');
+        return $this->hasOne(UnitCoupling::class, 'tractor_id')
+            ->whereNull('uncoupled_at')
+            ->orderBy('slot_order')
+            ->orderBy('id');
+    }
+
+    public function currentCouplingsAsTractor(): HasMany
+    {
+        return $this->hasMany(UnitCoupling::class, 'tractor_id')
+            ->whereNull('uncoupled_at')
+            ->orderBy('slot_order')
+            ->orderBy('id');
     }
 
     public function locations(): HasMany
@@ -71,10 +87,33 @@ class FleetUnit extends Model
         return (bool) $this->type?->has_odometer;
     }
 
+    public function isBitren(): bool
+    {
+        return $this->coupledTrailers()->count() >= 2;
+    }
+
+    public function coupledTrailers(): Collection
+    {
+        $this->loadMissing('currentCouplingsAsTractor.trailer');
+
+        return $this->currentCouplingsAsTractor
+            ->pluck('trailer')
+            ->filter()
+            ->values();
+    }
+
+    public function compositionLabel(): string
+    {
+        return $this->sheetUnits()->pluck('plate')->join(' + ');
+    }
+
     public function specSummary(): ?string
     {
         $specs = $this->specs ?? [];
         $parts = [];
+        if ($this->duty) {
+            $parts[] = $this->duty->label();
+        }
         if (! empty($specs['capacity_l'])) {
             $parts[] = number_format((int) $specs['capacity_l']).' L';
         }
@@ -110,16 +149,21 @@ class FleetUnit extends Model
 
     public function coupledPartner(): ?self
     {
-        return $this->currentCouplingAsTractor?->trailer
+        return $this->currentCouplingsAsTractor->first()?->trailer
             ?? $this->currentCouplingAsTrailer?->tractor;
     }
 
     public function sheetUnits(): Collection
     {
         $tractor = $this->hasOdometer() ? $this : $this->currentCouplingAsTrailer?->tractor;
-        $trailer = $this->hasOdometer() ? $this->currentCouplingAsTractor?->trailer : $this;
+        if (! $tractor) {
+            return collect([$this])->filter()->values();
+        }
 
-        return collect([$tractor, $trailer])->filter()->unique('id')->values();
+        $tractor->loadMissing(['currentCouplingsAsTractor.trailer']);
+        $trailers = $tractor->currentCouplingsAsTractor->pluck('trailer');
+
+        return collect([$tractor])->merge($trailers)->filter()->unique('id')->values();
     }
 
     public function tireLayout(): Collection

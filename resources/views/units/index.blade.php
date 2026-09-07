@@ -34,23 +34,30 @@
                 <th scope="col">Tipo</th>
                 <th scope="col">Config</th>
                 <th scope="col">Flota</th>
-                <th scope="col">Acoplado</th>
+                <th scope="col">Negocio</th>
+                <th scope="col">Formación</th>
                 <th scope="col">Odómetro</th>
             </tr>
         </thead>
         <tbody>
         @forelse($units as $unit)
+            @php
+                $formation = $unit->hasOdometer()
+                    ? $unit->currentCouplingsAsTractor->pluck('trailer.plate')->filter()->join(' + ')
+                    : ($unit->currentCouplingAsTrailer?->tractor?->plate);
+            @endphp
             <tr>
                 <td><a href="{{ route('units.show', $unit) }}">{{ $unit->plate }}</a></td>
                 <td>{{ $unit->type->name }}</td>
                 <td class="mono">{{ $unit->configuration->code }}</td>
                 <td>{{ $unit->fleet->name }}</td>
-                <td>{{ $unit->currentCouplingAsTractor?->trailer?->plate ?? $unit->currentCouplingAsTrailer?->tractor?->plate ?? '—' }}</td>
+                <td>{{ $unit->duty?->label() ?? '—' }}</td>
+                <td>{{ $formation ?: '—' }}</td>
                 <td class="mono">{{ $unit->hasOdometer() ? number_format($unit->current_odometer).' km' : 'Usa tractor' }}</td>
             </tr>
         @empty
             <tr>
-                <td colspan="6">
+                <td colspan="7">
                     <x-empty title="No hay unidades" :action="auth()->user()->role->canWrite() ? 'Nueva unidad' : null" :href="route('units.create')" />
                 </td>
             </tr>

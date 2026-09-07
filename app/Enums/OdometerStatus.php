@@ -11,7 +11,8 @@ enum OdometerStatus: string
     public function label(): string
     {
         return match ($this) {
-            self::Pending, self::Validated => 'Registrado',
+            self::Pending => 'Provisional',
+            self::Validated => 'Registrado',
             self::Rejected => 'Rechazado',
         };
     }
@@ -19,7 +20,8 @@ enum OdometerStatus: string
     public function tone(): string
     {
         return match ($this) {
-            self::Pending, self::Validated => 'green',
+            self::Pending => 'amber',
+            self::Validated => 'green',
             self::Rejected => 'red',
         };
     }

@@ -318,8 +318,32 @@
                 <div><span>Chasis</span>{{ $unit->specSummary() }}</div>
             @endif
             <div><span>Odómetro</span>{{ $unit->hasOdometer() ? number_format($unit->current_odometer).' km' : 'Usa el del tractor acoplado' }}</div>
-            <div><span>Acoplado</span>{{ $coupled?->plate ?? 'Sin acoplar' }}</div>
+            <div><span>Tipo de negocio</span>{{ $unit->duty?->label() ?? 'Sin definir' }}</div>
+            <div><span>Formación</span>
+                @php $coupledTrailers = $unit->hasOdometer() ? $unit->coupledTrailers() : collect(); @endphp
+                @if($unit->hasOdometer() && $coupledTrailers->isNotEmpty())
+                    {{ $unit->plate }} + {{ $coupledTrailers->pluck('plate')->join(' + ') }}
+                    @if($coupledTrailers->count() >= 2) <span class="hint">(bitren)</span> @endif
+                @else
+                    {{ $coupled?->plate ?? 'Sin acoplar' }}
+                @endif
+            </div>
         </div>
+        @if(auth()->user()->role->canWrite())
+            <form method="POST" action="{{ route('units.specs', $unit) }}" class="flex flex-wrap gap-2 mt-4">
+                @csrf
+                <select name="duty" class="inp flex-1">
+                    <option value="">Tipo de negocio / recorrido</option>
+                    @foreach($duties ?? \App\Enums\UnitDuty::cases() as $duty)
+                        <option value="{{ $duty->value }}" @selected(old('duty', $unit->duty?->value) === $duty->value)>{{ $duty->label() }}</option>
+                    @endforeach
+                </select>
+                <button class="btn btn-ghost btn-sm">Guardar negocio</button>
+            </form>
+            @if($unit->duty)
+                <p class="hint mt-2">{{ $unit->duty->hint() }}</p>
+            @endif
+        @endif
         @if(! $unit->hasOdometer() && auth()->user()->role->canWrite())
             <form method="POST" action="{{ route('units.specs', $unit) }}" class="flex flex-wrap gap-2 mt-4">
                 @csrf
@@ -333,7 +357,8 @@
     </x-panel>
 
     @if(auth()->user()->role->canManageCouplings())
-    <x-panel title="Acoplar / desacoplar">
+    <x-panel title="Acoplar / bitrén">
+        <p class="hint mb-3">Podés sumar hasta {{ \App\Models\FleetUnit::MAX_BITREN_TRAILERS }} acoplados al mismo tractor (bitren / multi-tanque).</p>
         <form method="POST" action="{{ route('units.couple', $unit) }}" class="flex flex-wrap gap-2 mb-3">
             @csrf
             <select name="other_unit_id" class="inp flex-1 min-w-32">
@@ -344,13 +369,15 @@
             <input name="odometer" type="number" class="inp w-28" placeholder="Km" required>
             <button class="btn btn-dark btn-sm">Acoplar</button>
         </form>
-        @if($coupled)
-            <form method="POST" action="{{ route('units.uncouple', $unit) }}" class="flex gap-2">
+        @foreach($openCouplings ?? [] as $coupling)
+            <form method="POST" action="{{ route('units.uncouple', $unit) }}" class="flex flex-wrap gap-2 mb-2 items-center">
                 @csrf
+                <input type="hidden" name="coupling_id" value="{{ $coupling->id }}">
+                <span class="mono text-sm flex-1">#{{ $coupling->slot_order }} · {{ $coupling->trailer?->plate ?? $coupling->tractor?->plate }}</span>
                 <input name="odometer" type="number" class="inp w-28" placeholder="Km" required>
                 <button class="btn btn-ghost btn-sm">Desacoplar</button>
             </form>
-        @endif
+        @endforeach
     </x-panel>
     @endif
 

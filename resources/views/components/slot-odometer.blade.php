@@ -1,20 +1,19 @@
 @props(['lastKm' => null, 'id' => null])
 <label class="field field--km">
-    <span>Km de la unidad en esta operación</span>
+    <span>Km de la unidad <em class="font-normal text-[var(--muted)]">(opcional)</em></span>
     <input
         name="odometer"
         type="number"
         min="{{ $lastKm ?? 0 }}"
         class="inp"
-        required
         inputmode="numeric"
         autocomplete="off"
         @if($id) id="{{ $id }}" @endif
-        placeholder="{{ $lastKm !== null ? number_format($lastKm, 0, '', '') : 'Km del camión ahora' }}"
+        placeholder="{{ $lastKm !== null ? number_format($lastKm, 0, '', '') : 'Dejar vacío si logística lo carga después' }}"
     >
     @if($lastKm !== null)
-        <span class="hint">Última lectura de la unidad: {{ number_format($lastKm) }} km. Vale solo para esta cubierta; las demás no lo heredan hasta que las retires.</span>
+        <span class="hint">Última lectura: {{ number_format($lastKm) }} km. Si lo dejás vacío, se usa esa lectura como provisional y logística la corrige después.</span>
     @else
-        <span class="hint">Anotá el odómetro del camión en este recambio, como en la orden de gomería.</span>
+        <span class="hint">Podés dejarlo vacío: el cambio se registra igual y logística completa el km luego.</span>
     @endif
 </label>

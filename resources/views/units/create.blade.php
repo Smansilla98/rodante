@@ -43,6 +43,15 @@
         <label class="field" id="odometerField"><span>Odómetro actual</span><input name="current_odometer" type="number" min="0" value="{{ old('current_odometer') }}" placeholder="Solo tractor / camión"></label>
         <label class="field"><span>Marca del equipo</span><input name="brand" value="{{ old('brand') }}" placeholder="Scania, Volvo, Bonano…"></label>
         <label class="field"><span>Modelo</span><input name="model_name" value="{{ old('model_name') }}"></label>
+        <label class="field"><span>Tipo de negocio / recorrido</span>
+            <select name="duty" class="inp">
+                <option value="">Sin definir</option>
+                @foreach($duties ?? \App\Enums\UnitDuty::cases() as $duty)
+                    <option value="{{ $duty->value }}" @selected(old('duty') === $duty->value)>{{ $duty->label() }}</option>
+                @endforeach
+            </select>
+            <span class="hint">Sirve para acotar cubiertas (p. ej. nieve / cadenas) en el recambio.</span>
+        </label>
 
         <fieldset class="space-y-4" id="trailerSpecs">
             <legend class="text-sm font-semibold">Datos del chasis / tanque</legend>

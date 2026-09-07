@@ -35,7 +35,9 @@ class HelpTest extends TestCase
             ->assertSee('Administrador')
             ->assertSee('Catálogo')
             ->assertSee('Administrar')
-            ->assertSee('Qué hace cada parte');
+            ->assertSee('Guía de permisos según el rol')
+            ->assertSee('Permisos habilitados')
+            ->assertSee('Limitaciones del rol');
     }
 
     public function test_consulta_sees_read_only_copy(): void
@@ -46,8 +48,8 @@ class HelpTest extends TestCase
             ->get(route('help.index'))
             ->assertOk()
             ->assertSee('Consulta')
-            ->assertSee('Solo lectura')
-            ->assertSee('No podés')
+            ->assertSee('solo lectura', false)
+            ->assertSee('Limitaciones del rol')
             ->assertSee('Montar, rotar, retirar o medir cubiertas');
     }
 

@@ -41,6 +41,7 @@ class OdometerService
         User $user,
         ?int $operationId = null,
         ?string $notes = null,
+        bool $provisional = false,
     ): OdometerReading {
         if (! $unit->hasOdometer()) {
             throw new DomainException('Solo las unidades tractor registran odómetro propio.');
@@ -64,14 +65,14 @@ class OdometerService
         $reading = OdometerReading::create([
             'unit_id' => $unit->id,
             'value' => $odometer,
-            'status' => OdometerStatus::Validated,
+            'status' => $provisional ? OdometerStatus::Pending : OdometerStatus::Validated,
             'recorded_by' => $user->id,
             'recorded_at' => now(),
-            'validated_by' => $user->id,
-            'validated_at' => now(),
-            'validation_source' => 'OPERACION',
+            'validated_by' => $provisional ? null : $user->id,
+            'validated_at' => $provisional ? null : now(),
+            'validation_source' => $provisional ? 'PROVISIONAL' : 'OPERACION',
             'tire_operation_id' => $operationId,
-            'notes' => $notes,
+            'notes' => $notes ?? ($provisional ? 'Km provisional — pendiente de logística' : null),
         ]);
 
         $unit->update(['current_odometer' => $odometer]);

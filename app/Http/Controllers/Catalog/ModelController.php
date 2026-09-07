@@ -27,7 +27,10 @@ class ModelController extends Controller
     {
         $this->authorize('manageCatalogs');
         $data = $this->validated($request);
-        $model = TireModel::create($data + ['is_active' => true]);
+        $model = TireModel::create($data + [
+            'is_active' => true,
+            'winter_capable' => $request->boolean('winter_capable'),
+        ]);
         $model->sizes()->sync($data['size_ids'] ?? []);
 
         return back()->with('success', 'Modelo creado.');
@@ -37,7 +40,10 @@ class ModelController extends Controller
     {
         $this->authorize('manageCatalogs');
         $data = $this->validated($request, $model);
-        $model->update($data + ['is_active' => $request->boolean('is_active')]);
+        $model->update($data + [
+            'is_active' => $request->boolean('is_active'),
+            'winter_capable' => $request->boolean('winter_capable'),
+        ]);
         $model->sizes()->sync($data['size_ids'] ?? []);
 
         return back()->with('success', 'Modelo actualizado.');

@@ -39,6 +39,10 @@
                 </label>
             @endforeach
         </div>
+        <label class="abm-check">
+            <input type="checkbox" name="winter_capable" value="1" @checked(old('winter_capable', $editing?->winter_capable))>
+            Apto nieve / cadenas
+        </label>
         @if($editing)
             <label class="abm-check"><input type="checkbox" name="is_active" value="1" @checked(old('is_active', $editing->is_active))> Activo</label>
         @endif
@@ -58,6 +62,7 @@
                 <th scope="col">Código</th>
                 <th scope="col">Nombre</th>
                 <th scope="col">Aplicación</th>
+                <th scope="col">Nieve</th>
                 <th scope="col">Medidas</th>
                 <th scope="col" class="text-right"> </th>
             </tr>
@@ -69,11 +74,12 @@
                 <td class="mono">{{ $model->code }}</td>
                 <td>{{ $model->name }}</td>
                 <td>{{ $model->application?->label() ?? 'Mixta' }}</td>
+                <td>{{ $model->winter_capable ? 'Sí' : '—' }}</td>
                 <td>{{ $model->sizes->pluck('code')->join(', ') ?: '—' }}</td>
                 <td class="text-right"><a class="abm-link" href="{{ route('models.index', ['edit' => $model->id]) }}">Editar</a></td>
             </tr>
         @empty
-            <tr><td colspan="6"><x-empty title="No hay modelos" action="Nuevo modelo" :href="route('models.index')" /></td></tr>
+            <tr><td colspan="7"><x-empty title="No hay modelos" action="Nuevo modelo" :href="route('models.index')" /></td></tr>
         @endforelse
         </tbody>
     </x-content-table>
