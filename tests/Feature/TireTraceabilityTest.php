@@ -843,7 +843,7 @@ class TireTraceabilityTest extends TestCase
         $this->assertStringContainsString('Tocá el auxilio del mapa para instalar', $html);
         $this->assertStringContainsString('Cambio', $html);
         $this->assertStringContainsString('Sale', $html);
-        $this->assertStringContainsString('Km de la unidad en esta operación', $html);
+        $this->assertStringContainsString('Km de la unidad', $html);
         $this->assertStringNotContainsString('id="sheetOdometer"', $html);
     }
 

@@ -91,7 +91,9 @@ class ProductionHardeningTest extends TestCase
     {
         [$tire] = $this->purchaseTires(1, 88110);
         $this->actingAs($this->admin)
+            ->withSession(['_token' => 'test-csrf-token'])
             ->put(route('tires.update', $tire), [
+                '_token' => 'test-csrf-token',
                 'individual_number' => $tire->individual_number,
                 'dot' => '1b3c 4d-0524',
                 'tire_brand_id' => $tire->tire_brand_id,
@@ -108,8 +110,10 @@ class ProductionHardeningTest extends TestCase
 
         [$other] = $this->purchaseTires(1, 88111);
         $this->actingAs($this->admin)
+            ->withSession(['_token' => 'test-csrf-token'])
             ->from(route('tires.show', [$other, 'edit' => 1]))
             ->put(route('tires.update', $other), [
+                '_token' => 'test-csrf-token',
                 'individual_number' => $other->individual_number,
                 'dot' => '1B3C4D0524',
                 'tire_brand_id' => $other->tire_brand_id,

@@ -11,8 +11,10 @@ class AccessibilitySurfaceTest extends TestCase
         $this->get('/login')
             ->assertOk()
             ->assertSee('for="username"', false)
-            ->assertSee('for="password"', false);
+            ->assertSee('for="password"', false)
+            ->assertSee('administrador de tu empresa', false);
 
+        config(['rodante.password_reset_enabled' => true]);
         $this->get('/olvide-contrasena')
             ->assertOk()
             ->assertSee('for="login"', false);

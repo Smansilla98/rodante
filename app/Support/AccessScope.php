@@ -177,8 +177,14 @@ class AccessScope
 
     public static function canViewTire(User $user, Tire|int $tire): bool
     {
-        $id = $tire instanceof Tire ? (int) $tire->id : $tire;
-        $ok = Tire::query()->whereKey($id);
+        $model = $tire instanceof Tire
+            ? $tire
+            : Tire::withoutTenant()->find($tire);
+        if (! $model || (int) $model->company_id !== (int) $user->company_id) {
+            return false;
+        }
+
+        $ok = Tire::withoutTenant()->whereKey($model->id)->where('company_id', $user->company_id);
         self::tires($ok, $user);
 
         return $ok->exists();
@@ -186,8 +192,14 @@ class AccessScope
 
     public static function canViewUnit(User $user, FleetUnit|int $unit): bool
     {
-        $id = $unit instanceof FleetUnit ? (int) $unit->id : $unit;
-        $ok = FleetUnit::query()->whereKey($id);
+        $model = $unit instanceof FleetUnit
+            ? $unit
+            : FleetUnit::withoutTenant()->find($unit);
+        if (! $model || (int) $model->company_id !== (int) $user->company_id) {
+            return false;
+        }
+
+        $ok = FleetUnit::withoutTenant()->whereKey($model->id)->where('company_id', $user->company_id);
         self::units($ok, $user);
 
         return $ok->exists();

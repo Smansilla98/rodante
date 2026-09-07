@@ -83,6 +83,7 @@ class AuthController extends Controller
         $request->session()->regenerate();
         $request->session()->forget('url.intended');
         $user->update(['last_login_at' => now()]);
+        app(\App\Support\Tenancy\TenantContext::class)->setId((int) $user->company_id);
         app(\App\Services\TelemetryService::class)->record('auth.login', $user, [
             'username' => $user->username,
         ]);

@@ -41,6 +41,7 @@ class QaRolesCommand extends Command
             if ($user->role !== $role) {
                 $this->warn("{$username} no tiene el rol esperado ({$user->role->label()}).");
             }
+            app(\App\Support\Tenancy\TenantContext::class)->setId((int) $user->company_id);
             $user->fleets()->sync(Fleet::pluck('id'));
             $user->bases()->sync(Base::pluck('id'));
             $users->push($user);

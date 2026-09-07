@@ -93,15 +93,18 @@ class RoleQaRunner
         $this->http->actingAs($adminA);
         app(\App\Support\Tenancy\TenantContext::class)->setId((int) $adminA->company_id);
         $response = $this->http->get('/neumaticos/'.$tireB->id);
+        $status = $response instanceof TestResponse
+            ? $response->status()
+            : (int) $response->getStatusCode();
         $this->steps[] = [
             'user' => $adminA->username,
             'role' => $adminA->role->value,
             'action' => 'cross-tenant tire show',
             'method' => 'GET',
             'path' => '/neumaticos/'.$tireB->id,
-            'status' => $response->status(),
+            'status' => $status,
             'expected' => '404',
-            'ok' => $response->status() === 404,
+            'ok' => $status === 404,
             'detail' => 'Aislamiento multiempresa',
         ];
     }
@@ -652,7 +655,7 @@ class RoleQaRunner
             $response = $raw instanceof TestResponse
                 ? $raw
                 : TestResponse::fromBaseResponse($raw);
-            $status = $response->status();
+            $status = (int) $response->getStatusCode();
             $flash = null;
             $error = null;
             try {
@@ -660,7 +663,7 @@ class RoleQaRunner
                 $errors = $response->session()->get('errors');
                 $error = $errors ? collect($errors->getBag('default')->all())->flatten()->first() : null;
             } catch (\Throwable) {
-                // 403/500 a veces no arrastran sesión.
+                // Streamed/403 a veces no arrastran sesión.
             }
             $ok = in_array($status, $expected, true);
             if ($ok && $needFlash && $status === 302) {
@@ -669,7 +672,7 @@ class RoleQaRunner
             $detail = $flash ?: ($error ?: ($response->headers->get('Location') ?: ''));
             if ($status >= 500) {
                 $exception = $response->exception ?? null;
-                $detail = $exception?->getMessage() ?: substr(trim(strip_tags($response->getContent())), 0, 180);
+                $detail = $exception?->getMessage() ?: 'error '.$status;
             }
             if (is_string($detail) && strlen($detail) > 180) {
                 $detail = substr($detail, 0, 180).'…';

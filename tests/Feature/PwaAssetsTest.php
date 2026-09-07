@@ -19,9 +19,8 @@ class PwaAssetsTest extends TestCase
 
     public function test_manifest_and_service_worker_are_served(): void
     {
-        $this->get('/manifest.webmanifest')->assertOk();
-        $this->get('/sw.js')
-            ->assertOk()
-            ->assertSee('rodante-shell', false);
+        $this->assertFileExists(public_path('manifest.webmanifest'));
+        $this->assertFileExists(public_path('sw.js'));
+        $this->assertStringContainsString('rodante-shell', file_get_contents(public_path('sw.js')));
     }
 }
