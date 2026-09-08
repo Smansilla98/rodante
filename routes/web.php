@@ -24,6 +24,7 @@ use App\Http\Controllers\QrController;
 use App\Http\Controllers\Report\ReportController;
 use App\Http\Controllers\RetreadShopController;
 use App\Http\Controllers\SearchController;
+use App\Http\Controllers\StartingPointController;
 use App\Http\Controllers\Tire\TireController;
 use App\Http\Controllers\TirePhotoController;
 use App\Http\Controllers\Unit\UnitController;
@@ -114,8 +115,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/ayuda', [HelpController::class, 'index'])->name('help.index');
     Route::get('/ayuda/manual', [HelpController::class, 'manual'])->name('help.manual');
     Route::get('/ayuda/punto-de-partida', [HelpController::class, 'startingPoint'])->name('help.starting-point');
+    Route::get('/punto-de-partida', [StartingPointController::class, 'index'])->name('starting-point.index');
 
     Route::middleware('capability:write')->group(function () {
+        Route::post('/punto-de-partida/stock', [StartingPointController::class, 'importStock'])->name('starting-point.import-stock');
         Route::post('/neumaticos/{tire}/incidencias', [TireController::class, 'storeIncident'])->name('tires.incidents.store');
         Route::post('/neumaticos/{tire}/mediciones', [TireController::class, 'storeMeasurement'])->name('tires.measurements.store');
         Route::post('/neumaticos/{tire}/stock', [TireController::class, 'returnToStock'])->name('tires.return-stock');

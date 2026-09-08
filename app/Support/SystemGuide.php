@@ -213,6 +213,20 @@ class SystemGuide
                 ],
             ],
             [
+                'key' => 'starting_point',
+                'name' => 'Punto de partida',
+                'group' => 'Operación',
+                'what' => 'Stock real previo al sistema: cubiertas ya compradas y anotadas afuera. Entran a stock sin orden de compra.',
+                'route' => 'starting-point.index',
+                'cells' => [
+                    'CONSULTA' => $v,
+                    'OPERARIO' => $o,
+                    'LOGISTICA' => $o,
+                    'JEFE_SECTOR' => $o,
+                    'ADMINISTRADOR' => $a,
+                ],
+            ],
+            [
                 'key' => 'odometers',
                 'name' => 'Odómetros',
                 'group' => 'Operación',

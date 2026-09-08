@@ -37,6 +37,7 @@
                 <x-nav-link :href="route('tires.stock')" icon="boxes" label="Stock" match="tires.stock" />
                 <x-nav-link :href="route('tires.index')" icon="circle" label="Neumáticos" :match="['tires.index', 'tires.show']" />
                 <x-nav-link :href="route('purchases.index')" icon="cart" label="Compras" match="purchases.*" />
+                <x-nav-link :href="route('starting-point.index')" icon="grid" label="Punto de partida" match="starting-point.*" />
                 <x-nav-link :href="route('work-orders.index')" icon="grid" label="Órdenes" match="work-orders.*" />
                 <x-nav-link :href="route('odometers.index')" icon="gauge" label="Odómetros" match="odometers.*" />
             </div>

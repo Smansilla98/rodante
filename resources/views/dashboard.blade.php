@@ -186,6 +186,11 @@
         <div class="hub__t">Ayuda</div>
         <div class="hub__s">Qué hace cada parte según tu rol y el manual de uso.</div>
     </a>
+    <a class="hub" href="{{ route('starting-point.index') }}">
+        <span class="hub__ico" aria-hidden="true"><x-icon name="grid" class="w-6 h-6" /></span>
+        <div class="hub__t">Punto de partida</div>
+        <div class="hub__s">Stock real previo al sistema (sin compra).</div>
+    </a>
 </div>
 
 <div class="grid lg:grid-cols-2 gap-5">

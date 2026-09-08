@@ -84,7 +84,9 @@ class ReportService
                 'tone' => 'blue',
                 'title' => $life->started_by === 'COMPRA'
                     ? 'Arranca la vida 1'
-                    : 'Vida '.$life->life_number.($life->started_by === 'RECAPADO' ? ' por recapado' : ''),
+                    : ($life->started_by === 'PUNTO_DE_PARTIDA'
+                        ? 'Alta por punto de partida'
+                        : 'Vida '.$life->life_number.($life->started_by === 'RECAPADO' ? ' por recapado' : '')),
                 'body' => $life->ended_at
                     ? 'Cerrada el '.$life->ended_at->format('d/m/Y')
                     : 'Vida en curso',
@@ -358,6 +360,8 @@ class ReportService
             'INC:RECAPADO' => ['LIFE:RECAPADO', 'INC:RECAPADO'],
             'PURCHASE_IN' => ['LIFE:COMPRA', 'PURCHASE_IN'],
             'LIFE:COMPRA' => ['PURCHASE_IN', 'LIFE:COMPRA'],
+            'OPENING_IN' => ['LIFE:PUNTO_DE_PARTIDA', 'OPENING_IN'],
+            'LIFE:PUNTO_DE_PARTIDA' => ['OPENING_IN', 'LIFE:PUNTO_DE_PARTIDA'],
             'TO_REPAIR' => ['REMOVE_TO_STOCK', 'INC:PINCHADURA', 'TO_REPAIR'],
             default => [],
         };

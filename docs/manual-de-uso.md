@@ -224,11 +224,13 @@ Cómo se edita: el listado es de lectura. Arriba hay **un** formulario. **Editar
 
 ---
 
-## 13. Punto de partida (carga inicial)
+## 13. Punto de partida (stock previo)
 
-Para implantar una flota nueva (catálogo, patentes, stock y cubiertas montadas), usá la guía **Ayuda → Punto de partida**: orden de carga, plantillas CSV, nomenclatura de posiciones (`E1_IZQ`, `E2_IZQ_EXT`, `AUXILIO`, …) y glosario. El texto también está en `docs/punto-de-partida.md`.
+**Operación → Punto de partida** carga el stock real que la empresa ya tenía antes de Rodante (cubiertas compradas y anotadas afuera). No es una compra: no hay proveedor ni OC.
 
-Hoy el import por archivo cubre **compras a stock**. La planilla de cubiertas ya en servicio es el formato de arranque para la implantación.
+Usá el CSV con columnas `Numero;Marca;Modelo;Medida;DOT;Km;Condicion`. Después montá en planilla lo que ya estaba en servicio. Guía, nomenclatura y glosario están en esa misma pantalla (`docs/punto-de-partida.md`).
+
+Las compras nuevas del día a día siguen en **Operación → Compras**.
 
 ---
 

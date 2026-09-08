@@ -47,6 +47,7 @@ class AuditLog extends Model
             'purchase.confirmed' => 'Confirmó una compra',
             'purchase.updated' => 'Editó una compra',
             'purchase.discarded' => 'Anuló una compra',
+            'opening.imported' => 'Cargó punto de partida (stock previo)',
             'odometer.updated' => 'Corrigió el odómetro',
             'tire.operation' => $this->operationAction($new),
             'tire.rotated' => 'Rotó cubiertas',
@@ -68,6 +69,11 @@ class AuditLog extends Model
         $text = match ($this->action) {
             'purchase.created', 'purchase.confirmed', 'purchase.updated' => $this->purchaseDetail($entity),
             'purchase.discarded' => $new['number'] ?? '—',
+            'opening.imported' => $this->joinParts([
+                $new['base'] ?? $entity?->name,
+                isset($new['count']) ? $new['count'].' cubiertas' : null,
+                $new['as_of'] ?? null,
+            ]),
             'odometer.updated' => $this->joinParts([
                 $new['unit'] ?? $entity?->unit?->plate,
                 $this->km($new['odometer'] ?? $entity?->value),

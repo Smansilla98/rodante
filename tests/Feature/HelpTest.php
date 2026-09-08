@@ -65,16 +65,9 @@ class HelpTest extends TestCase
             ->assertSee('Punto de partida');
     }
 
-    public function test_starting_point_renders_nomenclature_and_glossary(): void
+    public function test_help_starting_point_redirects_to_operation(): void
     {
         $this->get(route('help.starting-point'))
-            ->assertOk()
-            ->assertSee('Punto de partida')
-            ->assertSee('Glosario')
-            ->assertSee('E1_IZQ')
-            ->assertSee('AUXILIO')
-            ->assertSee('6X4')
-            ->assertSee('Nomenclatura de posiciones')
-            ->assertSee('Marca;Modelo;Medida;Cantidad');
+            ->assertRedirect(route('starting-point.index'));
     }
 }

@@ -5,6 +5,7 @@ namespace App\Enums;
 enum MovementType: string
 {
     case PurchaseIn = 'PURCHASE_IN';
+    case OpeningIn = 'OPENING_IN';
     case RemoveToStock = 'REMOVE_TO_STOCK';
     case Install = 'INSTALL';
     case Rotate = 'ROTATE';
@@ -22,6 +23,7 @@ enum MovementType: string
     {
         return match ($this) {
             self::PurchaseIn => 'Ingreso por compra',
+            self::OpeningIn => 'Ingreso punto de partida',
             self::RemoveToStock => 'Retiro a stock',
             self::Install => 'Instalación',
             self::Rotate => 'Rotación',
