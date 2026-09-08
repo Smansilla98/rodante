@@ -32,50 +32,55 @@
             <input type="date" name="from" value="{{ request('from') }}" aria-label="Desde">
             <input type="date" name="to" value="{{ request('to') }}" aria-label="Hasta">
             <input type="number" name="min_mm" step="0.1" min="0" value="{{ request('min_mm') }}" placeholder="mm máx. cubierta" aria-label="Profundidad máxima de cubierta" inputmode="decimal">
-            <label class="field field--check"><input type="checkbox" name="alert" value="1" @checked(request()->boolean('alert'))> Solo alertas</label>
+            <label class="field field--check">
+                <input type="checkbox" name="alert" value="1" @checked(request()->boolean('alert'))>
+                <span>Solo alertas</span>
+            </label>
             <button class="btn btn-dark btn-sm">Filtrar</button>
         </form>
     </x-slot:toolbar>
-    <x-content-table>
-        <thead>
-            <tr>
-                <th scope="col">Fecha</th>
-                <th scope="col">Cubierta</th>
-                <th scope="col">Unidad</th>
-                <th scope="col">Profundidades</th>
-                <th scope="col">Alerta</th>
-            </tr>
-        </thead>
-        <tbody>
-        @forelse($measurements as $m)
-            <tr @class(['row-alert' => $m->raises_alert])>
-                <td class="mono">{{ $m->measured_at?->format('d/m/Y H:i') }}</td>
-                <td>
-                    <a href="{{ route('tires.show', $m->tire) }}">{{ $m->tire?->displayName() }}</a>
-                </td>
-                <td>
-                    @if($m->unit)
-                        <a href="{{ route('units.show', $m->unit) }}">{{ $m->unit->plate }}</a>
-                    @else
-                        —
-                    @endif
-                </td>
-                <td class="mono text-sm">
-                    {{ $m->readings->map(fn ($r) => ($r->zone?->name ?? '?').': '.$r->millimeters)->implode(' · ') ?: '—' }}
-                </td>
-                <td>
-                    @if($m->raises_alert)
-                        <x-status tone="warn">Desgaste irregular</x-status>
-                    @else
-                        <x-status tone="ok">OK</x-status>
-                    @endif
-                </td>
-            </tr>
-        @empty
-            <tr><td colspan="5"><x-empty title="Sin mediciones" text="Cuando se midan profundidades, aparecen acá." /></td></tr>
-        @endforelse
-        </tbody>
-    </x-content-table>
-    <div class="pager">{{ $measurements->links() }}</div>
+    @if($measurements->isEmpty())
+        <x-empty title="Sin mediciones" text="Cuando se midan profundidades, aparecen acá." />
+    @else
+        <x-content-table class="table-mediciones">
+            <thead>
+                <tr>
+                    <th scope="col" class="col-fecha">Fecha</th>
+                    <th scope="col">Cubierta</th>
+                    <th scope="col" class="col-unidad">Unidad</th>
+                    <th scope="col">Profundidades</th>
+                    <th scope="col" class="col-alerta">Alerta</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach($measurements as $m)
+                <tr @class(['row-alert' => $m->raises_alert])>
+                    <td class="mono">{{ $m->measured_at?->format('d/m/Y H:i') }}</td>
+                    <td>
+                        <a href="{{ route('tires.show', $m->tire) }}">{{ $m->tire?->displayName() }}</a>
+                    </td>
+                    <td>
+                        @if($m->unit)
+                            <a href="{{ route('units.show', $m->unit) }}">{{ $m->unit->plate }}</a>
+                        @else
+                            —
+                        @endif
+                    </td>
+                    <td class="mono text-sm">
+                        {{ $m->readings->map(fn ($r) => ($r->zone?->name ?? '?').': '.$r->millimeters)->implode(' · ') ?: '—' }}
+                    </td>
+                    <td>
+                        @if($m->raises_alert)
+                            <x-status tone="warn">Desgaste irregular</x-status>
+                        @else
+                            <x-status tone="ok">OK</x-status>
+                        @endif
+                    </td>
+                </tr>
+            @endforeach
+            </tbody>
+        </x-content-table>
+        <div class="pager">{{ $measurements->links() }}</div>
+    @endif
 </x-panel>
 @endsection
