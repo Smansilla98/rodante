@@ -184,6 +184,7 @@ class RoleQaRunner
             'Export mediciones' => route('exports.measurements'),
             'Ayuda por rol' => route('help.index'),
             'Manual' => route('help.manual'),
+            'Punto de partida' => route('help.starting-point'),
         ];
         foreach ($pages as $label => $url) {
             $this->hit($user, $label, 'GET', $url, [], [200]);

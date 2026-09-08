@@ -113,6 +113,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/ayuda', [HelpController::class, 'index'])->name('help.index');
     Route::get('/ayuda/manual', [HelpController::class, 'manual'])->name('help.manual');
+    Route::get('/ayuda/punto-de-partida', [HelpController::class, 'startingPoint'])->name('help.starting-point');
 
     Route::middleware('capability:write')->group(function () {
         Route::post('/neumaticos/{tire}/incidencias', [TireController::class, 'storeIncident'])->name('tires.incidents.store');

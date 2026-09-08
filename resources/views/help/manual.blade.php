@@ -9,6 +9,7 @@
 >
     <x-slot:actions>
         <a class="btn btn-ghost" href="{{ route('help.index') }}">Qué hace cada rol</a>
+        <a class="btn btn-ghost" href="{{ route('help.starting-point') }}">Punto de partida</a>
         <button class="btn btn-dark no-print" type="button" id="btnPrint">Imprimir</button>
     </x-slot:actions>
 </x-page-header>

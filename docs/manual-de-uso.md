@@ -224,7 +224,15 @@ Cómo se edita: el listado es de lectura. Arriba hay **un** formulario. **Editar
 
 ---
 
-## 13. Si algo no se puede guardar
+## 13. Punto de partida (carga inicial)
+
+Para implantar una flota nueva (catálogo, patentes, stock y cubiertas montadas), usá la guía **Ayuda → Punto de partida**: orden de carga, plantillas CSV, nomenclatura de posiciones (`E1_IZQ`, `E2_IZQ_EXT`, `AUXILIO`, …) y glosario. El texto también está en `docs/punto-de-partida.md`.
+
+Hoy el import por archivo cubre **compras a stock**. La planilla de cubiertas ya en servicio es el formato de arranque para la implantación.
+
+---
+
+## 14. Si algo no se puede guardar
 
 El sistema muestra un mensaje arriba de la pantalla. Causas frecuentes:
 

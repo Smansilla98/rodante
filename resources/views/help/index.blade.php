@@ -9,6 +9,7 @@
 >
     <x-slot:actions>
         <a class="btn btn-primary" href="{{ route('help.manual') }}">Manual de uso</a>
+        <a class="btn btn-ghost" href="{{ route('help.starting-point') }}">Punto de partida</a>
     </x-slot:actions>
 </x-page-header>
 

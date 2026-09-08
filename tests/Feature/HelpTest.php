@@ -26,6 +26,7 @@ class HelpTest extends TestCase
 
         $this->get(route('help.index'))->assertRedirect(route('login'));
         $this->get(route('help.manual'))->assertRedirect(route('login'));
+        $this->get(route('help.starting-point'))->assertRedirect(route('login'));
     }
 
     public function test_admin_sees_role_guide_and_catalog_permission(): void
@@ -37,7 +38,8 @@ class HelpTest extends TestCase
             ->assertSee('Administrar')
             ->assertSee('Guía de permisos según el rol')
             ->assertSee('Permisos habilitados')
-            ->assertSee('Limitaciones del rol');
+            ->assertSee('Limitaciones del rol')
+            ->assertSee('Punto de partida');
     }
 
     public function test_consulta_sees_read_only_copy(): void
@@ -59,6 +61,20 @@ class HelpTest extends TestCase
             ->assertOk()
             ->assertSee('Manual de uso')
             ->assertSee('planilla')
-            ->assertSee('Odómetros');
+            ->assertSee('Odómetros')
+            ->assertSee('Punto de partida');
+    }
+
+    public function test_starting_point_renders_nomenclature_and_glossary(): void
+    {
+        $this->get(route('help.starting-point'))
+            ->assertOk()
+            ->assertSee('Punto de partida')
+            ->assertSee('Glosario')
+            ->assertSee('E1_IZQ')
+            ->assertSee('AUXILIO')
+            ->assertSee('6X4')
+            ->assertSee('Nomenclatura de posiciones')
+            ->assertSee('Marca;Modelo;Medida;Cantidad');
     }
 }
