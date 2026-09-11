@@ -2198,9 +2198,10 @@ body.sheet-modal-open {
     display: block;
 }
 
-.pattern-btn:disabled {
+.pattern-btn:disabled,
+.pattern-btn.is-blocked {
     opacity: 0.45;
-    cursor: not-allowed;
+    cursor: help;
 }
 
 .pattern-btn.is-on {

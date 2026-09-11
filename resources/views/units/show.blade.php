@@ -52,16 +52,24 @@
 
             @if($rotationPatterns)
                 <h2 class="stock-rail__title">Rotación</h2>
+                <p class="hint text-xs mb-2">Longitudinal, En X o Diagonal. Si un esquema está gris, faltan cubiertas o hay incompatibilidad (pasá el mouse para ver por qué).</p>
                 <div class="pattern-list">
                     @foreach($rotationPatterns as $pattern)
-                        <button type="button" class="pattern-btn" data-pattern="{{ $pattern['code'] }}"
-                            @disabled(! $pattern['ready'])
-                            title="{{ $pattern['ready'] ? $pattern['hint'] : $pattern['blocked'] }}">
+                        <button type="button" class="pattern-btn {{ $pattern['ready'] ? '' : 'is-blocked' }}"
+                            data-pattern="{{ $pattern['code'] }}"
+                            data-ready="{{ $pattern['ready'] ? '1' : '0' }}"
+                            data-blocked="{{ $pattern['blocked'] }}"
+                            title="{{ $pattern['ready'] ? $pattern['hint'] : $pattern['blocked'] }}"
+                            aria-disabled="{{ $pattern['ready'] ? 'false' : 'true' }}">
                             <x-rotation-mini :code="$pattern['code']" />
                             <span>{{ $pattern['name'] }}</span>
                         </button>
                     @endforeach
                 </div>
+                @php $blockedHint = collect($rotationPatterns)->firstWhere('ready', false)['blocked'] ?? null; @endphp
+                @if($blockedHint && ! collect($rotationPatterns)->contains('ready', true))
+                    <p class="hint text-xs mt-2">{{ $blockedHint }}</p>
+                @endif
             @endif
         </aside>
     @endif
@@ -232,7 +240,10 @@
                     <span>Nota</span>
                     <input name="notes" class="inp" placeholder="Opcional">
                 </label>
-                <button class="btn btn-primary w-full mt-3" id="patronSubmit">Aplicar esquema</button>
+                <div class="flex gap-2 mt-3">
+                    <button type="button" class="btn btn-ghost flex-1" id="patronCancel">Cancelar</button>
+                    <button class="btn btn-primary flex-1" id="patronSubmit">Aplicar esquema</button>
+                </div>
             </form>
         </aside>
         <script type="application/json" id="slotMap">@json($slotMap)</script>
@@ -365,7 +376,12 @@
             $coupleOptions = $unit->hasOdometer() ? $trailers : $tractors;
             $atBitrenCap = $unit->hasOdometer() && ($openCouplings?->count() ?? 0) >= \App\Models\FleetUnit::MAX_BITREN_TRAILERS;
         @endphp
-        <p class="hint mb-3">Puede sumar hasta {{ \App\Models\FleetUnit::MAX_BITREN_TRAILERS }} acoplados al mismo tractor (bitren / multi-tanque). Si elige un acoplado de otro tractor, se reasigna a esta formación.</p>
+        <p class="hint mb-3">
+            <strong>Para qué sirve:</strong> une el tractor (el que lleva odómetro) con uno o más acoplados (semi, tanque, batea).
+            Así la planilla muestra el conjunto y los km del viaje se asientan en el tractor.
+            Hasta {{ \App\Models\FleetUnit::MAX_BITREN_TRAILERS }} acoplados = bitrén / multi-tanque.
+            Al desacoplar se cierra el tramo. Si elegís un acoplado que ya está con otro tractor, se reasigna a esta formación.
+        </p>
         @if($atBitrenCap)
             <p class="hint mb-3">Este tractor ya alcanzó el máximo de acoplados.</p>
         @elseif($coupleOptions->isEmpty())
@@ -424,6 +440,9 @@
 </div>
 
 <x-panel title="Historial en esta patente" :flush="true" class="no-print planilla-history">
+    <div class="px-4 pt-3">
+        <p class="hint text-sm mb-0">Solo operaciones confirmadas (montar, rotar, medir, retirar, incidencias, acoples…). <strong>Tocar una cubierta en el mapa no genera registro</strong>: solo abre el panel de acciones.</p>
+    </div>
     <x-content-table>
         <thead>
             <tr>

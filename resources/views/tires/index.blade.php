@@ -20,7 +20,13 @@
         <form class="toolbar" method="GET" data-catalog-row>
             <script type="application/json" id="tireCatalog">@json($catalog)</script>
             <input name="q" value="{{ request('q') }}" placeholder="FH:01, 30363 o DOT" aria-label="Buscar cubierta">
-            <select name="brand_id" data-catalog="brand" data-empty="Todas las marcas" aria-label="Marca">
+            <select name="application" data-catalog="application" aria-label="Tipo">
+                <option value="">Todos los tipos</option>
+                @foreach($applications as $application)
+                    <option value="{{ $application->value }}" @selected(request('application') === $application->value)>{{ $application->label() }}</option>
+                @endforeach
+            </select>
+            <select name="brand_id" data-catalog="brand" data-empty="Todas las marcas" data-selected="{{ request('brand_id') }}" aria-label="Marca">
                 <option value="">Todas las marcas</option>
                 @foreach($catalog['brands'] as $brand)
                     <option value="{{ $brand['id'] }}" @selected((string) request('brand_id') === (string) $brand['id'])>{{ $brand['name'] }}</option>
@@ -37,15 +43,15 @@
                     <option value="">Estado</option>
                     @foreach($statuses as $status)<option value="{{ $status->value }}" @selected(request('status')==$status->value)>{{ $status->label() }}</option>@endforeach
                 </select>
-                    @endunless
-                    <select name="condition" aria-label="Condición">
-                        <option value="">Condición</option>
-                        @foreach($conditions as $condition)<option value="{{ $condition->value }}" @selected(request('condition')==$condition->value)>{{ $condition->label() }}</option>@endforeach
-                    </select>
-                    @if(request('queue'))
-                        <input type="hidden" name="queue" value="{{ request('queue') }}">
-                    @endif
-                    <button class="btn btn-dark btn-sm">Filtrar</button>
+            @endunless
+            <select name="condition" aria-label="Condición">
+                <option value="">Condición</option>
+                @foreach($conditions as $condition)<option value="{{ $condition->value }}" @selected(request('condition')==$condition->value)>{{ $condition->label() }}</option>@endforeach
+            </select>
+            @if(request('queue'))
+                <input type="hidden" name="queue" value="{{ request('queue') }}">
+            @endif
+            <button class="btn btn-dark btn-sm">Filtrar</button>
         </form>
     </x-slot:toolbar>
     <x-content-table>

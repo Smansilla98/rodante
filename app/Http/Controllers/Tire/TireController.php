@@ -39,6 +39,7 @@ class TireController extends Controller
         AccessScope::tires($query, $request->user());
 
         $tires = $query
+            ->when($request->application, fn ($q, $app) => $q->whereHas('model', fn ($m) => $m->where('application', $app)))
             ->when($request->brand_id, fn ($q, $id) => $q->where('tire_brand_id', $id))
             ->when($request->model_id, function ($q, $id) use ($request) {
                 $q->where('tire_model_id', $id);
@@ -81,6 +82,7 @@ class TireController extends Controller
         return view('tires.index', [
             'tires' => $tires,
             'catalog' => TireProductCatalog::uiPayload(),
+            'applications' => \App\Enums\TireApplication::cases(),
             'statuses' => TireStatus::cases(),
             'conditions' => TireCondition::cases(),
         ]);

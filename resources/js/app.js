@@ -199,6 +199,7 @@ const bindTireCatalog = () => {
     const sizeLabel = Object.fromEntries((catalog.sizes || []).map((size) => [String(size.id), size.label]));
 
     document.querySelectorAll('[data-catalog-row]').forEach((row) => {
+        const appSelect = row.querySelector('[data-catalog="application"]');
         const brandSelect = row.querySelector('[data-catalog="brand"]');
         const modelSelect = row.querySelector('[data-catalog="model"]');
         const sizeSelect = row.querySelector('[data-catalog="size"]');
@@ -206,9 +207,33 @@ const bindTireCatalog = () => {
             return;
         }
 
+        const modelsFor = (brand, application) => {
+            let models = brand?.models || [];
+            if (application) {
+                models = models.filter((item) => String(item.application || '') === String(application));
+            }
+            return models;
+        };
+
+        const refreshBrands = (keepValue) => {
+            const application = appSelect?.value || '';
+            const filtered = brands.filter((brand) => !application || modelsFor(brand, application).length > 0);
+            const keep = keepValue !== undefined ? keepValue : (brandSelect.dataset.selected || brandSelect.value);
+            fillSelect(
+                brandSelect,
+                filtered.map((brand) => ({ id: brand.id, label: brand.name })),
+                brandSelect.dataset.empty || 'Todas las marcas',
+            );
+            if (keep && filtered.some((brand) => String(brand.id) === String(keep))) {
+                brandSelect.value = String(keep);
+            }
+            brandSelect.dataset.selected = '';
+        };
+
         const refresh = () => {
+            const application = appSelect?.value || '';
             const brand = brands.find((item) => String(item.id) === brandSelect.value);
-            const models = brand?.models || [];
+            const models = modelsFor(brand, application);
             const keepModel = modelSelect.dataset.selected || modelSelect.value;
             fillSelect(modelSelect, models, modelSelect.dataset.empty || 'Modelo');
             if (keepModel && models.some((item) => String(item.id) === String(keepModel))) {
@@ -226,12 +251,20 @@ const bindTireCatalog = () => {
             sizeSelect.dataset.selected = '';
         };
 
+        appSelect?.addEventListener('change', () => {
+            brandSelect.value = '';
+            modelSelect.value = '';
+            sizeSelect.value = '';
+            refreshBrands('');
+            refresh();
+        });
         brandSelect.addEventListener('change', () => {
             modelSelect.value = '';
             sizeSelect.value = '';
             refresh();
         });
         modelSelect.addEventListener('change', refresh);
+        refreshBrands();
         refresh();
     });
 };
@@ -861,9 +894,15 @@ const recambio = () => {
     document.addEventListener('click', hideMenu);
 
     document.querySelectorAll('.pattern-btn[data-pattern]').forEach((btn) => {
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
             const pattern = patterns.find((item) => item.code === btn.dataset.pattern);
-            if (!pattern || !pattern.ready || !patronForm) {
+            if (!pattern || !patronForm) {
+                return;
+            }
+            if (!pattern.ready || btn.dataset.ready === '0') {
+                window.alert(pattern.blocked || btn.dataset.blocked || 'Ese esquema no está disponible con el mapa actual.');
                 return;
             }
             idle.hidden = true;
@@ -876,6 +915,20 @@ const recambio = () => {
             });
             drawPatternArrows(pattern);
         });
+    });
+
+    const clearPatternSelection = () => {
+        if (patronForm) {
+            patronForm.hidden = true;
+        }
+        document.querySelectorAll('.pattern-btn').forEach((btn) => btn.classList.remove('is-on'));
+        drawPatternArrows(null);
+    };
+
+    document.getElementById('patronCancel')?.addEventListener('click', () => {
+        clearPatternSelection();
+        idle.hidden = false;
+        panel.hidden = true;
     });
 };
 

@@ -276,6 +276,7 @@ class ExportController extends Controller
         AccessScope::tires($query, $request->user());
 
         return $query
+            ->when($request->application, fn ($q, $app) => $q->whereHas('model', fn ($m) => $m->where('application', $app)))
             ->when($request->brand_id, fn ($q, $id) => $q->where('tire_brand_id', $id))
             ->when($request->model_id, fn ($q, $id) => $q->where('tire_model_id', $id))
             ->when($request->size_id, fn ($q, $id) => $q->where('tire_size_id', $id))

@@ -132,7 +132,7 @@ class TireProductCatalog
     }
 
     /**
-     * @return array{brands: list<array{id:int,name:string,models:list<array{id:int,code:string,label:string,size_ids:list<int>}}>, sizes: list<array{id:int,label:string}>}
+     * @return array{brands: list<array{id:int,name:string,models:list<array{id:int,code:string,label:string,application:?string,size_ids:list<int>}}>, sizes: list<array{id:int,label:string}>, applications: list<array{value:string,label:string}>}
      */
     public static function uiPayload(): array
     {
@@ -149,6 +149,7 @@ class TireProductCatalog
                         'id' => $model->id,
                         'code' => $model->code,
                         'label' => $model->code.' — '.$model->name,
+                        'application' => $model->application?->value ?? (is_string($model->application) ? $model->application : null),
                         'size_ids' => $model->sizes->pluck('id')->map(fn ($id) => (int) $id)->values()->all(),
                     ])->values()->all(),
                 ])
@@ -162,6 +163,10 @@ class TireProductCatalog
                     'id' => $size->id,
                     'label' => $size->displayName(),
                 ])
+                ->values()
+                ->all(),
+            'applications' => collect(\App\Enums\TireApplication::cases())
+                ->map(fn ($app) => ['value' => $app->value, 'label' => $app->label()])
                 ->values()
                 ->all(),
         ];
