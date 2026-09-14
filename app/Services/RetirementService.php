@@ -27,14 +27,16 @@ class RetirementService
         if ($tire->status === TireStatus::DeBaja) {
             throw new DomainException('El neumático ya está de baja.');
         }
-        if ($tire->openAssignment) {
-            throw new DomainException('Retirá el neumático de la unidad antes de darlo de baja.');
-        }
+
+        $this->assertNotMountedOnUnit($tire);
 
         $files = $data['photos'] ?? [];
         unset($data['photos']);
 
         $retired = DB::transaction(function () use ($tire, $data, $user, $files) {
+            $tire->refresh()->load(['openAssignment', 'currentLocation']);
+            $this->assertNotMountedOnUnit($tire);
+
             $location = $tire->currentLocation;
             $this->locations->refreshAccumulatedKm($tire);
 
@@ -77,5 +79,48 @@ class RetirementService
         ]);
 
         return $retired;
+    }
+
+    /**
+     * La baja solo se permite si la cubierta no está colocada en una unidad (ni rodaje ni auxilio).
+     */
+    public function assertNotMountedOnUnit(Tire $tire): void
+    {
+        $tire->loadMissing(['openAssignment.unit', 'currentLocation.unit', 'currentLocation.position']);
+
+        if ($tire->openAssignment) {
+            $plate = $tire->openAssignment->unit?->plate ?? 'una unidad';
+            throw new DomainException(
+                "Retirá la cubierta de la unidad {$plate} (planilla) antes de darla de baja."
+            );
+        }
+
+        if ($tire->currentLocation?->unit_id) {
+            $plate = $tire->currentLocation->unit?->plate ?? 'una unidad';
+            $pos = $tire->currentLocation->position?->name;
+            throw new DomainException(
+                'La cubierta sigue colocada en '.$plate.($pos ? ' · '.$pos : '').'. Retirala a stock desde la planilla antes de darla de baja.'
+            );
+        }
+
+        if (in_array($tire->status, [TireStatus::Instalada, TireStatus::Auxilio], true)) {
+            throw new DomainException(
+                'Esta cubierta figura como '.$tire->status->label().'. Retirala de la unidad antes de darla de baja.'
+            );
+        }
+    }
+
+    public function isEligibleForRetirement(Tire $tire): bool
+    {
+        try {
+            if ($tire->status === TireStatus::DeBaja) {
+                return false;
+            }
+            $this->assertNotMountedOnUnit($tire);
+
+            return true;
+        } catch (DomainException) {
+            return false;
+        }
     }
 }

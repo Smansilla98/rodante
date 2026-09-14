@@ -63,6 +63,16 @@ class TireMovement extends Model
         return $this->belongsTo(UnitPosition::class, 'to_position_id');
     }
 
+    public function fromBase(): BelongsTo
+    {
+        return $this->belongsTo(Base::class, 'from_base_id');
+    }
+
+    public function toBase(): BelongsTo
+    {
+        return $this->belongsTo(Base::class, 'to_base_id');
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);

@@ -37,6 +37,9 @@
                 <x-nav-link :href="route('tires.stock')" icon="boxes" label="Stock" match="tires.stock" />
                 <x-nav-link :href="route('tires.index')" icon="circle" label="Neumáticos" :match="['tires.index', 'tires.show']" />
                 <x-nav-link :href="route('purchases.index')" icon="cart" label="Compras" match="purchases.*" />
+                @if(auth()->user()->role->canRetireOrRecap())
+                    <x-nav-link :href="route('retirements.index')" icon="alert" label="Dar de baja" match="retirements.*" />
+                @endif
                 <x-nav-link :href="route('starting-point.index')" icon="grid" label="Punto de partida" match="starting-point.*" />
                 <x-nav-link :href="route('work-orders.index')" icon="grid" label="Órdenes" match="work-orders.*" />
                 <x-nav-link :href="route('odometers.index')" icon="gauge" label="Odómetros" match="odometers.*" />
@@ -47,6 +50,7 @@
                 <x-nav-link :href="route('incidents.index')" icon="alert" label="Incidencias" match="incidents.*" />
                 <x-nav-link :href="route('couplings.index')" icon="truck" label="Enganches" match="couplings.*" />
                 <x-nav-link :href="route('reports.kilometers')" icon="chart" label="Km por cubierta" match="reports.kilometers" />
+                <x-nav-link :href="route('reports.weekly')" icon="inbox" label="Informe semanal" match="reports.weekly*" />
                 <x-nav-link :href="route('reports.cost-km')" icon="chart" label="Costo / km" match="reports.cost-km" />
                 <x-nav-link :href="route('reports.cost-attribution')" icon="chart" label="Costo unidad/posición" match="reports.cost-attribution" />
                 <x-nav-link :href="route('reports.inventory')" icon="boxes" label="Inventario teórico" match="reports.inventory" />

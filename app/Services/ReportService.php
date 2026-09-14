@@ -10,8 +10,11 @@ use App\Models\FleetUnit;
 use App\Models\Tire;
 use App\Models\TireIncident;
 use App\Models\TireMovement;
+use App\Models\TirePurchase;
 use App\Models\User;
 use App\Support\AccessScope;
+use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -282,6 +285,168 @@ class ReportService
             ->select('type', DB::raw('count(*) as total'), DB::raw('count(distinct tire_id) as tires'))
             ->groupBy('type')
             ->get();
+    }
+
+    /**
+     * Informe semanal: stock al momento, movimientos del período, compras y bajas.
+     *
+     * @return array{
+     *     from: CarbonInterface,
+     *     to: CarbonInterface,
+     *     generated_at: CarbonInterface,
+     *     stock_counts: list<array{status: string, total: int}>,
+     *     stock_tires: Collection<int, Tire>,
+     *     stock_total: int,
+     *     movements: list<array{at: CarbonInterface, moment: string, tire: string, left: string, entered: string, unit: string, type: string}>,
+     *     purchases: Collection<int, TirePurchase>,
+     *     retirements: list<array{at: CarbonInterface, moment: string, tire: string, notes: string|null, reason: string|null}>
+     * }
+     */
+    public function weeklyReport(User $user, CarbonInterface $from, CarbonInterface $to): array
+    {
+        $from = Carbon::parse($from)->startOfDay();
+        $to = Carbon::parse($to)->endOfDay();
+
+        $tiresQuery = Tire::query();
+        AccessScope::tires($tiresQuery, $user);
+
+        $stockCounts = (clone $tiresQuery)
+            ->toBase()
+            ->select('status', DB::raw('count(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $orderedCounts = [];
+        foreach (TireStatus::cases() as $status) {
+            $total = (int) ($stockCounts[$status->value] ?? 0);
+            if ($total > 0 || $status === TireStatus::Stock) {
+                $orderedCounts[] = [
+                    'status' => $status->label(),
+                    'total' => $total,
+                ];
+            }
+        }
+
+        $stockTires = (clone $tiresQuery)
+            ->with(['brand', 'model', 'size', 'currentLocation.base'])
+            ->where('status', TireStatus::Stock)
+            ->orderBy('individual_number')
+            ->get();
+
+        $visibleTireIds = (clone $tiresQuery)->select('id');
+
+        $movements = TireMovement::query()
+            ->with([
+                'tire.brand', 'tire.model',
+                'fromUnit', 'toUnit', 'fromPosition', 'toPosition', 'fromBase', 'toBase',
+            ])
+            ->whereIn('tire_id', $visibleTireIds)
+            ->whereBetween('occurred_at', [$from, $to])
+            ->orderBy('occurred_at')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (TireMovement $m) => $this->weeklyMovementRow($m))
+            ->all();
+
+        $purchasesQuery = TirePurchase::query()
+            ->with(['supplier', 'base', 'items'])
+            ->where('status', TirePurchase::STATUS_CONFIRMED)
+            ->where(function ($q) use ($from, $to) {
+                $q->whereBetween('confirmed_at', [$from, $to])
+                    ->orWhere(function ($inner) use ($from, $to) {
+                        $inner->whereNull('confirmed_at')
+                            ->whereBetween('purchased_at', [$from->toDateString(), $to->toDateString()]);
+                    });
+            })
+            ->orderByDesc('confirmed_at')
+            ->orderByDesc('purchased_at');
+        AccessScope::purchases($purchasesQuery, $user);
+        $purchases = $purchasesQuery->get();
+
+        $retirements = TireMovement::query()
+            ->with(['tire.brand', 'tire.model', 'reason'])
+            ->where('type', MovementType::Retire)
+            ->whereIn('tire_id', $visibleTireIds)
+            ->whereBetween('occurred_at', [$from, $to])
+            ->orderBy('occurred_at')
+            ->get()
+            ->map(function (TireMovement $m) {
+                return [
+                    'at' => $m->occurred_at,
+                    'moment' => $m->occurred_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? '—',
+                    'tire' => $m->tire?->displayName() ?? '—',
+                    'notes' => $m->notes,
+                    'reason' => $m->reason?->name,
+                ];
+            })
+            ->all();
+
+        return [
+            'from' => $from,
+            'to' => $to,
+            'generated_at' => now(),
+            'stock_counts' => $orderedCounts,
+            'stock_tires' => $stockTires,
+            'stock_total' => $stockTires->count(),
+            'movements' => $movements,
+            'purchases' => $purchases,
+            'retirements' => $retirements,
+        ];
+    }
+
+    /**
+     * @return array{at: CarbonInterface, moment: string, tire: string, left: string, entered: string, unit: string, type: string}
+     */
+    private function weeklyMovementRow(TireMovement $movement): array
+    {
+        $left = $this->weeklyPlaceLabel(
+            $movement->fromUnit,
+            $movement->fromPosition,
+            $movement->fromBase,
+            match ($movement->type) {
+                MovementType::PurchaseIn, MovementType::OpeningIn => 'Alta (sin origen)',
+                default => '—',
+            }
+        );
+        $entered = $this->weeklyPlaceLabel(
+            $movement->toUnit,
+            $movement->toPosition,
+            $movement->toBase,
+            match ($movement->type) {
+                MovementType::RemoveToStock, MovementType::FromReserva, MovementType::FromRepair, MovementType::PurchaseIn, MovementType::OpeningIn => 'Stock',
+                MovementType::Retire => 'De baja',
+                MovementType::ToReserva => 'Reserva',
+                MovementType::ToRepair => 'Reparación',
+                default => '—',
+            }
+        );
+
+        $unit = $movement->toUnit?->plate
+            ?? $movement->fromUnit?->plate
+            ?? '—';
+
+        $at = $movement->occurred_at?->timezone(config('app.timezone'));
+
+        return [
+            'at' => $movement->occurred_at,
+            'moment' => $at ? $at->format('d/m/Y H:i') : '—',
+            'tire' => $movement->tire?->displayName() ?? '—',
+            'left' => $left,
+            'entered' => $entered,
+            'unit' => $unit,
+            'type' => $movement->type->label(),
+        ];
+    }
+
+    private function weeklyPlaceLabel(?FleetUnit $unit, $position, $base, string $fallback): string
+    {
+        $parts = collect([
+            $unit?->plate,
+            $position?->name,
+            ! $unit ? $base?->name : null,
+        ])->filter()->values();
+
+        return $parts->isNotEmpty() ? $parts->implode(' · ') : $fallback;
     }
 
     private function movementItem(TireMovement $movement): array

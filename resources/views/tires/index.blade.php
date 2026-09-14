@@ -10,7 +10,7 @@
     <x-slot:actions>
         <x-export-csv :href="route('exports.tires', array_merge(request()->query(), request()->routeIs('tires.stock') ? ['stock_only' => 1, 'status' => 'STOCK'] : []))" />
         @if(auth()->user()->role->canWrite())
-            <a href="{{ route('purchases.create') }}" class="btn btn-primary"><x-icon name="plus" class="w-4 h-4" /> Nueva compra</a>
+            <a href="{{ route('purchases.create') }}" class="btn btn-primary"><x-icon name="plus" class="w-4 h-4" /> Ingresar compra</a>
         @endif
     </x-slot:actions>
 </x-page-header>
@@ -88,7 +88,7 @@
         @empty
             <tr><td colspan="6"><x-empty
                 title="No hay cubiertas con ese filtro"
-                :action="auth()->user()->role->canWrite() ? 'Nueva compra' : null"
+                :action="auth()->user()->role->canWrite() ? 'Ingresar compra' : null"
                 :href="route('purchases.create')"
             /></td></tr>
         @endforelse

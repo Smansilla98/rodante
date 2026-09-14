@@ -22,6 +22,7 @@ use App\Http\Controllers\PrintController;
 use App\Http\Controllers\Purchase\PurchaseController;
 use App\Http\Controllers\QrController;
 use App\Http\Controllers\Report\ReportController;
+use App\Http\Controllers\RetirementController;
 use App\Http\Controllers\RetreadShopController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\StartingPointController;
@@ -110,6 +111,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/reportes/incidencias', [ReportController::class, 'incidents'])->name('reports.incidents');
     Route::get('/reportes/predictivo', [ReportController::class, 'predictive'])->name('reports.predictive');
     Route::get('/reportes/telemetria', [ReportController::class, 'telemetry'])->name('reports.telemetry');
+    Route::get('/reportes/semanal', [ReportController::class, 'weekly'])->name('reports.weekly');
+    Route::post('/reportes/semanal/enviar', [ReportController::class, 'sendWeekly'])->name('reports.weekly.send');
     Route::get('/auditoria', [ReportController::class, 'audit'])->name('reports.audit');
 
     Route::get('/ayuda', [HelpController::class, 'index'])->name('help.index');
@@ -158,6 +161,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/unidades/{unit}', [UnitController::class, 'show'])->name('units.show');
 
     Route::middleware('capability:retire')->group(function () {
+        Route::get('/bajas', [RetirementController::class, 'index'])->name('retirements.index');
+        Route::post('/bajas/{tire}', [RetirementController::class, 'store'])->whereNumber('tire')->name('retirements.store');
         Route::post('/neumaticos/{tire}/baja', [TireController::class, 'retire'])->name('tires.retire');
     });
 

@@ -70,7 +70,7 @@ class SystemGuide
                 'can' => [
                     'Toda la operación de planilla, compras y acoples',
                     'Corregir odómetros',
-                    'Dar de baja una cubierta y registrar recapado (abre una vida nueva)',
+                    'Dar de baja desde el módulo Bajas (solo cubiertas fuera de unidad) y registrar recapado',
                     'Cambiar la configuración de ejes (las cubiertas instaladas vuelven a stock)',
                 ],
                 'cannot' => [
@@ -186,10 +186,10 @@ class SystemGuide
             ],
             [
                 'key' => 'retire',
-                'name' => 'Baja y recapado',
+                'name' => 'Dar de baja',
                 'group' => 'Operación',
-                'what' => 'Baja definitiva (con fotos de la carcasa) o recapado. El recapado cierra la vida actual y abre una nueva. La reparación no.',
-                'route' => 'tires.index',
+                'what' => 'Lista cubiertas fuera de unidad y registra la baja definitiva (motivo, notas y fotos). Si está montada, hay que retirarla a stock desde la planilla. El recapado se hace desde la ficha.',
+                'route' => 'retirements.index',
                 'cells' => [
                     'CONSULTA' => $n,
                     'OPERARIO' => $n,
@@ -246,6 +246,14 @@ class SystemGuide
                 'group' => 'Consulta',
                 'what' => 'Kilómetros acumulados, vidas, recapados y reparaciones de cada cubierta.',
                 'route' => 'reports.kilometers',
+                'cells' => self::all($v),
+            ],
+            [
+                'key' => 'weekly',
+                'name' => 'Informe semanal',
+                'group' => 'Consulta',
+                'what' => 'Stock al momento, movimientos de la semana (salida/entrada/unidad/hora), compras y bajas. Se puede enviar por correo.',
+                'route' => 'reports.weekly',
                 'cells' => self::all($v),
             ],
             [

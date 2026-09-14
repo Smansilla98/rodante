@@ -13,12 +13,14 @@ use App\Models\TireOperation;
 use App\Models\TirePurchase;
 use App\Models\UnitConfigurationChange;
 use App\Models\UnitCoupling;
+use App\Notifications\WeeklyReportNotification;
 use App\Services\ReportService;
 use App\Services\PredictiveWearService;
 use App\Services\TelemetryService;
 use App\Support\AccessScope;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
 
 class ReportController extends Controller
 {
@@ -98,5 +100,53 @@ class ReportController extends Controller
         abort_unless($request->user()->role->canViewTelemetry(), 403);
 
         return view('reports.telemetry', $telemetry->dashboard($request->user()));
+    }
+
+    public function weekly(Request $request, ReportService $reports)
+    {
+        [$from, $to] = $this->weeklyPeriod($request);
+
+        return view('reports.weekly', [
+            'report' => $reports->weeklyReport($request->user(), $from, $to),
+        ]);
+    }
+
+    public function sendWeekly(Request $request, ReportService $reports)
+    {
+        [$from, $to] = $this->weeklyPeriod($request);
+
+        $data = $request->validate([
+            'email' => ['required', 'email', 'max:190'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date'],
+        ]);
+
+        $report = $reports->weeklyReport($request->user(), $from, $to);
+
+        Notification::route('mail', $data['email'])
+            ->notify(new WeeklyReportNotification($report));
+
+        return redirect()
+            ->route('reports.weekly', [
+                'from' => $from->toDateString(),
+                'to' => $to->toDateString(),
+            ])
+            ->with('success', 'Informe semanal enviado a '.$data['email'].'.');
+    }
+
+    /**
+     * @return array{0: \Carbon\Carbon, 1: \Carbon\Carbon}
+     */
+    private function weeklyPeriod(Request $request): array
+    {
+        $from = $request->date('from')?->startOfDay()
+            ?? now()->startOfWeek(\Carbon\Carbon::MONDAY)->startOfDay();
+        $to = $request->date('to')?->endOfDay() ?? now()->endOfDay();
+
+        if ($from->gt($to)) {
+            [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
+        }
+
+        return [$from, $to];
     }
 }
