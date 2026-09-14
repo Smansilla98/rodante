@@ -162,6 +162,7 @@ Route::middleware('auth')->group(function () {
 
     Route::middleware('capability:retire')->group(function () {
         Route::get('/bajas', [RetirementController::class, 'index'])->name('retirements.index');
+        Route::post('/bajas', [RetirementController::class, 'storeBulk'])->name('retirements.bulk');
         Route::post('/bajas/{tire}', [RetirementController::class, 'store'])->whereNumber('tire')->name('retirements.store');
         Route::post('/neumaticos/{tire}/baja', [TireController::class, 'retire'])->name('tires.retire');
     });

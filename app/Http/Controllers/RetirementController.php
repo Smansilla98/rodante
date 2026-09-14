@@ -10,6 +10,8 @@ use App\Models\Tire;
 use App\Services\RetirementService;
 use App\Support\AccessScope;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 
 class RetirementController extends Controller
 {
@@ -59,7 +61,7 @@ class RetirementController extends Controller
         $eligible = $eligibleQuery
             ->orderByDesc('accumulated_km')
             ->orderBy('individual_number')
-            ->paginate(25, ['*'], 'elegibles')
+            ->paginate(50, ['*'], 'elegibles')
             ->withQueryString();
 
         $blocked = $blockedQuery
@@ -89,5 +91,64 @@ class RetirementController extends Controller
         return redirect()
             ->route('retirements.index')
             ->with('success', $tire->displayName().' quedó de baja. El historial se conserva.');
+    }
+
+    public function storeBulk(Request $request, RetirementService $retirements)
+    {
+        abort_unless($request->user()->role->canRetireOrRecap(), 403);
+
+        $data = $request->validate([
+            'tire_ids' => ['required', 'array', 'min:1', 'max:100'],
+            'tire_ids.*' => ['integer', 'distinct', 'exists:tires,id'],
+            'reason_id' => ['required', 'exists:movement_reasons,id'],
+            'notes' => ['nullable', 'string', 'max:500'],
+        ], [
+            'tire_ids.required' => 'Marcá al menos una cubierta.',
+            'tire_ids.min' => 'Marcá al menos una cubierta.',
+        ]);
+
+        $tires = Tire::query()
+            ->with(['openAssignment.unit', 'currentLocation.unit', 'currentLocation.position', 'model'])
+            ->whereIn('id', $data['tire_ids'])
+            ->get();
+
+        if ($tires->count() !== count($data['tire_ids'])) {
+            throw ValidationException::withMessages([
+                'tire_ids' => 'Alguna cubierta no existe o no está disponible.',
+            ]);
+        }
+
+        foreach ($tires as $tire) {
+            if (! Gate::forUser($request->user())->allows('retire', $tire)) {
+                abort(403);
+            }
+        }
+
+        $result = $retirements->retireMany($tires, [
+            'reason_id' => $data['reason_id'],
+            'notes' => $data['notes'] ?? null,
+        ], $request->user());
+
+        if ($result['retired'] === 0) {
+            return redirect()
+                ->route('retirements.index')
+                ->withInput()
+                ->withErrors(['retire' => implode(' ', $result['errors']) ?: 'No se pudo dar de baja ninguna cubierta.']);
+        }
+
+        $msg = $result['retired'] === 1
+            ? '1 cubierta quedó de baja.'
+            : $result['retired'].' cubiertas quedaron de baja.';
+
+        if ($result['errors'] !== []) {
+            return redirect()
+                ->route('retirements.index')
+                ->with('success', $msg)
+                ->withErrors(['retire' => implode(' ', $result['errors'])]);
+        }
+
+        return redirect()
+            ->route('retirements.index')
+            ->with('success', $msg.' El historial se conserva.');
     }
 }

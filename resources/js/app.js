@@ -1187,3 +1187,24 @@ document.querySelectorAll('[data-photo-input]').forEach((input) => {
         });
     });
 });
+
+document.querySelectorAll('[data-check-all]').forEach((master) => {
+    const cls = master.getAttribute('data-check-all');
+    if (!cls) {
+        return;
+    }
+    const sync = () => {
+        const boxes = [...document.querySelectorAll(`input.${cls}[type="checkbox"]`)];
+        master.checked = boxes.length > 0 && boxes.every((box) => box.checked);
+        master.indeterminate = boxes.some((box) => box.checked) && !master.checked;
+    };
+    master.addEventListener('change', () => {
+        document.querySelectorAll(`input.${cls}[type="checkbox"]`).forEach((box) => {
+            box.checked = master.checked;
+        });
+        master.indeterminate = false;
+    });
+    document.querySelectorAll(`input.${cls}[type="checkbox"]`).forEach((box) => {
+        box.addEventListener('change', sync);
+    });
+});

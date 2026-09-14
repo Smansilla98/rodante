@@ -5,7 +5,7 @@
 <x-page-header
     kicker="Operación"
     title="Dar de baja"
-    subtitle="Solo cubiertas que no estén colocadas en una unidad. Si está montada o en auxilio, primero retiralas a stock desde la planilla."
+    subtitle="Marcá las cubiertas fuera de unidad y dales de baja juntas. Si están montadas, primero retiralas a stock desde la planilla."
 >
     <x-slot:actions>
         <a href="{{ route('tires.index', ['status' => 'DE_BAJA']) }}" class="btn btn-ghost">Ver ya dadas de baja</a>
@@ -15,6 +15,9 @@
 
 @if($errors->has('retire'))
     <div class="flash flash--bad" role="alert">{{ $errors->first('retire') }}</div>
+@endif
+@if($errors->has('tire_ids'))
+    <div class="flash flash--bad" role="alert">{{ $errors->first('tire_ids') }}</div>
 @endif
 
 <form class="toolbar mb-5" method="GET" action="{{ route('retirements.index') }}">
@@ -27,54 +30,71 @@
 
 <section class="mb-8" aria-labelledby="eligibleTitle">
     <h2 id="eligibleTitle" class="text-lg font-bold mb-2">Listas para dar de baja</h2>
-    <p class="hint mb-4">Están fuera de unidad (stock, reserva o reparación). Tocá una fila para cargar el motivo y confirmar.</p>
+    <p class="hint mb-4">Marcá una o varias, elegí el motivo y confirmá. La baja es definitiva.</p>
 
-    <div class="action-cards">
-        @forelse($eligible as $tire)
-            <details class="action-card action-card--danger" @if((string) old('tire_focus') === (string) $tire->id) open @endif>
-                <summary class="action-card__summary">
-                    <span class="action-card__title">{{ $tire->displayName() }}</span>
-                    <span class="action-card__desc">
-                        {{ $tire->brand?->name }} · {{ $tire->size?->displayName() }}
-                        · {{ $tire->status->label() }}
-                        · {{ number_format($tire->accumulated_km) }} km
-                        · {{ $tire->currentLocation?->base?->name ?? 'Sin base' }}
-                    </span>
-                </summary>
-                <div class="action-card__body">
-                    <form method="POST" action="{{ route('retirements.store', $tire) }}" enctype="multipart/form-data" class="space-y-3" data-confirm="La baja es definitiva. Esta cubierta no se podrá reinstalar. ¿Continuar?">
-                        @csrf
-                        <input type="hidden" name="tire_focus" value="{{ $tire->id }}">
-                        <label class="field">
-                            <span>Motivo</span>
-                            <select name="reason_id" required>
-                                <option value="">Elegí un motivo…</option>
-                                @foreach($reasons as $reason)
-                                    <option value="{{ $reason->id }}" @selected((string) old('reason_id') === (string) $reason->id)>{{ $reason->name }}</option>
-                                @endforeach
-                            </select>
-                        </label>
-                        <label class="field">
-                            <span>Observaciones</span>
-                            <textarea name="notes" rows="2" placeholder="Ej. Fin de vida útil, carcasa agrietada" required>{{ old('notes') }}</textarea>
-                        </label>
-                        <label class="field">
-                            <span>Fotos (opcional)</span>
-                            <input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" capture="environment" multiple data-photo-input="#retirePreview{{ $tire->id }}">
-                        </label>
-                        <div id="retirePreview{{ $tire->id }}" class="photo-grid" aria-live="polite"></div>
-                        <p class="hint">Hasta 6 fotos. En el celular se puede abrir la cámara.</p>
-                        <a href="{{ route('tires.show', $tire) }}" class="btn btn-ghost btn-sm">Ver ficha</a>
-                        <button class="btn btn-danger action-card__btn">Confirmar baja</button>
-                    </form>
-                </div>
-            </details>
-        @empty
-            <x-panel>
-                <x-empty title="No hay cubiertas elegibles" text="Si la que buscás está en una unidad, aparece abajo. Primero retiralas a stock desde la planilla." />
-            </x-panel>
-        @endforelse
-    </div>
+    <form method="POST" action="{{ route('retirements.bulk') }}" data-confirm="La baja es definitiva. Las cubiertas marcadas no se podrán reinstalar. ¿Continuar?">
+        @csrf
+        <x-panel :flush="true">
+            <x-content-table>
+                <thead>
+                    <tr>
+                        <th scope="col" class="w-10">
+                            <input type="checkbox" data-check-all="retire-row" aria-label="Marcar todas en esta página" @disabled($eligible->isEmpty())>
+                        </th>
+                        <th scope="col">Cubierta</th>
+                        <th scope="col">Estado</th>
+                        <th scope="col">Km</th>
+                        <th scope="col">Ubicación</th>
+                    </tr>
+                </thead>
+                <tbody>
+                @forelse($eligible as $tire)
+                    <tr>
+                        <td>
+                            <input
+                                type="checkbox"
+                                class="retire-row"
+                                name="tire_ids[]"
+                                value="{{ $tire->id }}"
+                                @checked(collect(old('tire_ids', []))->map(fn ($id) => (string) $id)->contains((string) $tire->id))
+                                aria-label="Seleccionar {{ $tire->displayName() }}"
+                            >
+                        </td>
+                        <td>
+                            <a href="{{ route('tires.show', $tire) }}">{{ $tire->displayName() }}</a>
+                            <div class="text-xs text-slate-500">{{ $tire->brand?->name }} · {{ $tire->size?->displayName() }}</div>
+                        </td>
+                        <td><x-status :tone="$tire->status->tone()">{{ $tire->status->label() }}</x-status></td>
+                        <td class="mono">{{ number_format($tire->accumulated_km) }}</td>
+                        <td>{{ $tire->currentLocation?->base?->name ?? 'Sin base' }}</td>
+                    </tr>
+                @empty
+                    <tr><td colspan="5"><x-empty title="No hay cubiertas elegibles" text="Si la que buscás está en una unidad, aparece abajo. Primero retiralas a stock desde la planilla." /></td></tr>
+                @endforelse
+                </tbody>
+            </x-content-table>
+        </x-panel>
+
+        @if($eligible->isNotEmpty())
+            <div class="toolbar mt-4 flex-wrap items-end gap-3">
+                <label class="field">
+                    <span>Motivo</span>
+                    <select name="reason_id" required>
+                        <option value="">Elegí un motivo…</option>
+                        @foreach($reasons as $reason)
+                            <option value="{{ $reason->id }}" @selected((string) old('reason_id') === (string) $reason->id)>{{ $reason->name }}</option>
+                        @endforeach
+                    </select>
+                    <x-field-error name="reason_id" />
+                </label>
+                <label class="field" style="min-width:16rem;flex:1">
+                    <span>Observaciones</span>
+                    <input type="text" name="notes" value="{{ old('notes') }}" placeholder="Opcional. Ej. Fin de vida útil" maxlength="500">
+                </label>
+                <button class="btn btn-danger" type="submit">Dar de baja seleccionadas</button>
+            </div>
+        @endif
+    </form>
     <div class="pager mt-4">{{ $eligible->links() }}</div>
 </section>
 

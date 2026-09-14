@@ -123,4 +123,30 @@ class RetirementService
             return false;
         }
     }
+
+    /**
+     * Baja masiva: procesa una por una. Las que fallan no frenan al resto.
+     *
+     * @param  iterable<int, Tire>  $tires
+     * @return array{retired: int, errors: list<string>}
+     */
+    public function retireMany(iterable $tires, array $data, User $user): array
+    {
+        $retired = 0;
+        $errors = [];
+
+        foreach ($tires as $tire) {
+            try {
+                $this->retire($tire, $data, $user);
+                $retired++;
+            } catch (DomainException $e) {
+                $errors[] = $tire->displayName().': '.$e->getMessage();
+            }
+        }
+
+        return [
+            'retired' => $retired,
+            'errors' => $errors,
+        ];
+    }
 }
