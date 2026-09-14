@@ -1107,6 +1107,24 @@ document.addEventListener('submit', (event) => {
 
 document.getElementById('btnPrint')?.addEventListener('click', () => window.print());
 
+document.querySelectorAll('.action-cards').forEach((group) => {
+    group.querySelectorAll('details.action-card').forEach((card) => {
+        card.addEventListener('toggle', () => {
+            if (!card.open) {
+                return;
+            }
+            group.querySelectorAll('details.action-card').forEach((other) => {
+                if (other !== card) {
+                    other.open = false;
+                }
+            });
+            window.requestAnimationFrame(() => {
+                card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            });
+        });
+    });
+});
+
 (function () {
     try {
         const raw = document.getElementById('rodanteFieldErrors')?.dataset.fields;

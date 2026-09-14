@@ -3550,6 +3550,219 @@ body.sheet-modal-open {
     border-color: #34d399;
 }
 
+/* Ficha de cubierta: resumen + acciones claras */
+.tire-summary {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    box-shadow: var(--shadow);
+    padding: 1.25rem 1.35rem 1.4rem;
+    margin-bottom: 1.25rem;
+}
+
+.tire-summary__head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    margin-bottom: 0.65rem;
+}
+
+.tire-summary__title {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 800;
+}
+
+.tire-summary__chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.tire-summary__where {
+    margin: 0 0 1rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+
+.tire-summary__where a {
+    color: inherit;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+}
+
+.tire-summary__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+    gap: 0.85rem 1rem;
+    margin: 0;
+}
+
+.tire-summary__stats div {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.tire-summary__stats dt {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.tire-summary__stats dd {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.tire-summary__forecast {
+    margin-top: 1rem;
+}
+
+.tire-summary__measure {
+    margin-top: 1rem;
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--line);
+}
+
+.tire-summary__measure h3 {
+    margin: 0 0 0.5rem;
+    font-size: 0.95rem;
+}
+
+.tire-summary__measure ul {
+    margin: 0;
+    padding-left: 1.1rem;
+}
+
+.tire-summary__qr {
+    margin-top: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.action-cards-section {
+    margin-bottom: 1.5rem;
+}
+
+.action-cards-section__title {
+    margin: 0 0 0.35rem;
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+
+.action-cards-section__lead {
+    margin: 0 0 1rem;
+    color: var(--ink-soft);
+    font-size: 1rem;
+}
+
+.action-cards {
+    display: grid;
+    gap: 0.85rem;
+}
+
+@media (min-width: 800px) {
+    .action-cards {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+.action-card {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--card);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+}
+
+.action-card--danger {
+    border-color: rgb(248 113 113 / 0.55);
+}
+
+.action-card--link {
+    display: block;
+    padding: 1rem 1.1rem;
+    color: inherit;
+    text-decoration: none;
+    min-height: 4.5rem;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.action-card--link:hover,
+.action-card--link:focus-visible {
+    border-color: var(--primary);
+    background: rgb(200 16 46 / 0.08);
+    outline: none;
+}
+
+.action-card__summary {
+    list-style: none;
+    cursor: pointer;
+    padding: 1rem 1.1rem;
+    min-height: 4.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    align-items: flex-start;
+}
+
+.action-card__summary::-webkit-details-marker {
+    display: none;
+}
+
+.action-card__summary::after {
+    content: "Abrir ▾";
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-top: 0.35rem;
+}
+
+.action-card[open] > .action-card__summary::after {
+    content: "Cerrar ▴";
+}
+
+.action-card__title {
+    display: block;
+    font-size: 1.12rem;
+    font-weight: 800;
+    line-height: 1.3;
+}
+
+.action-card__desc {
+    display: block;
+    font-size: 0.98rem;
+    color: var(--ink-soft);
+    line-height: 1.4;
+}
+
+.action-card__body {
+    padding: 0 1.1rem 1.15rem;
+    border-top: 1px solid var(--line);
+    padding-top: 1rem;
+}
+
+.action-card__btn {
+    min-height: 48px;
+    width: 100%;
+    font-size: 1.05rem;
+}
+
+@media (min-width: 480px) {
+    .action-card__btn {
+        width: auto;
+        min-width: 12rem;
+    }
+}
+
 .wo-pick {
     max-height: 18rem;
     overflow: auto;

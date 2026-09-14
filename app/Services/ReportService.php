@@ -292,6 +292,7 @@ class ReportService
 
         [$title, $body, $kindLabel, $tone] = match ($movement->type) {
             MovementType::PurchaseIn => ['Entró a stock por compra', $movement->notes, 'Alta', 'green'],
+            MovementType::OpeningIn => ['Entró por punto de partida', $movement->notes ?: 'Stock previo al sistema.', 'Alta', 'green'],
             MovementType::Install => ['Se montó en la unidad', $to ?: $movement->notes, 'Montaje', 'green'],
             MovementType::RemoveToStock => ['Se bajó de la unidad', collect([$from, $km])->filter()->implode(' · '), 'Ubicación', 'amber'],
             MovementType::Rotate => ['Rotó de posición', trim($from.' → '.$to), 'Montaje', 'amber'],

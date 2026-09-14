@@ -186,20 +186,22 @@ class ProductCycleTest extends TestCase
 
         $html = $this->actingAs($operario)->get(route('tires.show', $tire))->assertOk()->getContent();
         $this->assertStringNotContainsString('value="RECAPADO"', $html);
-        $this->assertStringContainsString('Historial', $html);
+        $this->assertStringContainsString('Historial de esta cubierta', $html);
+        $this->assertStringContainsString('Qué hacer ahora', $html);
         $this->assertStringContainsString('Se montó en la unidad', $html);
-        $this->assertStringContainsString('Alta / montaje', $html);
-        $this->assertStringNotContainsString('Dar de baja', $html);
+        $this->assertStringContainsString('Alta o montaje', $html);
+        $this->assertStringNotContainsString('Confirmar baja', $html);
         $timelineHtml = substr($html, (int) strpos($html, 'class="timeline"'));
         $this->assertLessThan(
-            strpos($timelineHtml, 'Se montó en la unidad'),
             strpos($timelineHtml, 'Alta por compra'),
-            'El historial debe listar el alta antes del montaje (más viejo arriba).'
+            strpos($timelineHtml, 'Se montó en la unidad'),
+            'El historial debe listar lo más reciente primero (montaje arriba del alta).'
         );
 
         $adminHtml = $this->actingAs($this->admin)->get(route('tires.show', $tire))->assertOk()->getContent();
         $this->assertStringContainsString('value="RECAPADO"', $adminHtml);
-        $this->assertStringContainsString('Dar de baja', $adminHtml);
+        $this->assertStringContainsString('Confirmar baja', $adminHtml);
+        $this->assertStringContainsString('Sacar de circulación', $adminHtml);
     }
 
     public function test_search_finds_plate_and_tire_number(): void
