@@ -50,7 +50,9 @@
                     <input type="date" name="as_of" required value="{{ old('as_of', now()->toDateString()) }}">
                     <x-field-error name="as_of" />
                 </label>
-                <button class="btn btn-primary">Importar a stock</button>
+                <div class="form-actions" style="border:0;margin:0;padding:0">
+                    <button class="btn btn-primary">Importar a stock</button>
+                </div>
             </form>
             <ul class="hint text-sm list-disc pl-5 space-y-1">
                 <li>Marca = nombre exacto; Modelo y Medida = <strong>código</strong> del catálogo.</li>

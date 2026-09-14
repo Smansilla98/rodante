@@ -55,6 +55,17 @@ class PrintController extends Controller
         ]));
     }
 
+    public function weekly(Request $request, ReportService $reports)
+    {
+        [$from, $to] = $reports->weeklyPeriod($request->get('from'), $request->get('to'));
+        $report = $reports->weeklyReport($request->user(), $from, $to);
+
+        return view('print.weekly-report', $this->printContext($request, [
+            'report' => $report,
+            'companyName' => $request->user()?->company?->name,
+        ]));
+    }
+
     private function printContext(Request $request, array $payload): array
     {
         return $payload + [

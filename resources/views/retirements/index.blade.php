@@ -76,22 +76,26 @@
         </x-panel>
 
         @if($eligible->isNotEmpty())
-            <div class="toolbar mt-4 flex-wrap items-end gap-3">
-                <label class="field">
-                    <span>Motivo</span>
-                    <select name="reason_id" required>
-                        <option value="">Elegí un motivo…</option>
-                        @foreach($reasons as $reason)
-                            <option value="{{ $reason->id }}" @selected((string) old('reason_id') === (string) $reason->id)>{{ $reason->name }}</option>
-                        @endforeach
-                    </select>
-                    <x-field-error name="reason_id" />
-                </label>
-                <label class="field" style="min-width:16rem;flex:1">
-                    <span>Observaciones</span>
-                    <input type="text" name="notes" value="{{ old('notes') }}" placeholder="Opcional. Ej. Fin de vida útil" maxlength="500">
-                </label>
-                <button class="btn btn-danger" type="submit">Dar de baja seleccionadas</button>
+            <div class="action-bar">
+                <div class="action-bar__fields">
+                    <label class="field">
+                        <span>Motivo</span>
+                        <select name="reason_id" required>
+                            <option value="">Elegí un motivo…</option>
+                            @foreach($reasons as $reason)
+                                <option value="{{ $reason->id }}" @selected((string) old('reason_id') === (string) $reason->id)>{{ $reason->name }}</option>
+                            @endforeach
+                        </select>
+                        <x-field-error name="reason_id" />
+                    </label>
+                    <label class="field">
+                        <span>Observaciones</span>
+                        <input type="text" name="notes" value="{{ old('notes') }}" placeholder="Opcional. Ej. Fin de vida útil" maxlength="500">
+                    </label>
+                </div>
+                <div class="action-bar__submit">
+                    <button class="btn btn-danger" type="submit">Dar de baja seleccionadas</button>
+                </div>
             </div>
         @endif
     </form>

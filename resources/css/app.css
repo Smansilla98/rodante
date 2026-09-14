@@ -532,6 +532,8 @@ body.nav-lock {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
 }
 
 .panel {
@@ -649,9 +651,108 @@ body.nav-lock {
 .abm-actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
-    justify-content: flex-end;
+    gap: 10px;
+    justify-content: center;
     align-items: center;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+}
+
+.form-actions .btn {
+    min-width: min(100%, 16rem);
+}
+
+.action-bar {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 16px;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    background: color-mix(in srgb, var(--card) 92%, #c8102e 8%);
+}
+
+.action-bar__fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+}
+
+.action-bar__fields .field {
+    flex: 1 1 12rem;
+    margin: 0;
+}
+
+.action-bar__submit {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+}
+
+.action-bar__submit .btn {
+    min-width: min(100%, 18rem);
+    min-height: 48px;
+}
+
+.export-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    align-items: center;
+}
+
+.export-actions .btn {
+    min-width: 9.5rem;
+}
+
+.share-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-bottom: 20px;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    background: var(--card);
+}
+
+.share-panel__title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    text-align: center;
+}
+
+.share-panel__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+    align-items: flex-end;
+}
+
+.share-panel__row .field {
+    flex: 1 1 14rem;
+    max-width: 22rem;
+    margin: 0;
 }
 
 .abm-check {
@@ -3753,13 +3854,17 @@ body.sheet-modal-open {
 .action-card__btn {
     min-height: 48px;
     width: 100%;
+    max-width: 20rem;
     font-size: 1.05rem;
+    align-self: center;
+    display: flex;
+    margin-inline: auto;
 }
 
 @media (min-width: 480px) {
     .action-card__btn {
         width: auto;
-        min-width: 12rem;
+        min-width: 14rem;
     }
 }
 

@@ -112,6 +112,37 @@ class WeeklyReportTest extends TestCase
             ->assertSessionHasErrors('email');
     }
 
+    public function test_weekly_exports_csv_excel_and_pdf(): void
+    {
+        $this->purchaseTires(1, 76100);
+        $period = [
+            'from' => now()->startOfWeek()->toDateString(),
+            'to' => now()->toDateString(),
+        ];
+
+        $this->get(route('reports.weekly', $period))
+            ->assertOk()
+            ->assertSee('Exportar o enviar')
+            ->assertSee('CSV')
+            ->assertSee('Excel')
+            ->assertSee('PDF');
+
+        $csv = $this->get(route('exports.report-weekly-csv', $period));
+        $csv->assertOk();
+        $this->assertStringContainsString('text/csv', (string) $csv->headers->get('content-type'));
+        $this->assertStringContainsString('attachment', (string) $csv->headers->get('content-disposition'));
+
+        $xls = $this->get(route('exports.report-weekly-excel', $period));
+        $xls->assertOk();
+        $this->assertStringContainsString('application/vnd.ms-excel', (string) $xls->headers->get('content-type'));
+        $this->assertStringContainsString('Workbook', $xls->streamedContent());
+
+        $this->get(route('reports.weekly.pdf', $period))
+            ->assertOk()
+            ->assertSee('Informe semanal')
+            ->assertSee('Imprimir / guardar PDF');
+    }
+
     public function test_stock_snapshot_counts_current_stock(): void
     {
         $this->purchaseTires(3, 76030);

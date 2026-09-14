@@ -14,6 +14,7 @@ use App\Models\TireModel;
 use App\Models\TireSize;
 use App\Models\UnitCoupling;
 use App\Services\CsvExportService;
+use App\Services\ExcelExportService;
 use App\Services\PurchaseService;
 use App\Services\ReportService;
 use App\Support\AccessScope;
@@ -22,7 +23,10 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ExportController extends Controller
 {
-    public function __construct(private CsvExportService $csv) {}
+    public function __construct(
+        private CsvExportService $csv,
+        private ExcelExportService $excel,
+    ) {}
 
     public function tiresCsv(Request $request): StreamedResponse
     {
@@ -268,6 +272,200 @@ class ExportController extends Controller
                 $write([$label, $row->total, $row->tires]);
             }
         });
+    }
+
+    public function reportWeeklyCsv(Request $request, ReportService $reports): StreamedResponse
+    {
+        $report = $this->weeklyPayload($request, $reports);
+        $from = $report['from']->toDateString();
+        $to = $report['to']->toDateString();
+
+        return $this->csv->download('informe-semanal-'.$from.'-'.$to, [
+            'Seccion', 'Momento', 'Cubierta', 'Salio', 'Entro', 'Unidad', 'Tipo', 'Detalle',
+        ], function ($write) use ($report) {
+            foreach ($report['stock_counts'] as $row) {
+                $write(['Stock', '', '', '', '', '', $row['status'], (string) $row['total']]);
+            }
+            foreach ($report['stock_tires'] as $tire) {
+                $write([
+                    'Stock detalle',
+                    '',
+                    $tire->displayName(),
+                    '',
+                    '',
+                    '',
+                    'Stock',
+                    $tire->currentLocation?->base?->name ?? '',
+                ]);
+            }
+            foreach ($report['movements'] as $row) {
+                $write([
+                    'Movimiento',
+                    $row['moment'],
+                    $row['tire'],
+                    $row['left'],
+                    $row['entered'],
+                    $row['unit'],
+                    $row['type'],
+                    '',
+                ]);
+            }
+            foreach ($report['purchases'] as $purchase) {
+                $write([
+                    'Compra',
+                    ($purchase->confirmed_at ?? $purchase->purchased_at)?->format('d/m/Y') ?? '',
+                    $purchase->number ?? '#'.$purchase->id,
+                    $purchase->supplier?->name ?? '',
+                    $purchase->base?->name ?? '',
+                    '',
+                    'Compra',
+                    (string) $purchase->items->sum('quantity'),
+                ]);
+            }
+            foreach ($report['retirements'] as $row) {
+                $write([
+                    'Baja',
+                    $row['moment'],
+                    $row['tire'],
+                    '',
+                    'De baja',
+                    '',
+                    $row['reason'] ?? 'Baja',
+                    $row['notes'] ?? '',
+                ]);
+            }
+        });
+    }
+
+    public function reportWeeklyExcel(Request $request, ReportService $reports): StreamedResponse
+    {
+        $report = $this->weeklyPayload($request, $reports);
+        $from = $report['from']->toDateString();
+        $to = $report['to']->toDateString();
+
+        return $this->excel->download('informe-semanal-'.$from.'-'.$to, [
+            [
+                'title' => 'Stock',
+                'headers' => ['Estado', 'Cantidad'],
+                'rows' => collect($report['stock_counts'])
+                    ->map(fn ($row) => [$row['status'], $row['total']])
+                    ->all(),
+            ],
+            [
+                'title' => 'Stock detalle',
+                'headers' => ['Numero', 'Cubierta', 'Base'],
+                'rows' => $report['stock_tires']
+                    ->map(fn ($tire) => [
+                        $tire->individual_number,
+                        $tire->displayName(),
+                        $tire->currentLocation?->base?->name ?? '',
+                    ])
+                    ->values()
+                    ->all(),
+            ],
+            [
+                'title' => 'Movimientos',
+                'headers' => ['Momento', 'Cubierta', 'Salio', 'Entro', 'Unidad', 'Tipo'],
+                'rows' => collect($report['movements'])
+                    ->map(fn ($row) => [
+                        $row['moment'], $row['tire'], $row['left'], $row['entered'], $row['unit'], $row['type'],
+                    ])
+                    ->all(),
+            ],
+            [
+                'title' => 'Compras',
+                'headers' => ['Fecha', 'Numero', 'Proveedor', 'Base', 'Cubiertas'],
+                'rows' => $report['purchases']
+                    ->map(fn ($purchase) => [
+                        ($purchase->confirmed_at ?? $purchase->purchased_at)?->format('d/m/Y') ?? '',
+                        $purchase->number ?? '#'.$purchase->id,
+                        $purchase->supplier?->name ?? '',
+                        $purchase->base?->name ?? '',
+                        $purchase->items->sum('quantity'),
+                    ])
+                    ->values()
+                    ->all(),
+            ],
+            [
+                'title' => 'Bajas',
+                'headers' => ['Momento', 'Cubierta', 'Motivo', 'Notas'],
+                'rows' => collect($report['retirements'])
+                    ->map(fn ($row) => [
+                        $row['moment'], $row['tire'], $row['reason'] ?? '', $row['notes'] ?? '',
+                    ])
+                    ->all(),
+            ],
+        ]);
+    }
+
+    public function reportCostKmCsv(Request $request, ReportService $reports): StreamedResponse
+    {
+        $tires = $reports->costPerKm($request->user());
+
+        return $this->csv->download('reporte-costo-km', [
+            'Cubierta', 'Km', 'Costo', 'Costo_por_km',
+        ], function ($write) use ($tires) {
+            foreach ($tires as $tire) {
+                $write([
+                    $tire->displayName(),
+                    $tire->accumulated_km,
+                    $tire->cost_total,
+                    $tire->cost_per_km,
+                ]);
+            }
+        });
+    }
+
+    public function reportCostAttributionCsv(Request $request, ReportService $reports): StreamedResponse
+    {
+        $byPosition = $reports->costByPosition($request->user());
+        $byUnit = $reports->costByUnit($request->user());
+
+        return $this->csv->download('reporte-costo-unidad', [
+            'Tipo', 'Nombre', 'Total', 'Entradas', 'Cubiertas',
+        ], function ($write) use ($byPosition, $byUnit) {
+            foreach ($byPosition as $row) {
+                $write(['Posicion', $row->position_name, $row->total_amount, $row->entries_count, $row->tire_count]);
+            }
+            foreach ($byUnit as $row) {
+                $write(['Unidad', $row->plate, $row->total_amount, $row->entries_count, $row->tire_count]);
+            }
+        });
+    }
+
+    public function reportInventoryCsv(Request $request, ReportService $reports): StreamedResponse
+    {
+        $query = \App\Models\Tire::query()->with(['brand', 'model', 'size', 'currentLocation.base', 'currentLocation.unit']);
+        AccessScope::tires($query, $request->user());
+        $query->where('status', '!=', \App\Enums\TireStatus::DeBaja)
+            ->orderBy('status')
+            ->orderBy('individual_number');
+
+        return $this->csv->download('reporte-inventario', [
+            'Numero', 'Cubierta', 'Estado', 'Ubicacion',
+        ], function ($write) use ($query) {
+            $query->chunkById(500, function ($tires) use ($write) {
+                foreach ($tires as $tire) {
+                    $write([
+                        $tire->individual_number,
+                        $tire->displayName(),
+                        $tire->status->label(),
+                        $tire->currentLocation?->unit?->plate
+                            ?: ($tire->currentLocation?->base?->name ?: $tire->status->label()),
+                    ]);
+                }
+            });
+        });
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function weeklyPayload(Request $request, ReportService $reports): array
+    {
+        [$from, $to] = $reports->weeklyPeriod($request->get('from'), $request->get('to'));
+
+        return $reports->weeklyReport($request->user(), $from, $to);
     }
 
     private function tiresQuery(Request $request)

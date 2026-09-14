@@ -2,24 +2,14 @@
 @section('kicker', 'Consulta')
 @section('title', 'Informe semanal')
 @section('content')
+@php
+    $period = ['from' => $report['from']->toDateString(), 'to' => $report['to']->toDateString()];
+@endphp
 <x-page-header
     kicker="Consulta"
     title="Informe semanal"
-    subtitle="Stock al momento, movimientos de la semana, compras y bajas. Podés enviarlo por correo con un botón."
->
-    <x-slot:actions>
-        <form method="POST" action="{{ route('reports.weekly.send') }}" class="inline-flex flex-wrap items-end gap-2" data-confirm="¿Enviar el informe al correo indicado?">
-            @csrf
-            <input type="hidden" name="from" value="{{ $report['from']->toDateString() }}">
-            <input type="hidden" name="to" value="{{ $report['to']->toDateString() }}">
-            <label class="field">
-                <span>Enviar a</span>
-                <input type="email" name="email" value="{{ old('email', auth()->user()->email) }}" required placeholder="correo@empresa.com" aria-label="Correo destino">
-            </label>
-            <button class="btn btn-primary" type="submit">Enviar por correo</button>
-        </form>
-    </x-slot:actions>
-</x-page-header>
+    subtitle="Stock al momento, movimientos de la semana, compras y bajas. Exportá o enviá por correo."
+/>
 
 @if($errors->any())
     <div class="flash flash--bad" role="alert">{{ $errors->first() }}</div>
@@ -34,8 +24,37 @@
         <span>Hasta</span>
         <input type="date" name="to" value="{{ $report['to']->toDateString() }}" required>
     </label>
-    <button class="btn btn-dark btn-sm">Actualizar</button>
+    <button class="btn btn-dark">Actualizar</button>
 </form>
+
+<section class="share-panel" aria-label="Compartir o exportar informe">
+    <h2 class="share-panel__title">Exportar o enviar</h2>
+    <div class="export-actions">
+        <a class="btn btn-ghost" href="{{ route('exports.report-weekly-csv', $period) }}" download>
+            <x-icon name="grid" class="w-4 h-4" /> CSV
+        </a>
+        <a class="btn btn-ghost" href="{{ route('exports.report-weekly-excel', $period) }}" download>
+            <x-icon name="grid" class="w-4 h-4" /> Excel
+        </a>
+        <a class="btn btn-ghost" href="{{ route('reports.weekly.pdf', $period) }}" target="_blank" rel="noopener">
+            <x-icon name="book" class="w-4 h-4" /> PDF
+        </a>
+    </div>
+    <form method="POST" action="{{ route('reports.weekly.send') }}" data-confirm="¿Enviar el informe al correo indicado?">
+        @csrf
+        <input type="hidden" name="from" value="{{ $report['from']->toDateString() }}">
+        <input type="hidden" name="to" value="{{ $report['to']->toDateString() }}">
+        <div class="share-panel__row">
+            <label class="field">
+                <span>Enviar a</span>
+                <input type="email" name="email" value="{{ old('email', auth()->user()->email) }}" required placeholder="correo@empresa.com" aria-label="Correo destino">
+            </label>
+        </div>
+        <div class="action-bar__submit" style="border:0;padding-top:0">
+            <button class="btn btn-primary" type="submit">Enviar por correo</button>
+        </div>
+    </form>
+</section>
 
 <p class="hint mb-6">Redactado el {{ $report['generated_at']->format('d/m/Y H:i') }}. El stock es el de <strong>ahora</strong>, no el histórico de la semana.</p>
 

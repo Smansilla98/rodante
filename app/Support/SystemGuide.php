@@ -252,7 +252,7 @@ class SystemGuide
                 'key' => 'weekly',
                 'name' => 'Informe semanal',
                 'group' => 'Consulta',
-                'what' => 'Stock al momento, movimientos de la semana (salida/entrada/unidad/hora), compras y bajas. Se puede enviar por correo.',
+                'what' => 'Stock al momento, movimientos de la semana (salida/entrada/unidad/hora), compras y bajas. Se puede exportar CSV/Excel/PDF o enviar por correo.',
                 'route' => 'reports.weekly',
                 'cells' => self::all($v),
             ],

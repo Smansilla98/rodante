@@ -5,7 +5,11 @@
     kicker="Consulta"
     title="Costo por unidad y posición"
     subtitle="Suma de asientos con atribución. El $/km por cubierta no cambia: sigue siendo costo con tire_id / km."
-/>
+>
+    <x-slot:actions>
+        <x-export-csv :href="route('exports.report-cost-attribution')" />
+    </x-slot:actions>
+</x-page-header>
 
 <div class="grid lg:grid-cols-2 gap-5">
     <x-panel title="Por unidad" :flush="true">

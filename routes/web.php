@@ -88,6 +88,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/exportar/reporte-km.csv', [ExportController::class, 'reportKilometersCsv'])->name('exports.report-kilometers');
     Route::get('/exportar/reporte-consumo.csv', [ExportController::class, 'reportConsumptionCsv'])->name('exports.report-consumption');
     Route::get('/exportar/reporte-incidencias.csv', [ExportController::class, 'reportIncidentsCsv'])->name('exports.report-incidents');
+    Route::get('/exportar/reporte-costo-km.csv', [ExportController::class, 'reportCostKmCsv'])->name('exports.report-cost-km');
+    Route::get('/exportar/reporte-costo-unidad.csv', [ExportController::class, 'reportCostAttributionCsv'])->name('exports.report-cost-attribution');
+    Route::get('/exportar/reporte-inventario.csv', [ExportController::class, 'reportInventoryCsv'])->name('exports.report-inventory');
+    Route::get('/exportar/informe-semanal.csv', [ExportController::class, 'reportWeeklyCsv'])->name('exports.report-weekly-csv');
+    Route::get('/exportar/informe-semanal.xls', [ExportController::class, 'reportWeeklyExcel'])->name('exports.report-weekly-excel');
+    Route::get('/reportes/semanal/pdf', [PrintController::class, 'weekly'])->name('reports.weekly.pdf');
 
     Route::get('/ordenes', [WorkOrderController::class, 'index'])->name('work-orders.index');
     Route::get('/ordenes/{workOrder}', [WorkOrderController::class, 'show'])->whereNumber('workOrder')->name('work-orders.show');

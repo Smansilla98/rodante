@@ -57,6 +57,7 @@ class RetirementModuleTest extends TestCase
             ->assertOk()
             ->assertSee('Listas para dar de baja')
             ->assertSee('Dar de baja seleccionadas')
+            ->assertSee('action-bar', false)
             ->assertSee((string) $stockTire->individual_number)
             ->assertSee('No se pueden dar de baja')
             ->assertSee((string) $mountedTire->individual_number)

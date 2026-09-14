@@ -48,7 +48,9 @@
             @endfor
         </div>
         <label class="field mb-4"><span>Notas</span><textarea name="notes" rows="2"></textarea></label>
-        <button class="btn btn-primary">Crear borrador</button>
+        <div class="form-actions">
+            <button class="btn btn-primary">Crear borrador</button>
+        </div>
     </x-panel>
 </form>
 

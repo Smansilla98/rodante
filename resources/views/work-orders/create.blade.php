@@ -60,7 +60,9 @@
         </label>
         <label class="field"><span>Notas</span><textarea name="notes" rows="2" class="inp">{{ old('notes') }}</textarea></label>
         <x-field-error name="error" />
-        <button class="btn btn-primary">Abrir orden</button>
+        <div class="form-actions">
+            <button class="btn btn-primary">Abrir orden</button>
+        </div>
     </div>
 </form>
 @endsection

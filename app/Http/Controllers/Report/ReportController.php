@@ -104,7 +104,7 @@ class ReportController extends Controller
 
     public function weekly(Request $request, ReportService $reports)
     {
-        [$from, $to] = $this->weeklyPeriod($request);
+        [$from, $to] = $reports->weeklyPeriod($request->get('from'), $request->get('to'));
 
         return view('reports.weekly', [
             'report' => $reports->weeklyReport($request->user(), $from, $to),
@@ -113,7 +113,7 @@ class ReportController extends Controller
 
     public function sendWeekly(Request $request, ReportService $reports)
     {
-        [$from, $to] = $this->weeklyPeriod($request);
+        [$from, $to] = $reports->weeklyPeriod($request->get('from'), $request->get('to'));
 
         $data = $request->validate([
             'email' => ['required', 'email', 'max:190'],
@@ -132,21 +132,5 @@ class ReportController extends Controller
                 'to' => $to->toDateString(),
             ])
             ->with('success', 'Informe semanal enviado a '.$data['email'].'.');
-    }
-
-    /**
-     * @return array{0: \Carbon\Carbon, 1: \Carbon\Carbon}
-     */
-    private function weeklyPeriod(Request $request): array
-    {
-        $from = $request->date('from')?->startOfDay()
-            ?? now()->startOfWeek(\Carbon\Carbon::MONDAY)->startOfDay();
-        $to = $request->date('to')?->endOfDay() ?? now()->endOfDay();
-
-        if ($from->gt($to)) {
-            [$from, $to] = [$to->copy()->startOfDay(), $from->copy()->endOfDay()];
-        }
-
-        return [$from, $to];
     }
 }

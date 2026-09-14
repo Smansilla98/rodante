@@ -288,6 +288,25 @@ class ReportService
     }
 
     /**
+     * @return array{0: \Carbon\Carbon, 1: \Carbon\Carbon}
+     */
+    public function weeklyPeriod(?string $from = null, ?string $to = null): array
+    {
+        $fromAt = $from
+            ? Carbon::parse($from)->startOfDay()
+            : now()->startOfWeek(Carbon::MONDAY)->startOfDay();
+        $toAt = $to
+            ? Carbon::parse($to)->endOfDay()
+            : now()->endOfDay();
+
+        if ($fromAt->gt($toAt)) {
+            return [$toAt->copy()->startOfDay(), $fromAt->copy()->endOfDay()];
+        }
+
+        return [$fromAt, $toAt];
+    }
+
+    /**
      * Informe semanal: stock al momento, movimientos del período, compras y bajas.
      *
      * @return array{

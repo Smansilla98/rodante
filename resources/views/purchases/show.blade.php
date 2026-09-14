@@ -97,7 +97,9 @@
         <form method="POST" action="{{ route('purchases.confirm', $purchase) }}" class="mt-6" data-confirm="Al confirmar, las cubiertas ingresan a stock con su número individual. El borrador deja de poder anularse. ¿Confirmar la compra?">
             @csrf
             <p class="hint mb-3">Confirmá solo si los números y la medida están bien. Después las cubiertas quedan en stock listas para instalar.</p>
-            <button class="btn btn-primary">Confirmar e ingresar a stock</button>
+            <div class="form-actions">
+                <button class="btn btn-primary">Confirmar e ingresar a stock</button>
+            </div>
         </form>
     @endif
 </x-panel>

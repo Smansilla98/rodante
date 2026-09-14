@@ -76,7 +76,9 @@
                 <span class="hint">Tanques, semis y bateas llevan una cubierta por lado. La medida es de la unidad: 295 o 385.</span>
             </label>
         </fieldset>
-        <button class="btn btn-primary">Guardar</button>
+        <div class="form-actions">
+            <button class="btn btn-primary">Guardar</button>
+        </div>
     </div>
 </form>
 @endsection

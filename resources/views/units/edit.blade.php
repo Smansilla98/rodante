@@ -65,7 +65,9 @@
                 </label>
             </fieldset>
         @endunless
-        <button class="btn btn-primary">Guardar cambios</button>
+        <div class="form-actions">
+            <button class="btn btn-primary">Guardar cambios</button>
+        </div>
     </div>
 </form>
 
