@@ -16,7 +16,7 @@
 @if(auth()->user()->role->canWrite())
     <div class="grid sm:grid-cols-3 gap-3 mb-8">
         <a href="{{ route('odometers.index') }}" class="btn btn-primary btn-touch">Cargar km</a>
-        <a href="{{ route('field.index') }}" class="btn btn-dark btn-touch">Medición / incidencia</a>
+        <a href="{{ route('field.index') }}" class="btn btn-dark btn-touch">Buscar cubierta</a>
         <a href="{{ route('units.index') }}" class="btn btn-ghost btn-touch">Abrir planilla</a>
     </div>
 @endif
@@ -144,8 +144,8 @@
 <div class="hub-grid mb-8">
     <a class="hub" href="{{ route('field.index') }}">
         <span class="hub__ico" aria-hidden="true"><x-icon name="search" class="w-6 h-6" /></span>
-        <div class="hub__t">Campo</div>
-        <div class="hub__s">Número o QR. Identificar y actuar.</div>
+        <div class="hub__t">Buscar cubierta</div>
+        <div class="hub__s">Por número o QR, en playa o en el camión.</div>
     </a>
     <a class="hub" href="{{ route('units.index') }}">
         <span class="hub__ico" aria-hidden="true"><x-icon name="truck" class="w-6 h-6" /></span>

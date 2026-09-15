@@ -3,7 +3,7 @@
 @section('title', 'Dar de baja')
 @section('content')
 <x-page-header
-    kicker="Operación"
+    kicker="Cubiertas"
     title="Dar de baja"
     subtitle="Marcá las cubiertas fuera de unidad y dales de baja juntas. Si están montadas, primero retiralas a stock desde la planilla."
 >
@@ -12,6 +12,15 @@
         <a href="{{ route('tires.index', ['queue' => 'retirement']) }}" class="btn btn-ghost">Cola próximas a baja</a>
     </x-slot:actions>
 </x-page-header>
+
+<x-help-callout title="Cómo dar de baja sin enredarte">
+    <ol>
+        <li>Solo aparecen arriba las que <strong>no</strong> están en una unidad.</li>
+        <li>Marcá una o varias (el tilde de arriba marca toda la página).</li>
+        <li>Elegí el motivo y confirmá. Vas a ver cuántas marcaste antes de enviar.</li>
+        <li>Si está en un camión, usá el botón de la planilla abajo y después volvé acá.</li>
+    </ol>
+</x-help-callout>
 
 @if($errors->has('retire'))
     <div class="flash flash--bad" role="alert">{{ $errors->first('retire') }}</div>
@@ -32,7 +41,11 @@
     <h2 id="eligibleTitle" class="text-lg font-bold mb-2">Listas para dar de baja</h2>
     <p class="hint mb-4">Marcá una o varias, elegí el motivo y confirmá. La baja es definitiva.</p>
 
-    <form method="POST" action="{{ route('retirements.bulk') }}" data-confirm="La baja es definitiva. Las cubiertas marcadas no se podrán reinstalar. ¿Continuar?">
+    <form
+        method="POST"
+        action="{{ route('retirements.bulk') }}"
+        data-confirm-template="La baja es definitiva. Vas a dar de baja {n} cubierta(s) y no se podrán reinstalar. ¿Continuar?"
+    >
         @csrf
         <x-panel :flush="true">
             <x-content-table>
@@ -77,6 +90,7 @@
 
         @if($eligible->isNotEmpty())
             <div class="action-bar">
+                <p class="retire-count mb-0" data-retire-count aria-live="polite">Ninguna marcada</p>
                 <div class="action-bar__fields">
                     <label class="field">
                         <span>Motivo</span>
@@ -94,7 +108,7 @@
                     </label>
                 </div>
                 <div class="action-bar__submit">
-                    <button class="btn btn-danger" type="submit">Dar de baja seleccionadas</button>
+                    <button class="btn btn-danger" type="submit" data-retire-submit disabled>Marcá cubiertas para dar de baja</button>
                 </div>
             </div>
         @endif

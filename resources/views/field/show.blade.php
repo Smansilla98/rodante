@@ -2,9 +2,9 @@
 @section('title', $tire->displayName())
 @section('content')
 @php $forecast = $forecast ?? []; @endphp
-<x-page-header kicker="Campo" :title="$tire->displayName()" :subtitle="$tire->status->label()">
+<x-page-header kicker="Buscar cubierta" :title="$tire->displayName()" :subtitle="$tire->status->label()">
     <x-slot:actions>
-        <a href="{{ route('field.index') }}" class="btn btn-ghost">Otra cubierta</a>
+        <a href="{{ route('field.index') }}" class="btn btn-ghost">Buscar otra</a>
     </x-slot:actions>
 </x-page-header>
 <div class="panel max-w-xl">

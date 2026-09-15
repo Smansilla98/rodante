@@ -29,35 +29,47 @@
         </div>
 
         <nav class="sb-nav" aria-label="Secciones">
-            <div class="sb-group">
-                <div class="sb-lbl">Operación</div>
+            <x-nav-group title="Día a día">
                 <x-nav-link :href="route('dashboard')" icon="home" label="Tablero" match="dashboard" />
-                <x-nav-link :href="route('field.index')" icon="search" label="Campo" match="field.*" />
+                <x-nav-link :href="route('field.index')" icon="search" label="Buscar cubierta" match="field.*" />
                 <x-nav-link :href="route('units.index')" icon="truck" label="Unidades" match="units.*" />
+                <x-nav-link :href="route('odometers.index')" icon="gauge" label="Odómetros" match="odometers.*" />
+            </x-nav-group>
+
+            <x-nav-group title="Cubiertas">
                 <x-nav-link :href="route('tires.stock')" icon="boxes" label="Stock" match="tires.stock" />
                 <x-nav-link :href="route('tires.index')" icon="circle" label="Neumáticos" :match="['tires.index', 'tires.show']" />
                 <x-nav-link :href="route('purchases.index')" icon="cart" label="Compras" match="purchases.*" />
+                <x-nav-link :href="route('starting-point.index')" icon="grid" label="Punto de partida" match="starting-point.*" />
+                <x-nav-link :href="route('work-orders.index')" icon="grid" label="Órdenes" match="work-orders.*" />
                 @if(auth()->user()->role->canRetireOrRecap())
                     <x-nav-link :href="route('retirements.index')" icon="alert" label="Dar de baja" match="retirements.*" />
                 @endif
-                <x-nav-link :href="route('starting-point.index')" icon="grid" label="Punto de partida" match="starting-point.*" />
-                <x-nav-link :href="route('work-orders.index')" icon="grid" label="Órdenes" match="work-orders.*" />
-                <x-nav-link :href="route('odometers.index')" icon="gauge" label="Odómetros" match="odometers.*" />
-            </div>
-            <div class="sb-group">
-                <div class="sb-lbl">Consulta</div>
+            </x-nav-group>
+
+            <x-nav-group title="Seguimiento" :collapsed="true">
                 <x-nav-link :href="route('measurements.index')" icon="ruler" label="Mediciones" match="measurements.*" />
                 <x-nav-link :href="route('incidents.index')" icon="alert" label="Incidencias" match="incidents.*" />
                 <x-nav-link :href="route('couplings.index')" icon="truck" label="Enganches" match="couplings.*" />
+            </x-nav-group>
+
+            <x-nav-group title="Informes" :collapsed="true">
                 <x-nav-link :href="route('reports.kilometers')" icon="chart" label="Km por cubierta" match="reports.kilometers" />
                 <x-nav-link :href="route('reports.weekly')" icon="inbox" label="Informe semanal" match="reports.weekly*" />
-                <x-nav-link :href="route('reports.cost-km')" icon="chart" label="Costo / km" match="reports.cost-km" />
-                <x-nav-link :href="route('reports.cost-attribution')" icon="chart" label="Costo unidad/posición" match="reports.cost-attribution" />
+                <x-nav-link :href="route('reports.consumption')" icon="grid" label="Consumo" match="reports.consumption" />
+                <x-nav-link :href="route('reports.predictive')" icon="chart" label="Predictivo" match="reports.predictive" />
                 <x-nav-link :href="route('reports.inventory')" icon="boxes" label="Inventario teórico" match="reports.inventory" />
                 <x-nav-link :href="route('inventories.index')" icon="boxes" label="Inventario físico" match="inventories.*" />
-                <x-nav-link :href="route('reports.consumption')" icon="grid" label="Consumo" match="reports.consumption" />
+            </x-nav-group>
+
+            <x-nav-group title="Costos" :collapsed="true">
+                <x-nav-link :href="route('reports.cost-km')" icon="chart" label="Costo / km" match="reports.cost-km" />
+                <x-nav-link :href="route('reports.cost-attribution')" icon="chart" label="Costo unidad/posición" match="reports.cost-attribution" />
+                <x-nav-link :href="route('costs.index')" icon="chart" label="Costos" match="costs.*" />
+            </x-nav-group>
+
+            <x-nav-group title="Control" :collapsed="true">
                 <x-nav-link :href="route('reports.incidents')" icon="alert" label="Incidencias (resumen)" match="reports.incidents" />
-                <x-nav-link :href="route('reports.predictive')" icon="chart" label="Predictivo" match="reports.predictive" />
                 <x-nav-link :href="route('reports.audit')" icon="shield" label="Movimientos" match="reports.audit" />
                 @if(auth()->user()->role->canViewTelemetry())
                     <x-nav-link :href="route('reports.telemetry')" icon="gauge" label="Telemetría" match="reports.telemetry" />
@@ -65,19 +77,17 @@
                 @if(auth()->user()->role->canRetireOrRecap())
                     <x-nav-link :href="route('integrity.index')" icon="shield" label="Integridad" match="integrity.*" />
                 @endif
-                <x-nav-link :href="route('costs.index')" icon="chart" label="Costos" match="costs.*" />
                 <x-nav-link :href="route('notifications.index')" icon="alert" label="Avisos" match="notifications.*" />
                 <x-nav-link :href="route('help.index')" icon="book" label="Ayuda" match="help.*" />
-            </div>
+            </x-nav-group>
+
             @if(auth()->user()->is_super_admin)
-                <div class="sb-group">
-                    <div class="sb-lbl">Plataforma</div>
+                <x-nav-group title="Plataforma" :collapsed="true">
                     <x-nav-link :href="route('admin.companies.index')" icon="shield" label="Empresas" match="admin.companies.*" />
-                </div>
+                </x-nav-group>
             @endif
             @if(auth()->user()->role->canManageCatalogs())
-                <div class="sb-group">
-                    <div class="sb-lbl">Catálogo</div>
+                <x-nav-group title="Catálogo" :collapsed="true">
                     <x-nav-link :href="route('brands.index')" icon="tag" label="Marcas" match="brands.*" />
                     <x-nav-link :href="route('models.index')" icon="circle" label="Modelos" match="models.*" />
                     <x-nav-link :href="route('sizes.index')" icon="ruler" label="Medidas" match="sizes.*" />
@@ -87,7 +97,7 @@
                     <x-nav-link :href="route('types.index')" icon="grid" label="Tipos y motivos" match="types.*" />
                     <x-nav-link :href="route('shops.index')" icon="pin" label="Recapadoras" match="shops.*" />
                     <x-nav-link :href="route('users.index')" icon="users" label="Usuarios" match="users.*" />
-                </div>
+                </x-nav-group>
             @endif
         </nav>
     </aside>

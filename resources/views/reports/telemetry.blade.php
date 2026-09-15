@@ -9,7 +9,7 @@
 />
 
 <div class="kpi-grid mb-6">
-    @foreach(['auth.login' => 'Ingresos', 'field.identify' => 'Campo', 'tire.operation' => 'Planilla', 'tire.measured' => 'Mediciones', 'tire.retired' => 'Bajas', 'tire.life_report' => 'Informes'] as $key => $label)
+    @foreach(['auth.login' => 'Ingresos', 'field.identify' => 'Buscar cubierta', 'tire.operation' => 'Planilla', 'tire.measured' => 'Mediciones', 'tire.retired' => 'Bajas', 'tire.life_report' => 'Informes'] as $key => $label)
         <div class="kpi">
             <div class="kpi__l">{{ $label }}</div>
             <div class="kpi__v">{{ number_format($totals[$key] ?? 0) }}</div>

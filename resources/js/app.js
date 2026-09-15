@@ -1086,7 +1086,16 @@ document.addEventListener('submit', (event) => {
     if ((form.method || 'get').toLowerCase() === 'get') {
         return;
     }
-    if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
+    if (form.dataset.confirmTemplate) {
+        const n = form.querySelectorAll('input.retire-row[type="checkbox"]:checked').length
+            || form.querySelectorAll('input[name="tire_ids[]"]:checked').length
+            || 0;
+        const message = form.dataset.confirmTemplate.replaceAll('{n}', String(n));
+        if (!window.confirm(message)) {
+            event.preventDefault();
+            return;
+        }
+    } else if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
         event.preventDefault();
         return;
     }
@@ -1197,14 +1206,170 @@ document.querySelectorAll('[data-check-all]').forEach((master) => {
         const boxes = [...document.querySelectorAll(`input.${cls}[type="checkbox"]`)];
         master.checked = boxes.length > 0 && boxes.every((box) => box.checked);
         master.indeterminate = boxes.some((box) => box.checked) && !master.checked;
+        document.dispatchEvent(new CustomEvent('rodante:selection-change', { detail: { className: cls } }));
     };
     master.addEventListener('change', () => {
         document.querySelectorAll(`input.${cls}[type="checkbox"]`).forEach((box) => {
             box.checked = master.checked;
         });
         master.indeterminate = false;
+        document.dispatchEvent(new CustomEvent('rodante:selection-change', { detail: { className: cls } }));
     });
     document.querySelectorAll(`input.${cls}[type="checkbox"]`).forEach((box) => {
         box.addEventListener('change', sync);
     });
 });
+
+(() => {
+    const storageKey = 'rodante.sb.groups';
+    let saved = {};
+    try {
+        saved = JSON.parse(localStorage.getItem(storageKey) || '{}') || {};
+    } catch (_) {
+        saved = {};
+    }
+
+    const setCollapsed = (group, collapsed, persist) => {
+        group.classList.toggle('is-collapsed', collapsed);
+        const toggle = group.querySelector('[data-sb-toggle]');
+        if (toggle) {
+            toggle.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+        }
+        if (persist && group.dataset.sbPersist === '1' && group.dataset.sbGroup) {
+            saved[group.dataset.sbGroup] = collapsed ? 1 : 0;
+            try {
+                localStorage.setItem(storageKey, JSON.stringify(saved));
+            } catch (_) {
+                // ignore quota / private mode
+            }
+        }
+    };
+
+    document.querySelectorAll('[data-sb-group]').forEach((group) => {
+        const key = group.dataset.sbGroup;
+        const hasActive = !!group.querySelector('.sb-link.is-active');
+        let collapsed = group.hasAttribute('data-sb-default-collapsed');
+        if (key && Object.prototype.hasOwnProperty.call(saved, key)) {
+            collapsed = saved[key] === 1;
+        }
+        if (hasActive) {
+            collapsed = false;
+        }
+        setCollapsed(group, collapsed, false);
+
+        group.querySelector('[data-sb-toggle]')?.addEventListener('click', () => {
+            setCollapsed(group, !group.classList.contains('is-collapsed'), true);
+        });
+    });
+})();
+
+(() => {
+    const countEl = document.querySelector('[data-retire-count]');
+    const submitBtn = document.querySelector('[data-retire-submit]');
+    if (!countEl) {
+        return;
+    }
+    const refresh = () => {
+        const n = document.querySelectorAll('input.retire-row[type="checkbox"]:checked').length;
+        countEl.textContent = n === 0
+            ? 'Ninguna marcada'
+            : (n === 1 ? '1 cubierta marcada' : `${n} cubiertas marcadas`);
+        if (submitBtn) {
+            submitBtn.disabled = n === 0;
+            submitBtn.textContent = n === 0
+                ? 'Marcá cubiertas para dar de baja'
+                : (n === 1 ? 'Dar de baja 1 cubierta' : `Dar de baja ${n} cubiertas`);
+        }
+    };
+    document.addEventListener('rodante:selection-change', (event) => {
+        if (event.detail?.className === 'retire-row') {
+            refresh();
+        }
+    });
+    refresh();
+})();
+
+(() => {
+    const input = document.querySelector('[data-field-q]');
+    const startBtn = document.querySelector('[data-field-scan-start]');
+    const stopBtn = document.querySelector('[data-field-scan-stop]');
+    const panel = document.querySelector('[data-field-scan-panel]');
+    const video = document.querySelector('[data-field-scan-video]');
+    const status = document.querySelector('[data-field-scan-status]');
+    if (!input || !startBtn || !video) {
+        return;
+    }
+
+    let stream = null;
+    let timer = null;
+    let detector = null;
+
+    const setStatus = (text) => {
+        if (status) {
+            status.textContent = text;
+        }
+    };
+
+    const stop = () => {
+        if (timer) {
+            clearInterval(timer);
+            timer = null;
+        }
+        if (stream) {
+            stream.getTracks().forEach((track) => track.stop());
+            stream = null;
+        }
+        video.srcObject = null;
+        panel?.setAttribute('hidden', '');
+        stopBtn?.setAttribute('hidden', '');
+        startBtn.removeAttribute('hidden');
+    };
+
+    const applyCode = (raw) => {
+        const value = String(raw || '').trim();
+        if (!value) {
+            return;
+        }
+        input.value = value;
+        stop();
+        input.form?.requestSubmit();
+    };
+
+    startBtn.addEventListener('click', async () => {
+        if (!('BarcodeDetector' in window) || !navigator.mediaDevices?.getUserMedia) {
+            setStatus('Este celular no permite escanear acá. Escribí el número o pegá el código del QR.');
+            input.focus();
+            return;
+        }
+        try {
+            detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+            stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: 'environment' } },
+                audio: false,
+            });
+            video.srcObject = stream;
+            await video.play();
+            panel?.removeAttribute('hidden');
+            stopBtn?.removeAttribute('hidden');
+            startBtn.setAttribute('hidden', '');
+            setStatus('Apuntá al QR de la cubierta…');
+            timer = setInterval(async () => {
+                try {
+                    const codes = await detector.detect(video);
+                    if (codes?.[0]?.rawValue) {
+                        applyCode(codes[0].rawValue);
+                    }
+                } catch (_) {
+                    // keep scanning
+                }
+            }, 450);
+        } catch (_) {
+            stop();
+            setStatus('No se pudo abrir la cámara. Escribí el número o pegá el código del QR.');
+            input.focus();
+        }
+    });
+
+    stopBtn?.addEventListener('click', stop);
+    window.addEventListener('pagehide', stop);
+})();

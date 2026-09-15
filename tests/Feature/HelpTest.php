@@ -62,7 +62,29 @@ class HelpTest extends TestCase
             ->assertSee('Manual de uso')
             ->assertSee('planilla')
             ->assertSee('Odómetros')
-            ->assertSee('Punto de partida');
+            ->assertSee('Punto de partida')
+            ->assertSee('Dar de baja')
+            ->assertSee('Informe semanal')
+            ->assertSee('exportar CSV')
+            ->assertSee('enviar por correo')
+            ->assertSee('Día a día');
+    }
+
+    public function test_sidebar_is_sectioned_for_admin(): void
+    {
+        $this->get(route('dashboard'))
+            ->assertOk()
+            ->assertSee('Día a día')
+            ->assertSee('Cubiertas')
+            ->assertSee('Seguimiento')
+            ->assertSee('Informes')
+            ->assertSee('Costos')
+            ->assertSee('Control')
+            ->assertSee('Dar de baja')
+            ->assertSee('Informe semanal')
+            ->assertSee('Buscar cubierta')
+            ->assertSee('data-sb-group', false)
+            ->assertSee('sb-lbl--toggle', false);
     }
 
     public function test_help_starting_point_redirects_to_operation(): void

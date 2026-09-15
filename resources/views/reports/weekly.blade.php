@@ -6,11 +6,19 @@
     $period = ['from' => $report['from']->toDateString(), 'to' => $report['to']->toDateString()];
 @endphp
 <x-page-header
-    kicker="Consulta"
+    kicker="Informes"
     title="Informe semanal"
     subtitle="Stock al momento, movimientos de la semana, compras y bajas. Exportá o enviá por correo."
 />
 
+<x-help-callout title="Cómo usar el informe">
+    <ol>
+        <li>Elegí el período (por defecto, de lunes a hoy) y tocá <strong>Actualizar</strong>.</li>
+        <li>Revisá stock, movimientos, compras y bajas.</li>
+        <li>Exportá en <strong>CSV</strong>, <strong>Excel</strong> o <strong>PDF</strong>, o enviá por correo.</li>
+        <li>El stock es el de <strong>ahora</strong>, no un histórico de la semana.</li>
+    </ol>
+</x-help-callout>
 @if($errors->any())
     <div class="flash flash--bad" role="alert">{{ $errors->first() }}</div>
 @endif

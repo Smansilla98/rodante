@@ -163,7 +163,7 @@ class RoleQaRunner
     {
         $pages = [
             'Tablero' => route('dashboard'),
-            'Campo' => route('field.index'),
+            'Buscar cubierta' => route('field.index'),
             'Unidades' => route('units.index'),
             'Planilla' => route('units.show', $this->browseUnit),
             'Stock' => route('tires.stock'),

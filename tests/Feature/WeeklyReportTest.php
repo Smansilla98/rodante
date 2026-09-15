@@ -123,6 +123,7 @@ class WeeklyReportTest extends TestCase
         $this->get(route('reports.weekly', $period))
             ->assertOk()
             ->assertSee('Exportar o enviar')
+            ->assertSee('Cómo usar el informe')
             ->assertSee('CSV')
             ->assertSee('Excel')
             ->assertSee('PDF');

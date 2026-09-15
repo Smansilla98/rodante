@@ -25,4 +25,22 @@ return [
     */
     'csp_enforce' => (bool) env('RODANTE_CSP_ENFORCE', true),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Informe semanal por correo (programado)
+    |--------------------------------------------------------------------------
+    |
+    | Lunes 08:00 (timezone de la app). Requiere SMTP real (MAIL_MAILER=smtp).
+    | Si WEEKLY_REPORT_EMAILS está vacío, se envía a jefes/admins activos
+    | de cada empresa. Si tiene valores, esos correos reciben el de cada empresa.
+    |
+    */
+    'weekly_report' => [
+        'enabled' => (bool) env('RODANTE_WEEKLY_REPORT_ENABLED', false),
+        'emails' => array_values(array_filter(array_map(
+            static fn (string $email): string => trim($email),
+            explode(',', (string) env('RODANTE_WEEKLY_REPORT_EMAILS', ''))
+        ))),
+    ],
+
 ];
