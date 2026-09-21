@@ -109,6 +109,7 @@ export interface Tire {
   recap_wear?: 'NUEVA' | 'USADA' | null;
   /** Etiqueta única calculada en el backend (combina status+condition+recap_wear+aplicación) — usar esta, no armar una propia. */
   display_condition?: string;
+  notes?: string | null;
   accumulated_km: number;
   current_tread_min: string | number | null;
   purchased_at: string | null;

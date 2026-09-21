@@ -104,6 +104,10 @@
         </div>
     </dl>
 
+    @if($tire->notes)
+        <p class="tire-summary__where"><strong>Observaciones:</strong> {{ $tire->notes }}</p>
+    @endif
+
     @if(! empty($forecast['narrative']))
         <div class="forecast-card forecast-card--{{ $forecast['status'] ?? 'unknown' }} tire-summary__forecast">
             <strong>Pronóstico</strong>
@@ -324,6 +328,17 @@
                                     <option value="{{ $condition->value }}" @selected(old('condition', $tire->condition->value) === $condition->value)>{{ $condition->label() }}</option>
                                 @endforeach
                             </select>
+                        </label>
+                        <label class="field"><span>Desgaste del recapado (solo si la condición es Recapada)</span>
+                            <select name="recap_wear">
+                                <option value="">Sin clasificar</option>
+                                <option value="NUEVA" @selected(old('recap_wear', $tire->recap_wear) === 'NUEVA')>Nueva</option>
+                                <option value="USADA" @selected(old('recap_wear', $tire->recap_wear) === 'USADA')>Usada</option>
+                            </select>
+                        </label>
+                        <label class="field"><span>Observaciones</span>
+                            <textarea name="notes" rows="3" maxlength="2000" placeholder="Opcional">{{ old('notes', $tire->notes) }}</textarea>
+                            <x-field-error name="notes" />
                         </label>
                         <button class="btn btn-primary action-card__btn">Guardar cambios</button>
                     </form>

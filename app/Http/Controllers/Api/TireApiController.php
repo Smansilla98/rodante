@@ -11,6 +11,7 @@ use App\Http\Requests\RetireTireRequest;
 use App\Http\Requests\ReturnTireToStockRequest;
 use App\Http\Requests\StoreTireIncidentRequest;
 use App\Http\Requests\StoreTireMeasurementRequest;
+use App\Http\Requests\UpdateTireRequest;
 use App\Models\FleetUnit;
 use App\Models\Tire;
 use App\Services\IncidentService;
@@ -21,6 +22,7 @@ use App\Services\PredictiveWearService;
 use App\Services\ReportService;
 use App\Services\RetirementService;
 use App\Services\TelemetryService;
+use App\Services\TireIdentityService;
 use App\Services\TireOperationService;
 use App\Support\AccessScope;
 use Illuminate\Http\Request;
@@ -79,7 +81,7 @@ class TireApiController extends Controller
         $tire = $reports->tireHistory($tire);
 
         return response()->json([
-            'tire' => $tire->only(['id', 'individual_number', 'status', 'condition', 'recap_wear', 'display_condition', 'accumulated_km']),
+            'tire' => $tire->only(['id', 'individual_number', 'dot', 'status', 'condition', 'recap_wear', 'display_condition', 'accumulated_km', 'notes', 'tire_brand_id', 'tire_model_id', 'tire_size_id']),
             'display' => $tire->displayName(),
             'timeline' => $reports->timeline($tire),
             'movements' => $tire->movements,
@@ -291,6 +293,43 @@ class TireApiController extends Controller
 
         $data = $request->validate(['recap_wear' => 'required|in:NUEVA,USADA']);
         $tire->update(['recap_wear' => $data['recap_wear']]);
+
+        return response()->json($tire->fresh(['brand', 'model', 'size']));
+    }
+
+    /**
+     * Modificar neumático (marca/modelo/medida/DOT/condición/observaciones) — reusa
+     * UpdateTireRequest tal cual la usa la web (`TireController::update`), misma
+     * autorización (`Gate::allows('update', $tire)`, hoy solo Administrador) y mismas
+     * reglas, para no duplicar validaciones entre plataformas.
+     */
+    public function update(UpdateTireRequest $request, Tire $tire, TireIdentityService $identity)
+    {
+        $data = $request->validated();
+        if (! TireCondition::tryFrom($data['condition'])) {
+            return response()->json(['message' => 'Condición inválida.'], 422);
+        }
+        if ((int) $data['individual_number'] !== (int) $tire->individual_number) {
+            try {
+                $identity->changeNumber(
+                    $tire,
+                    (int) $data['individual_number'],
+                    (string) ($data['number_reason'] ?? ''),
+                    $request->user(),
+                );
+            } catch (DomainException $e) {
+                return response()->json(['message' => $e->getMessage()], 422);
+            }
+        }
+        $tire->update([
+            'tire_brand_id' => $data['tire_brand_id'],
+            'tire_model_id' => $data['tire_model_id'],
+            'tire_size_id' => $data['tire_size_id'],
+            'condition' => $data['condition'],
+            'recap_wear' => $data['condition'] === TireCondition::Recapada->value ? ($data['recap_wear'] ?? null) : null,
+            'dot' => $data['dot'] ?? null,
+            'notes' => $data['notes'] ?? null,
+        ]);
 
         return response()->json($tire->fresh(['brand', 'model', 'size']));
     }

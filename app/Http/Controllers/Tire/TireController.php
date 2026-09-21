@@ -148,7 +148,9 @@ class TireController extends Controller
             'tire_model_id' => $data['tire_model_id'],
             'tire_size_id' => $data['tire_size_id'],
             'condition' => $data['condition'],
+            'recap_wear' => $data['condition'] === TireCondition::Recapada->value ? ($data['recap_wear'] ?? null) : null,
             'dot' => $data['dot'] ?? null,
+            'notes' => $data['notes'] ?? null,
         ]);
 
         return redirect()->route('tires.show', $tire)->with('success', 'Cubierta actualizada.');

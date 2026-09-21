@@ -23,7 +23,7 @@ class Tire extends Model
     protected $fillable = [
         'company_id', 'public_token', 'individual_number', 'dot', 'tire_brand_id', 'tire_model_id', 'tire_size_id',
         'tire_purchase_item_id', 'current_lifecycle_id', 'status', 'condition', 'recap_wear',
-        'accumulated_km', 'current_tread_min', 'purchased_at', 'retired_at',
+        'accumulated_km', 'current_tread_min', 'purchased_at', 'retired_at', 'notes',
     ];
 
     /**

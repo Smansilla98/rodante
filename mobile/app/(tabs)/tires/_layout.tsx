@@ -15,6 +15,7 @@ export default function TiresLayout() {
     >
       <Stack.Screen name="index" options={{ title: 'Neumáticos' }} />
       <Stack.Screen name="new" options={{ title: 'Nuevo neumático' }} />
+      <Stack.Screen name="edit" options={{ title: 'Modificar neumático' }} />
       <Stack.Screen name="[id]" options={{ title: 'Neumático' }} />
     </Stack>
   );

@@ -136,6 +136,24 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
+  /** Modificar neumático (marca/modelo/medida/DOT/condición/observaciones) — solo Administrador. */
+  updateTire: (
+    tireId: number,
+    body: {
+      individual_number: number;
+      tire_brand_id: number;
+      tire_model_id: number;
+      tire_size_id: number;
+      condition: string;
+      dot?: string;
+      notes?: string;
+    },
+  ) =>
+    apiRequest<Tire>(`/tires/${tireId}`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
   workOrders: (page = 1) => apiRequest<Paginated<WorkOrder>>(`/work-orders?page=${page}`),
 
   createWorkOrder: (body: {

@@ -20,6 +20,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/tires', [ApiSurfaceController::class, 'storeTire'])->middleware('capability:write');
         Route::post('/tires/lookup', [ApiSurfaceController::class, 'lookup']);
         Route::get('/tires/{tire}', [TireApiController::class, 'show']);
+        Route::post('/tires/{tire}', [TireApiController::class, 'update'])->middleware('capability:write');
         Route::get('/tires/{tire}/history', [TireApiController::class, 'history']);
         Route::get('/tires/{tire}/prediction', [TireApiController::class, 'prediction']);
         Route::get('/tires/{tire}/life-report', [TireApiController::class, 'lifeReport']);

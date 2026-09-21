@@ -4,7 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { api, ApiError } from '../../../src/api/client';
 import type { LifeReportPayload, PredictionPayload, TireHistoryPayload } from '../../../src/api/types';
 import { useAuth } from '../../../src/auth/AuthContext';
-import { canRetireOrRecap, canWrite } from '../../../src/auth/permissions';
+import { canManageAbm, canRetireOrRecap, canWrite } from '../../../src/auth/permissions';
 import { colors, radius, space, touchTarget, type } from '../../../src/theme';
 import { TireStatusBadge } from '../../../src/ui/StatusBadge';
 import { Card, Chip, ErrorState, Field, LoadingState, PrimaryButton, SectionLabel } from '../../../src/ui/primitives';
@@ -35,6 +35,7 @@ export default function TireDetailScreen() {
 
   const canWriteThis = canWrite(user?.role);
   const canRetire = canRetireOrRecap(user?.role);
+  const canModify = canManageAbm(user?.role);
 
   const load = useCallback(async () => {
     setError(null);
@@ -201,6 +202,15 @@ export default function TireDetailScreen() {
           <Card>
             <SectionLabel>Acciones</SectionLabel>
             <View style={{ gap: space.sm }}>
+              {canModify ? (
+                <PrimaryButton
+                  title="Modificar neumático"
+                  icon="create-outline"
+                  onPress={() => router.push(`/(tabs)/tires/edit?id=${tireId}`)}
+                  variant="outline"
+                  block
+                />
+              ) : null}
               <PrimaryButton
                 title="Registrar incidente"
                 icon="alert-circle-outline"

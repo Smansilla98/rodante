@@ -192,6 +192,15 @@ export const TIRE_STATUS_LABEL: Record<string, string> = {
   DE_BAJA: 'De baja',
 };
 
+/** Espejo de `App\Enums\TireCondition::label()` — para el picker completo de "Modificar". */
+export const TIRE_CONDITION_LABEL: Record<string, string> = {
+  NUEVA: 'Nueva',
+  NUEVA_USADA: 'Nueva usada',
+  USADA: 'Usada',
+  RECAPADA: 'Recapada',
+  REPARADA: 'Reparada (parche)',
+};
+
 export const UNIT_STATUS_LABEL: Record<string, string> = {
   ACTIVA: 'Activa',
   INACTIVA: 'Inactiva',

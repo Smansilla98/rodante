@@ -49,6 +49,8 @@ class UpdateTireRequest extends FormRequest
             'tire_model_id' => 'required|exists:tire_models,id',
             'tire_size_id' => 'required|exists:tire_sizes,id',
             'condition' => 'required|string',
+            'recap_wear' => 'nullable|in:NUEVA,USADA',
+            'notes' => 'nullable|string|max:2000',
         ];
     }
 
