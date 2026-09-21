@@ -233,19 +233,28 @@ export interface UnitLayoutPayload {
   layout: UnitLayoutEntry[];
 }
 
+export interface RetreadShop {
+  id: number;
+  name: string;
+}
+
 export interface WorkOrder {
   id: number;
   company_id: number;
+  number?: string;
   tire_id?: number | null;
   retread_shop_id: number;
   type: WorkOrderTypeValue;
   status: WorkOrderStatusValue;
   notes?: string | null;
+  cost?: number | string | null;
   created_at: string;
   updated_at: string;
   tire?: Tire | null;
   items?: Array<{ id: number; tire_id: number; tire?: Tire | null }>;
   shop?: { id: number; name: string } | null;
+  opener?: { id: number; name: string } | null;
+  closer?: { id: number; name: string } | null;
 }
 
 export interface InventorySession {
@@ -265,6 +274,26 @@ export interface InventorySession {
   closed_at?: string | null;
   cancelled_at?: string | null;
   base?: Base | null;
+  opener?: { id: number; name: string } | null;
+}
+
+export interface InventoryLine {
+  id: number;
+  tire_id: number;
+  expected_kind?: string | null;
+  observed_kind?: string | null;
+  delta: string;
+  found: boolean;
+  notes?: string | null;
+  tire?: Tire | null;
+  expectedBase?: Base | null;
+  observedBase?: Base | null;
+  scanner?: { id: number; name: string } | null;
+}
+
+export interface InventorySessionDetailPayload {
+  session: InventorySession;
+  lines: Paginated<InventoryLine>;
 }
 
 /** Paginator por defecto de Laravel. */
@@ -287,17 +316,68 @@ export interface Paginated<T> {
   };
 }
 
+export interface TireMovement {
+  id: number;
+  type: string;
+  occurred_at: string;
+  from_unit_id?: number | null;
+  to_unit_id?: number | null;
+  from_base_id?: number | null;
+  to_base_id?: number | null;
+  km_delta?: number | null;
+  notes?: string | null;
+  fromUnit?: { id: number; plate: string } | null;
+  toUnit?: { id: number; plate: string } | null;
+  fromPosition?: { id: number; code: string } | null;
+  toPosition?: { id: number; code: string } | null;
+  user?: { id: number; name: string } | null;
+}
+
+export interface TireIncident {
+  id: number;
+  type: string;
+  occurred_at: string;
+  description?: string | null;
+  notes?: string | null;
+  user?: { id: number; name: string } | null;
+}
+
+export interface TireLifecycle {
+  id: number;
+  life_number: number;
+  started_at: string;
+  ended_at?: string | null;
+  km_in_life?: number | null;
+  condition_at_start?: string | null;
+}
+
 export interface TireHistoryPayload {
   tire: Partial<Tire> & { id: number; individual_number: number; status: TireStatusValue };
   display: string;
   timeline: unknown[];
-  movements: unknown[];
-  incidents: unknown[];
-  lifecycles: unknown[];
+  movements: TireMovement[];
+  incidents: TireIncident[];
+  lifecycles: TireLifecycle[];
+}
+
+export interface PredictionZone {
+  name: string;
+  mm: number;
+  remaining_km: number | null;
 }
 
 export interface PredictionPayload {
-  [key: string]: unknown;
+  current_mm: number | null;
+  threshold_mm: number;
+  wear_mm_per_1000km: number;
+  remaining_km: number | null;
+  confidence: 'low' | 'medium' | 'high' | string;
+  source: string;
+  status: 'unknown' | 'critical' | 'warn' | 'ok' | string;
+  samples: number;
+  ai_enabled: boolean;
+  zones: PredictionZone[];
+  narrative: string;
 }
 
 export interface LifeReportPayload {
@@ -315,6 +395,13 @@ export interface TelemetryPayload {
   totals: Record<string, number>;
   sources: Record<string, number>;
   events: unknown[];
+}
+
+export interface DashboardPayload {
+  tires_total: number;
+  tires_by_status: Record<string, number>;
+  open_work_orders: number;
+  open_inventory_sessions: number;
 }
 
 export interface LookupResult extends Tire {}

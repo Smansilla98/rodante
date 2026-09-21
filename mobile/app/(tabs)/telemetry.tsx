@@ -4,7 +4,7 @@ import type { TelemetryPayload } from '../../src/api/types';
 import { api, ApiError } from '../../src/api/client';
 import { useAuth } from '../../src/auth/AuthContext';
 import { canViewTelemetry } from '../../src/auth/permissions';
-import { colors, space, type } from '../../src/theme';
+import { TELEMETRY_EVENT_LABEL, TELEMETRY_SOURCE_LABEL, colors, space, type } from '../../src/theme';
 import { PageHeader } from '../../src/ui/PageHeader';
 import { Card, EmptyState, ErrorState, LoadingState, SectionLabel, StatTile } from '../../src/ui/primitives';
 
@@ -53,19 +53,25 @@ export default function TelemetryScreen() {
           <ErrorState message={error} onRetry={load} />
         ) : data ? (
           <>
-            <View style={styles.grid}>
-              {Object.entries(data.totals ?? {}).map(([key, value]) => (
-                <StatTile key={key} label={key.replace(/_/g, ' ')} value={value} />
-              ))}
-            </View>
-            <Card>
-              <SectionLabel>Fuentes</SectionLabel>
-              {Object.entries(data.sources ?? {}).map(([key, value]) => (
-                <Text key={key} style={styles.sourceRow}>
-                  {key.replace(/_/g, ' ')}: {value}
-                </Text>
-              ))}
-            </Card>
+            {Object.keys(data.totals ?? {}).length === 0 ? (
+              <EmptyState icon="pulse-outline" title="Sin actividad" hint="No hay eventos en este período." />
+            ) : (
+              <View style={styles.grid}>
+                {Object.entries(data.totals ?? {}).map(([key, value]) => (
+                  <StatTile key={key} label={TELEMETRY_EVENT_LABEL[key] ?? key.replace(/[._]/g, ' ')} value={value} />
+                ))}
+              </View>
+            )}
+            {Object.keys(data.sources ?? {}).length > 0 ? (
+              <Card>
+                <SectionLabel>Origen</SectionLabel>
+                {Object.entries(data.sources ?? {}).map(([key, value]) => (
+                  <Text key={key} style={styles.sourceRow}>
+                    {TELEMETRY_SOURCE_LABEL[key] ?? key}: {value}
+                  </Text>
+                ))}
+              </Card>
+            ) : null}
           </>
         ) : null}
       </ScrollView>

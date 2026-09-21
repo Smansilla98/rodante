@@ -110,7 +110,11 @@ export const api = {
 
   me: () => apiRequest<import('./types').ApiUser>('/me'),
 
+  dashboard: () => apiRequest<import('./types').DashboardPayload>('/dashboard'),
+
   bases: () => apiRequest<Base[]>('/bases'),
+
+  retreadShops: () => apiRequest<import('./types').RetreadShop[]>('/retread-shops'),
 
   movementReasons: (appliesTo?: string) =>
     apiRequest<import('./types').MovementReason[]>(
@@ -156,6 +160,8 @@ export const api = {
 
   workOrders: (page = 1) => apiRequest<Paginated<WorkOrder>>(`/work-orders?page=${page}`),
 
+  workOrder: (id: number) => apiRequest<WorkOrder>(`/work-orders/${id}`),
+
   createWorkOrder: (body: {
     tire_id?: number;
     tire_ids?: number[];
@@ -168,8 +174,55 @@ export const api = {
       body: JSON.stringify(body),
     }),
 
+  sendWorkOrderToShop: (id: number) => apiRequest<WorkOrder>(`/work-orders/${id}/send`, { method: 'POST' }),
+
+  closeWorkOrder: (id: number, body?: { cost?: number; notes?: string }) =>
+    apiRequest<WorkOrder>(`/work-orders/${id}/close`, {
+      method: 'POST',
+      body: JSON.stringify(body ?? {}),
+    }),
+
+  cancelWorkOrder: (id: number, notes?: string) =>
+    apiRequest<WorkOrder>(`/work-orders/${id}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    }),
+
   inventorySessions: (page = 1) =>
     apiRequest<Paginated<InventorySession>>(`/inventory-sessions?page=${page}`),
+
+  inventorySession: (id: number) =>
+    apiRequest<import('./types').InventorySessionDetailPayload>(`/inventory-sessions/${id}`),
+
+  createInventorySession: (base_id: number, notes?: string) =>
+    apiRequest<InventorySession>('/inventory-sessions', {
+      method: 'POST',
+      body: JSON.stringify({ base_id, notes }),
+    }),
+
+  startInventorySession: (id: number) =>
+    apiRequest<InventorySession>(`/inventory-sessions/${id}/start`, { method: 'POST' }),
+
+  scanInventorySession: (id: number, q: string) =>
+    apiRequest<import('./types').InventoryLine>(`/inventory-sessions/${id}/scan`, {
+      method: 'POST',
+      body: JSON.stringify({ q }),
+    }),
+
+  reviewInventorySession: (id: number) =>
+    apiRequest<InventorySession>(`/inventory-sessions/${id}/review`, { method: 'POST' }),
+
+  closeInventorySession: (id: number, body?: { apply_fixes?: boolean; notes?: string }) =>
+    apiRequest<InventorySession>(`/inventory-sessions/${id}/close`, {
+      method: 'POST',
+      body: JSON.stringify(body ?? {}),
+    }),
+
+  cancelInventorySession: (id: number, notes?: string) =>
+    apiRequest<InventorySession>(`/inventory-sessions/${id}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ notes }),
+    }),
 
   tires: (opts?: {
     status?: string;

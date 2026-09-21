@@ -2,12 +2,91 @@ import { useCallback, useEffect, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { api, ApiError } from '../../../src/api/client';
-import type { LifeReportPayload, PredictionPayload, TireHistoryPayload } from '../../../src/api/types';
+import type {
+  LifeReportPayload,
+  PredictionPayload,
+  TireHistoryPayload,
+  TireIncident,
+  TireLifecycle,
+  TireMovement,
+} from '../../../src/api/types';
 import { useAuth } from '../../../src/auth/AuthContext';
 import { canManageAbm, canRetireOrRecap, canWrite } from '../../../src/auth/permissions';
-import { colors, radius, space, touchTarget, type } from '../../../src/theme';
+import {
+  INCIDENT_TYPE_LABEL,
+  MOVEMENT_TYPE_LABEL,
+  colors,
+  radius,
+  space,
+  touchTarget,
+  type,
+} from '../../../src/theme';
 import { TireStatusBadge } from '../../../src/ui/StatusBadge';
-import { Card, Chip, ErrorState, Field, LoadingState, PrimaryButton, SectionLabel } from '../../../src/ui/primitives';
+import { Card, Chip, ErrorState, Field, LoadingState, PrimaryButton, SectionLabel, StatusPill } from '../../../src/ui/primitives';
+
+const CONFIDENCE_LABEL: Record<string, string> = { high: 'alta', medium: 'media', low: 'baja' };
+
+const PREDICTION_STATUS: Record<string, { label: string; color: string }> = {
+  critical: { label: 'Crítico', color: colors.danger },
+  warn: { label: 'Atención', color: colors.warn },
+  ok: { label: 'Normal', color: colors.ok },
+  unknown: { label: 'Sin datos suficientes', color: colors.muted },
+};
+
+function formatDateTime(value?: string | null): string {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+}
+
+function movementPlace(movement: TireMovement, side: 'from' | 'to'): string {
+  const unit = side === 'from' ? movement.fromUnit : movement.toUnit;
+  const position = side === 'from' ? movement.fromPosition : movement.toPosition;
+  if (unit) return `${unit.plate}${position ? ` · ${position.code}` : ''}`;
+  const baseId = side === 'from' ? movement.from_base_id : movement.to_base_id;
+  return baseId ? 'Depósito' : '—';
+}
+
+function MovementRow({ movement }: { movement: TireMovement }) {
+  const from = movementPlace(movement, 'from');
+  const to = movementPlace(movement, 'to');
+  return (
+    <View style={styles.historyRow}>
+      <Text style={styles.historyTitle}>{MOVEMENT_TYPE_LABEL[movement.type] ?? movement.type}</Text>
+      <Text style={styles.historyMeta}>
+        {formatDateTime(movement.occurred_at)} · {from} → {to}
+        {movement.km_delta ? ` · ${movement.km_delta.toLocaleString()} km` : ''}
+      </Text>
+      {movement.notes ? <Text style={styles.historyNotes}>{movement.notes}</Text> : null}
+    </View>
+  );
+}
+
+function IncidentRow({ incident }: { incident: TireIncident }) {
+  return (
+    <View style={styles.historyRow}>
+      <Text style={styles.historyTitle}>{INCIDENT_TYPE_LABEL[incident.type] ?? incident.type}</Text>
+      <Text style={styles.historyMeta}>{formatDateTime(incident.occurred_at)}</Text>
+      {incident.description ? <Text style={styles.historyNotes}>{incident.description}</Text> : null}
+    </View>
+  );
+}
+
+function LifecycleRow({ lifecycle }: { lifecycle: TireLifecycle }) {
+  return (
+    <View style={styles.historyRow}>
+      <Text style={styles.historyTitle}>Vida {lifecycle.life_number}</Text>
+      <Text style={styles.historyMeta}>
+        {formatDateTime(lifecycle.started_at)} → {lifecycle.ended_at ? formatDateTime(lifecycle.ended_at) : 'En curso'}
+      </Text>
+    </View>
+  );
+}
+
+function sortByOccurredDesc<T extends { occurred_at: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => new Date(b.occurred_at).getTime() - new Date(a.occurred_at).getTime());
+}
 
 type Tab = 'history' | 'prediction' | 'life-report';
 
@@ -171,15 +250,61 @@ export default function TireDetailScreen() {
         </View>
 
         {tab === 'history' ? (
-          <Card>
-            <SectionLabel>Movimientos ({history.movements?.length ?? 0})</SectionLabel>
-            <SectionLabel>Incidentes ({history.incidents?.length ?? 0})</SectionLabel>
-            <SectionLabel>Ciclos de vida ({history.lifecycles?.length ?? 0})</SectionLabel>
-          </Card>
+          <View style={{ gap: space.md }}>
+            <Card>
+              <SectionLabel>Movimientos ({history.movements?.length ?? 0})</SectionLabel>
+              {history.movements?.length ? (
+                sortByOccurredDesc(history.movements).map((m) => <MovementRow key={m.id} movement={m} />)
+              ) : (
+                <Text style={styles.sub}>Sin movimientos todavía.</Text>
+              )}
+            </Card>
+            <Card>
+              <SectionLabel>Incidentes ({history.incidents?.length ?? 0})</SectionLabel>
+              {history.incidents?.length ? (
+                sortByOccurredDesc(history.incidents).map((i) => <IncidentRow key={i.id} incident={i} />)
+              ) : (
+                <Text style={styles.sub}>Sin incidentes.</Text>
+              )}
+            </Card>
+            <Card>
+              <SectionLabel>Ciclos de vida ({history.lifecycles?.length ?? 0})</SectionLabel>
+              {history.lifecycles?.length ? (
+                history.lifecycles.map((l) => <LifecycleRow key={l.id} lifecycle={l} />)
+              ) : (
+                <Text style={styles.sub}>Sin ciclos registrados.</Text>
+              )}
+            </Card>
+          </View>
         ) : tab === 'prediction' ? (
           <Card>
             {prediction ? (
-              <Text style={styles.mono}>{JSON.stringify(prediction, null, 2)}</Text>
+              <>
+                <View style={styles.headRow}>
+                  <Text style={styles.title}>Pronóstico</Text>
+                  <StatusPill
+                    label={(PREDICTION_STATUS[prediction.status] ?? PREDICTION_STATUS.unknown).label}
+                    color={(PREDICTION_STATUS[prediction.status] ?? PREDICTION_STATUS.unknown).color}
+                  />
+                </View>
+                <Text style={styles.sub}>{prediction.narrative}</Text>
+                {prediction.remaining_km !== null ? (
+                  <Text style={styles.hint}>
+                    {prediction.remaining_km.toLocaleString()} km estimados hasta {prediction.threshold_mm} mm ·
+                    confianza {CONFIDENCE_LABEL[prediction.confidence] ?? prediction.confidence}
+                  </Text>
+                ) : null}
+                {prediction.zones.length > 0 ? (
+                  <View style={{ marginTop: space.md }}>
+                    <SectionLabel>Por zona</SectionLabel>
+                    {prediction.zones.map((z) => (
+                      <Text key={z.name} style={styles.sub}>
+                        {z.name}: {z.mm} mm{z.remaining_km !== null ? ` · ${z.remaining_km.toLocaleString()} km restantes` : ''}
+                      </Text>
+                    ))}
+                  </View>
+                ) : null}
+              </>
             ) : (
               <LoadingState label="Calculando predicción…" />
             )}
@@ -405,6 +530,15 @@ const styles = StyleSheet.create({
   title: { color: colors.ink, fontSize: type.title, fontWeight: '700', flexShrink: 1 },
   sub: { color: colors.muted, fontSize: type.body, marginTop: space.xs },
   fieldLabel: { color: colors.muted, fontSize: type.label, fontWeight: '600', marginBottom: space.xs },
+  historyRow: {
+    paddingVertical: space.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    marginTop: space.sm,
+  },
+  historyTitle: { color: colors.ink, fontSize: type.bodyStrong, fontWeight: '700' },
+  historyMeta: { color: colors.muted, fontSize: type.caption, marginTop: 2 },
+  historyNotes: { color: colors.inkSoft, fontSize: type.caption, marginTop: 2, fontStyle: 'italic' },
   conditionRow: {
     flexDirection: 'row',
     alignItems: 'center',

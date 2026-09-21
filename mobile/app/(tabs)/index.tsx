@@ -2,59 +2,36 @@ import { useCallback, useEffect, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { api, ApiError } from '../../src/api/client';
+import type { DashboardPayload } from '../../src/api/types';
 import { useAuth } from '../../src/auth/AuthContext';
-import { canWrite, dashboardKpis, roleLabel } from '../../src/auth/permissions';
+import { canWrite, roleLabel } from '../../src/auth/permissions';
 import { colors, radius, space, touchTarget, type } from '../../src/theme';
 import { PageHeader } from '../../src/ui/PageHeader';
-import { Card, ErrorState, Icon, LoadingState, SectionLabel, StatTile } from '../../src/ui/primitives';
+import { Card, ErrorState, Icon, LoadingState } from '../../src/ui/primitives';
 
-const STATUS_BY_KPI: Record<string, string | null> = {
-  total: null,
-  stock: 'STOCK',
-  installed: 'INSTALADA',
-  reserve: 'RESERVA',
-  spare: 'AUXILIO',
-  repair: 'EN_REPARACION',
-  retired: 'DE_BAJA',
-};
-
-const KPI_LABEL: Record<string, string> = {
-  total: 'Total neumáticos',
-  stock: 'En stock',
-  installed: 'Instalados',
-  reserve: 'En reserva',
-  spare: 'Auxilio',
-  repair: 'En reparación',
-  retired: 'De baja',
-  km: 'Km acumulados',
-};
+/** Solo los 3 estados más relevantes para un vistazo rápido — el resto está a un toque en "Neumáticos". */
+const HIGHLIGHT_STATUSES: Array<{ key: string; label: string }> = [
+  { key: 'STOCK', label: 'En stock' },
+  { key: 'INSTALADA', label: 'Instalados' },
+  { key: 'DE_BAJA', label: 'De baja' },
+];
 
 export default function DashboardScreen() {
   const { user } = useAuth();
   const router = useRouter();
-  const [counts, setCounts] = useState<Record<string, number> | null>(null);
+  const writeAllowed = canWrite(user?.role);
+  const [data, setData] = useState<DashboardPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-
-  const kpis = dashboardKpis(user?.role).filter((k) => k !== 'km');
-  const writeAllowed = canWrite(user?.role);
 
   const load = useCallback(async () => {
     setError(null);
     try {
-      const entries = await Promise.all(
-        kpis.map(async (kpi) => {
-          const status = STATUS_BY_KPI[kpi];
-          const res = await api.tires(status ? { status, page: 1 } : { page: 1 });
-          return [kpi, res.meta.total] as const;
-        }),
-      );
-      setCounts(Object.fromEntries(entries));
+      setData(await api.dashboard());
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No se pudo cargar el resumen');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.role]);
+  }, []);
 
   useEffect(() => {
     void load();
@@ -73,43 +50,67 @@ export default function DashboardScreen() {
         contentContainerStyle={styles.scroll}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        {counts === null && !error ? (
+        {data === null && !error ? (
           <LoadingState label="Cargando resumen…" />
         ) : error ? (
           <ErrorState message={error} onRetry={load} />
-        ) : (
-          <View style={styles.grid}>
-            {kpis.map((kpi) => (
-              <StatTile key={kpi} label={KPI_LABEL[kpi] ?? kpi} value={counts?.[kpi] ?? 0} />
-            ))}
-          </View>
-        )}
+        ) : data ? (
+          <>
+            <Card style={styles.heroCard}>
+              <Text style={styles.heroLabel}>Neumáticos</Text>
+              <Text style={styles.heroValue}>{data.tires_total.toLocaleString()}</Text>
+              <View style={styles.inlineStats}>
+                {HIGHLIGHT_STATUSES.map((s, idx) => (
+                  <View key={s.key} style={[styles.inlineStat, idx > 0 && styles.inlineStatBorder]}>
+                    <Text style={styles.inlineLabel}>{s.label}</Text>
+                    <Text style={styles.inlineValue}>{data.tires_by_status[s.key] ?? 0}</Text>
+                  </View>
+                ))}
+              </View>
+            </Card>
 
-        <Card style={{ marginTop: space.lg }}>
-          <SectionLabel>Accesos rápidos</SectionLabel>
-          <View style={{ gap: space.sm }}>
-            {writeAllowed ? (
-              <QuickLink
-                icon="add-circle-outline"
-                label="Nuevo neumático"
-                onPress={() => router.push('/(tabs)/tires/new')}
-              />
-            ) : null}
-            <QuickLink icon="search-outline" label="Buscar neumático" onPress={() => router.push('/(tabs)/lookup')} />
-            <QuickLink icon="ellipse-outline" label="Neumáticos" onPress={() => router.push('/(tabs)/tires')} />
-            <QuickLink icon="bus-outline" label="Unidades" onPress={() => router.push('/(tabs)/units')} />
-            <QuickLink
-              icon="build-outline"
-              label="Órdenes de trabajo"
-              onPress={() => router.push('/(tabs)/work-orders' as Href)}
-            />
-            <QuickLink
-              icon="clipboard-outline"
-              label="Inventarios"
-              onPress={() => router.push('/(tabs)/inventory-sessions' as Href)}
-            />
-          </View>
-        </Card>
+            <View style={styles.miniRow}>
+              <Pressable
+                style={({ pressed }) => [styles.miniTile, pressed && styles.miniTilePressed]}
+                onPress={() => router.push('/(tabs)/work-orders' as Href)}
+                accessibilityRole="button"
+                accessibilityLabel={`${data.open_work_orders} órdenes de trabajo abiertas`}
+              >
+                <Text style={styles.miniValue}>{data.open_work_orders}</Text>
+                <Text style={styles.miniLabel}>OTs abiertas</Text>
+              </Pressable>
+              <Pressable
+                style={({ pressed }) => [styles.miniTile, pressed && styles.miniTilePressed]}
+                onPress={() => router.push('/(tabs)/inventory-sessions' as Href)}
+                accessibilityRole="button"
+                accessibilityLabel={`${data.open_inventory_sessions} inventarios en curso`}
+              >
+                <Text style={styles.miniValue}>{data.open_inventory_sessions}</Text>
+                <Text style={styles.miniLabel}>Inventarios en curso</Text>
+              </Pressable>
+            </View>
+          </>
+        ) : null}
+
+        <Text style={styles.section}>Accesos rápidos</Text>
+        <View style={{ gap: space.sm }}>
+          {writeAllowed ? (
+            <QuickLink icon="add-circle-outline" label="Nuevo neumático" onPress={() => router.push('/(tabs)/tires/new')} />
+          ) : null}
+          <QuickLink icon="search-outline" label="Buscar neumático" onPress={() => router.push('/(tabs)/lookup')} />
+          <QuickLink icon="ellipse-outline" label="Neumáticos" onPress={() => router.push('/(tabs)/tires')} />
+          <QuickLink icon="bus-outline" label="Unidades" onPress={() => router.push('/(tabs)/units')} />
+          <QuickLink
+            icon="build-outline"
+            label="Órdenes de trabajo"
+            onPress={() => router.push('/(tabs)/work-orders' as Href)}
+          />
+          <QuickLink
+            icon="clipboard-outline"
+            label="Inventarios"
+            onPress={() => router.push('/(tabs)/inventory-sessions' as Href)}
+          />
+        </View>
       </ScrollView>
     </View>
   );
@@ -140,8 +141,30 @@ function QuickLink({
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.page },
-  scroll: { padding: space.lg, paddingTop: 0 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.md },
+  scroll: { padding: space.lg, paddingTop: 0, gap: space.md },
+  heroCard: { gap: space.xs },
+  heroLabel: { color: colors.muted, fontSize: type.label, fontWeight: '600' },
+  heroValue: { color: colors.ink, fontSize: 40, fontWeight: '800' },
+  inlineStats: { flexDirection: 'row', marginTop: space.sm },
+  inlineStat: { flex: 1, alignItems: 'center', paddingVertical: space.xs },
+  inlineStatBorder: { borderLeftWidth: 1, borderLeftColor: colors.line },
+  inlineLabel: { color: colors.muted, fontSize: type.caption },
+  inlineValue: { color: colors.ink, fontSize: type.title, fontWeight: '700', marginTop: 2 },
+  miniRow: { flexDirection: 'row', gap: space.sm },
+  miniTile: {
+    flex: 1,
+    minHeight: touchTarget.row,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: space.md,
+    justifyContent: 'center',
+  },
+  miniTilePressed: { backgroundColor: colors.card2 },
+  miniValue: { color: colors.ink, fontSize: type.display, fontWeight: '800' },
+  miniLabel: { color: colors.muted, fontSize: type.caption, marginTop: 2 },
+  section: { color: colors.muted, fontSize: type.label, fontWeight: '700', marginBottom: space.xs },
   link: {
     flexDirection: 'row',
     alignItems: 'center',

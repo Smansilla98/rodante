@@ -201,6 +201,53 @@ export const TIRE_CONDITION_LABEL: Record<string, string> = {
   REPARADA: 'Reparada (parche)',
 };
 
+/** Espejo de `App\Enums\MovementType::label()` — para el historial del neumático. */
+export const MOVEMENT_TYPE_LABEL: Record<string, string> = {
+  PURCHASE_IN: 'Ingreso por compra',
+  OPENING_IN: 'Ingreso punto de partida',
+  REMOVE_TO_STOCK: 'Retiro a stock',
+  INSTALL: 'Instalación',
+  ROTATE: 'Rotación',
+  TO_RESERVA: 'Pase a reserva',
+  FROM_RESERVA: 'Salida de reserva',
+  TO_SPARE: 'Pase a auxilio',
+  FROM_SPARE: 'Salida de auxilio',
+  TO_REPAIR: 'Pase a reparación',
+  FROM_REPAIR: 'Salida de reparación',
+  RETIRE: 'Baja',
+  TRANSFER_BASE: 'Cambio de base',
+  CORRECTION: 'Corrección',
+};
+
+/** Espejo de `App\Enums\IncidentType::label()`. */
+export const INCIDENT_TYPE_LABEL: Record<string, string> = {
+  PINCHADURA: 'Pinchadura',
+  SOPLADURA: 'Sopladura',
+  PARCHE: 'Parche',
+  REPARACION: 'Reparación',
+  RECAPADO: 'Recapado',
+  INSPECCION: 'Inspección',
+  DESGASTE_IRREGULAR: 'Desgaste irregular',
+  CAMBIO: 'Cambio',
+  OTRA: 'Otra',
+};
+
+/** Espejo de eventos de telemetría (`TelemetryService::dashboard`, App\Services\*::record('...')). */
+export const TELEMETRY_EVENT_LABEL: Record<string, string> = {
+  'field.identify': 'Identificación en campo',
+  'tire.incident': 'Incidentes registrados',
+  'tire.life_report': 'Reportes de vida consultados',
+  'tire.measured': 'Mediciones registradas',
+  'tire.operation': 'Operaciones de unidad',
+  'tire.retired': 'Bajas registradas',
+};
+
+export const TELEMETRY_SOURCE_LABEL: Record<string, string> = {
+  web: 'Web',
+  api: 'App / API',
+  pwa: 'PWA',
+};
+
 export const UNIT_STATUS_LABEL: Record<string, string> = {
   ACTIVA: 'Activa',
   INACTIVA: 'Inactiva',
@@ -230,3 +277,24 @@ export const INVENTORY_SESSION_STATUS_LABEL: Record<string, string> = {
   CLOSED: 'Cerrada',
   CANCELLED: 'Cancelada',
 };
+
+/** Espejo de `App\Enums\InventoryLineDelta::label()/tone()`. */
+export const INVENTORY_LINE_DELTA_LABEL: Record<string, string> = {
+  OK: 'OK',
+  MISSING: 'Faltante',
+  UNEXPECTED: 'Sobrante',
+  WRONG_BASE: 'Otra base',
+  MOUNTED: 'Montada / fuera de depósito',
+};
+
+const INVENTORY_LINE_DELTA_TONE: Record<string, string> = {
+  OK: 'green',
+  MISSING: 'red',
+  UNEXPECTED: 'amber',
+  WRONG_BASE: 'amber',
+  MOUNTED: 'blue',
+};
+
+export function inventoryLineDeltaColor(delta: string): string {
+  return toneColor(INVENTORY_LINE_DELTA_TONE[delta] ?? 'slate');
+}
