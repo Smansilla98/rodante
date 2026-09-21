@@ -34,6 +34,7 @@ log() { printf '[railway-db] %s\n' "$*"; }
 die() { printf '[railway-db] ERROR: %s\n' "$*" >&2; exit 1; }
 
 SEED_DEMO="${SEED_DEMO:-1}"
+SEED_QA="${SEED_QA:-0}"
 DB_WAIT_SECONDS="${DB_WAIT_SECONDS:-90}"
 
 # --- Normalizar URL de conexión (Railway suele inyectar varias) --------------
@@ -152,6 +153,14 @@ if [[ "${SEED_DEMO}" == "1" || "${SEED_DEMO}" == "true" || "${SEED_DEMO}" == "ye
   log "Demo lista. Usuarios: admin / jefe / logistica / operario / consulta — password"
 else
   log "SEED_DEMO=${SEED_DEMO}: se omitió el seed"
+fi
+
+# QaScenariosSeeder: apagado por defecto (SEED_QA=0). El seeder mismo se niega a correr
+# si APP_ENV=production, así que aunque alguien active SEED_QA acá no pasa nada — es un
+# cinturón de seguridad doble para no meter datos de prueba en la base productiva.
+if [[ "${SEED_QA}" == "1" || "${SEED_QA}" == "true" || "${SEED_QA}" == "yes" ]]; then
+  log "SEED_QA=${SEED_QA}: cargando escenarios de QA (QaScenariosSeeder)..."
+  php artisan db:seed --class=QaScenariosSeeder --force || log "AVISO: QaScenariosSeeder no corrió (ver log arriba)."
 fi
 
 log "Listo."

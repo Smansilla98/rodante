@@ -37,6 +37,16 @@ MySQL: `localhost:33062` / `trazabilidad` / `laravel` / `secret`
 - Railway: variables en [`.env.railway`](.env.railway) + release [`scripts/railway-db-setup.sh`](scripts/railway-db-setup.sh)
 - **Base de datos:** el producto usa **MySQL 8** (local y Railway recomendado). PostgreSQL también está soportado vía el mismo script.
 
+## Mobile (Android/iOS)
+
+App nativa de campo (Expo Router + TypeScript) en [`mobile/`](mobile/), consume la
+API Sanctum (`/api/v1`). Ver [`docs/MOBILE_PLATFORM.md`](docs/MOBILE_PLATFORM.md) para
+arquitectura, identificadores de app, perfiles EAS y la matriz de capacidades por rol.
+
+```bash
+cd mobile && npm install && npm start
+```
+
 ### Deploy Railway (resumen)
 
 1. Servicio web + plugin **MySQL** (recomendado) o **PostgreSQL**.

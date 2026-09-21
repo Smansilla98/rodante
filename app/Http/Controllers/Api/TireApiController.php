@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\TireCondition;
 use App\Exceptions\DomainException;
 use App\Exceptions\SheetConflictException;
 use App\Http\Controllers\Controller;
@@ -13,6 +14,8 @@ use App\Models\FleetUnit;
 use App\Models\Tire;
 use App\Services\IncidentService;
 use App\Services\MeasurementService;
+use App\Models\UnitPosition;
+use App\Services\PositionFitService;
 use App\Services\PredictiveWearService;
 use App\Services\ReportService;
 use App\Services\RetirementService;
@@ -25,7 +28,7 @@ class TireApiController extends Controller
 {
     public function tires(Request $request)
     {
-        $query = Tire::with('brand', 'model', 'size', 'currentLocation');
+        $query = Tire::with('brand', 'model', 'size', 'currentLocation.unit', 'currentLocation.position', 'currentLocation.base');
         AccessScope::tires($query, $request->user());
         $tires = $query
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
@@ -48,7 +51,7 @@ class TireApiController extends Controller
         $tire = $reports->tireHistory($tire);
 
         return response()->json([
-            'tire' => $tire->only(['id', 'individual_number', 'status', 'condition', 'accumulated_km']),
+            'tire' => $tire->only(['id', 'individual_number', 'status', 'condition', 'recap_wear', 'display_condition', 'accumulated_km']),
             'display' => $tire->displayName(),
             'timeline' => $reports->timeline($tire),
             'movements' => $tire->movements,
@@ -75,7 +78,7 @@ class TireApiController extends Controller
 
         return response()->json([
             'tire' => $history->only([
-                'id', 'individual_number', 'dot', 'status', 'condition', 'accumulated_km',
+                'id', 'individual_number', 'dot', 'status', 'condition', 'recap_wear', 'display_condition', 'accumulated_km',
                 'current_tread_min', 'purchased_at', 'retired_at',
             ]),
             'display' => $history->displayName(),
@@ -107,7 +110,7 @@ class TireApiController extends Controller
 
     public function units(Request $request)
     {
-        $query = FleetUnit::with('type', 'configuration', 'fleet')->orderBy('plate');
+        $query = FleetUnit::with('type', 'configuration', 'fleet', 'base')->orderBy('plate');
         AccessScope::units($query, $request->user());
 
         return response()->json($query->get());
@@ -116,7 +119,7 @@ class TireApiController extends Controller
     public function unitLayout(Request $request, FleetUnit $unit)
     {
         $this->authorizeVisible('view', $unit);
-        $unit->load('configuration.positions', 'locations.tire.brand', 'locations.tire.model', 'locations.position');
+        $unit->load('type', 'fleet', 'base', 'configuration.positions', 'locations.tire.brand', 'locations.tire.model', 'locations.position');
 
         return response()->json([
             'unit' => $unit,
@@ -127,12 +130,79 @@ class TireApiController extends Controller
         ]);
     }
 
+    /**
+     * Cubiertas de stock compatibles con una posición — mismo criterio de compatibilidad
+     * que Unit/UnitController::stockSearch (web), reutilizando PositionFitService para no
+     * duplicar reglas de negocio entre backend y clientes.
+     */
+    public function positionCandidates(Request $request, FleetUnit $unit, UnitPosition $position, PositionFitService $fit)
+    {
+        $this->authorizeVisible('view', $unit);
+        abort_unless((int) $position->unit_configuration_id === (int) $unit->unit_configuration_id, 404);
+
+        $data = $request->validate(['q' => 'nullable|string|max:40']);
+
+        $unit->load('configuration.positions', 'locations.tire');
+        $mounted = $unit->locations->firstWhere('position_id', $position->id)?->tire;
+        $needed = $fit->neededApplication($mounted, $position);
+        $guide = $fit->fitGuide($mounted, $position, $unit);
+
+        $query = Tire::with('brand', 'model', 'size', 'currentLifecycle')->installable()->orderBy('individual_number');
+        AccessScope::tires($query, $request->user());
+        if ($width = $unit->allowedTireWidth()) {
+            $query->whereHas('size', fn ($q) => $q->where('width_mm', $width));
+        }
+        if ($mounted?->size_id) {
+            $query->where('size_id', $mounted->size_id);
+        }
+        if ($needed) {
+            $query->whereHas('model', fn ($m) => $m->whereIn('application', $fit->compatibleApplicationValues($needed)));
+        }
+        if ($fit->prefersWinter($unit)) {
+            $query->whereHas('model', fn ($m) => $m->where('winter_capable', true));
+        }
+        if ($term = trim((string) ($data['q'] ?? ''))) {
+            $digits = preg_replace('/\D+/', '', $term);
+            $query->where(function ($inner) use ($term, $digits) {
+                $inner->where('individual_number', 'like', "%{$term}%")
+                    ->orWhereHas('brand', fn ($b) => $b->where('name', 'like', "%{$term}%"))
+                    ->orWhereHas('model', fn ($m) => $m->where('code', 'like', "%{$term}%"));
+                if ($digits !== '') {
+                    $inner->orWhere('individual_number', $digits);
+                }
+            });
+        }
+
+        $items = $query->limit(30)->get()
+            ->filter(fn (Tire $tire) => $fit->canReplace($tire, $position, $unit, $mounted))
+            ->map(fn (Tire $tire) => [
+                'id' => $tire->id,
+                'individual_number' => $tire->individual_number,
+                'brand' => $tire->brand?->name,
+                'model' => $tire->model?->name,
+                'size' => $tire->size?->code,
+                'application_label' => $tire->model?->application?->label(),
+            ])
+            ->values();
+
+        return response()->json([
+            'data' => $items,
+            'hint' => $guide['application_label']
+                ? 'Solo cubiertas compatibles (nomenclatura '.$guide['application_label'].').'
+                : 'Cubiertas compatibles con esta ubicación.',
+            'size' => $guide['size'],
+        ]);
+    }
+
     public function operate(Request $request, FleetUnit $unit, TireOperationService $operations)
     {
         $this->authorizeVisible('view', $unit);
         $this->authorize('operate', $unit);
         $data = $request->validate([
-            'odometer' => 'required|integer|min:0',
+            // Igual que Unit/UnitController::operate() (web): el odómetro no es obligatorio.
+            // Si no llega, TireOperationService usa el último odómetro conocido de la unidad
+            // motriz acoplada (tractor para semis/tanques/bateas).
+            'odometer' => 'nullable|integer|min:0',
             'notes' => 'nullable|string',
             'removals' => 'array',
             'removals.*.tire_id' => 'nullable|exists:tires,id',
@@ -144,6 +214,7 @@ class TireApiController extends Controller
             'installations.*.position_id' => 'nullable|exists:unit_positions,id',
             'installations.*.expect_empty' => 'nullable|boolean',
         ]);
+        $data['odometer_provisional'] = ! isset($data['odometer']);
         $data['removals'] = collect($data['removals'] ?? [])->filter(fn ($row) => ! empty($row['tire_id']))->values()->all();
         $data['installations'] = collect($data['installations'] ?? [])->filter(fn ($row) => ! empty($row['tire_id']) && ! empty($row['position_id']))->values()->all();
 
@@ -174,6 +245,26 @@ class TireApiController extends Controller
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+    }
+
+    /**
+     * Clasificación manual de desgaste de una cubierta recapada ("Nueva"/"Usada") — a
+     * diferencia de Nueva→Usada (que se calcula solo por km recorridos), esto no tiene
+     * una regla automática todavía, así que lo decide la persona que la mira.
+     */
+    public function setRecapWear(Request $request, Tire $tire)
+    {
+        $this->authorizeVisible('view', $tire);
+        abort_unless($request->user()->role->canWrite(), 403, 'No tiene permiso para clasificar cubiertas.');
+
+        if ($tire->condition !== TireCondition::Recapada) {
+            return response()->json(['message' => 'Solo se puede clasificar el desgaste de una cubierta recapada.'], 422);
+        }
+
+        $data = $request->validate(['recap_wear' => 'required|in:NUEVA,USADA']);
+        $tire->update(['recap_wear' => $data['recap_wear']]);
+
+        return response()->json($tire->fresh(['brand', 'model', 'size']));
     }
 
     public function returnToStock(ReturnTireToStockRequest $request, Tire $tire, TireOperationService $operations)

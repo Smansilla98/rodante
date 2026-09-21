@@ -49,28 +49,6 @@
                     <p class="refaccion-drop__empty">Tocá el auxilio del mapa para instalar</p>
                 @endif
             </div>
-
-            @if($rotationPatterns)
-                <h2 class="stock-rail__title">Rotación</h2>
-                <p class="hint text-xs mb-2">Longitudinal, En X o Diagonal. Si un esquema está gris, faltan cubiertas o hay incompatibilidad (pasá el mouse para ver por qué).</p>
-                <div class="pattern-list">
-                    @foreach($rotationPatterns as $pattern)
-                        <button type="button" class="pattern-btn {{ $pattern['ready'] ? '' : 'is-blocked' }}"
-                            data-pattern="{{ $pattern['code'] }}"
-                            data-ready="{{ $pattern['ready'] ? '1' : '0' }}"
-                            data-blocked="{{ $pattern['blocked'] }}"
-                            title="{{ $pattern['ready'] ? $pattern['hint'] : $pattern['blocked'] }}"
-                            aria-disabled="{{ $pattern['ready'] ? 'false' : 'true' }}">
-                            <x-rotation-mini :code="$pattern['code']" />
-                            <span>{{ $pattern['name'] }}</span>
-                        </button>
-                    @endforeach
-                </div>
-                @php $blockedHint = collect($rotationPatterns)->firstWhere('ready', false)['blocked'] ?? null; @endphp
-                @if($blockedHint && ! collect($rotationPatterns)->contains('ready', true))
-                    <p class="hint text-xs mt-2">{{ $blockedHint }}</p>
-                @endif
-            @endif
         </aside>
     @endif
 
@@ -229,25 +207,8 @@
                 </div>
             </div>
 
-            <form method="POST" action="{{ route('units.slot', $unit) }}" id="formPatron" hidden>
-                @csrf
-                <input type="hidden" name="action" value="patron">
-                <input type="hidden" name="pattern" id="patronCode">
-                <p class="recambio-dock__slot">Esquema de rotación</p>
-                <p class="recambio-dock__idle mb-3" id="patronHint"></p>
-                <x-slot-odometer :last-km="$lastKm" />
-                <label class="field">
-                    <span>Nota</span>
-                    <input name="notes" class="inp" placeholder="Opcional">
-                </label>
-                <div class="flex gap-2 mt-3">
-                    <button type="button" class="btn btn-ghost flex-1" id="patronCancel">Cancelar</button>
-                    <button class="btn btn-primary flex-1" id="patronSubmit">Aplicar esquema</button>
-                </div>
-            </form>
         </aside>
         <script type="application/json" id="slotMap">@json($slotMap)</script>
-        <script type="application/json" id="rotationPatterns">@json($rotationPatterns)</script>
         <div id="slotMenu" class="slot-menu" hidden>
             <button type="button" data-menu="ficha">Ver ficha</button>
             <button type="button" data-menu="cambio">Cambio</button>

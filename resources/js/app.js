@@ -336,13 +336,6 @@ const recambio = () => {
     const rotatePosition = document.getElementById('rotatePosition');
     const rotateEmpty = document.getElementById('rotateEmpty');
     const rotateSubmit = document.getElementById('rotateSubmit');
-    const patronForm = document.getElementById('formPatron');
-    let patterns = [];
-    try {
-        patterns = JSON.parse(document.getElementById('rotationPatterns')?.textContent || '[]');
-    } catch {
-        patterns = [];
-    }
     const forms = {
         pinchadura: document.getElementById('formPinchadura'),
         rotacion: document.getElementById('formRotacion'),
@@ -353,67 +346,6 @@ const recambio = () => {
     const measureFields = document.getElementById('measureFields');
     const measureEmpty = document.getElementById('measureEmpty');
     const measureSubmit = document.getElementById('measureSubmit');
-    const svgNS = 'http://www.w3.org/2000/svg';
-    let activePattern = null;
-
-    const drawPatternArrows = (pattern) => {
-        activePattern = pattern;
-        const schematic = document.querySelector('.schematic--live');
-        const svg = schematic?.querySelector('.schematic__arrows');
-        if (!svg || !schematic) {
-            return;
-        }
-        svg.replaceChildren();
-        if (!pattern?.pairs?.length) {
-            svg.setAttribute('hidden', '');
-            return;
-        }
-        const root = schematic.getBoundingClientRect();
-        svg.removeAttribute('hidden');
-        svg.setAttribute('viewBox', `0 0 ${schematic.clientWidth} ${schematic.clientHeight}`);
-        const defs = document.createElementNS(svgNS, 'defs');
-        const marker = document.createElementNS(svgNS, 'marker');
-        marker.setAttribute('id', 'rotArrow');
-        marker.setAttribute('viewBox', '0 0 10 10');
-        marker.setAttribute('refX', '8');
-        marker.setAttribute('refY', '5');
-        marker.setAttribute('markerWidth', '6');
-        marker.setAttribute('markerHeight', '6');
-        marker.setAttribute('orient', 'auto-start-reverse');
-        const tip = document.createElementNS(svgNS, 'path');
-        tip.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
-        tip.setAttribute('fill', '#e11d48');
-        marker.append(tip);
-        defs.append(marker);
-        svg.append(defs);
-
-        pattern.pairs.forEach(([from, to]) => {
-            const a = schematic.querySelector(`[data-slot="${from}"]`);
-            const b = schematic.querySelector(`[data-slot="${to}"]`);
-            if (!a || !b) {
-                return;
-            }
-            const aBox = a.getBoundingClientRect();
-            const bBox = b.getBoundingClientRect();
-            const line = document.createElementNS(svgNS, 'line');
-            line.setAttribute('x1', String(aBox.left + aBox.width / 2 - root.left));
-            line.setAttribute('y1', String(aBox.top + aBox.height / 2 - root.top));
-            line.setAttribute('x2', String(bBox.left + bBox.width / 2 - root.left));
-            line.setAttribute('y2', String(bBox.top + bBox.height / 2 - root.top));
-            line.setAttribute('stroke', '#e11d48');
-            line.setAttribute('stroke-width', '2');
-            line.setAttribute('marker-start', 'url(#rotArrow)');
-            line.setAttribute('marker-end', 'url(#rotArrow)');
-            svg.append(line);
-        });
-    };
-
-    window.addEventListener('resize', () => {
-        if (activePattern) {
-            drawPatternArrows(activePattern);
-        }
-    });
-
     const fillMeasureZones = (zones) => {
         measureFields.innerHTML = '';
         (zones || []).forEach((zone, i) => {
@@ -649,11 +581,6 @@ const recambio = () => {
 
         idle.hidden = true;
         panel.hidden = false;
-        if (patronForm) {
-            patronForm.hidden = true;
-        }
-        document.querySelectorAll('.pattern-btn').forEach((btn) => btn.classList.remove('is-on'));
-        drawPatternArrows(null);
         document.getElementById('recambioSlot').textContent = slot.code;
         document.getElementById('recambioRole').textContent = `${slot.name} · ${slot.role}`;
         currentSlot = slot;
@@ -892,44 +819,6 @@ const recambio = () => {
     });
 
     document.addEventListener('click', hideMenu);
-
-    document.querySelectorAll('.pattern-btn[data-pattern]').forEach((btn) => {
-        btn.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            const pattern = patterns.find((item) => item.code === btn.dataset.pattern);
-            if (!pattern || !patronForm) {
-                return;
-            }
-            if (!pattern.ready || btn.dataset.ready === '0') {
-                window.alert(pattern.blocked || btn.dataset.blocked || 'Ese esquema no está disponible con el mapa actual.');
-                return;
-            }
-            idle.hidden = true;
-            panel.hidden = true;
-            patronForm.hidden = false;
-            document.getElementById('patronCode').value = pattern.code;
-            document.getElementById('patronHint').textContent = pattern.hint;
-            document.querySelectorAll('.pattern-btn').forEach((other) => {
-                other.classList.toggle('is-on', other === btn);
-            });
-            drawPatternArrows(pattern);
-        });
-    });
-
-    const clearPatternSelection = () => {
-        if (patronForm) {
-            patronForm.hidden = true;
-        }
-        document.querySelectorAll('.pattern-btn').forEach((btn) => btn.classList.remove('is-on'));
-        drawPatternArrows(null);
-    };
-
-    document.getElementById('patronCancel')?.addEventListener('click', () => {
-        clearPatternSelection();
-        idle.hidden = false;
-        panel.hidden = true;
-    });
 };
 
 recambio();

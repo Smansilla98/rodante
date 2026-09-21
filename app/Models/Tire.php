@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Enums\TireApplication;
 use App\Enums\TireCondition;
 use App\Enums\TireStatus;
 use App\Models\Concerns\BelongsToCompany;
 use Database\Factories\TireFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -20,9 +22,16 @@ class Tire extends Model
 
     protected $fillable = [
         'company_id', 'public_token', 'individual_number', 'dot', 'tire_brand_id', 'tire_model_id', 'tire_size_id',
-        'tire_purchase_item_id', 'current_lifecycle_id', 'status', 'condition',
+        'tire_purchase_item_id', 'current_lifecycle_id', 'status', 'condition', 'recap_wear',
         'accumulated_km', 'current_tread_min', 'purchased_at', 'retired_at',
     ];
+
+    /**
+     * `display_condition` viaja en TODA serialización JSON de Tire (API v1 → mobile) sin
+     * tocar cada controller uno por uno — así web y mobile nunca pueden mostrar dos
+     * vocabularios de estado distintos por un endpoint que se olvidó de agregarlo.
+     */
+    protected $appends = ['display_condition'];
 
     protected function casts(): array
     {
@@ -40,6 +49,58 @@ class Tire extends Model
         $code = $this->model?->code ?? 'S/M';
 
         return $code.' Nº'.$this->individual_number;
+    }
+
+    /**
+     * Etiqueta compuesta única para mostrar en web/mobile: combina `status` (ubicación)
+     * y `condition` (estado físico) — nunca dos listas de estados distintas entre
+     * plataformas. Reusa `TireCondition::label()` (fuente de verdad existente), no
+     * inventa vocabulario nuevo.
+     *
+     * `status` pisa a `condition` cuando importa más operativamente (una cubierta en
+     * reparación se muestra "A reparar" sin importar su condición previa; "De baja" es
+     * siempre terminal). Para "Recapada" agrega Nueva/Usada (`recap_wear`, clasificación
+     * MANUAL por cantidad de uso — ver `setRecapWear` en TireApiController, no se calcula
+     * solo, a diferencia de Nueva→Usada que sí es automático por km) y Lineal/Motriz según
+     * la aplicación del modelo actual — ver `recapPatternLabel()`.
+     */
+    protected function displayCondition(): Attribute
+    {
+        return Attribute::make(get: function (): string {
+            if ($this->status === TireStatus::DeBaja) {
+                return 'Baja';
+            }
+            if ($this->status === TireStatus::EnReparacion) {
+                return 'A reparar';
+            }
+            if ($this->condition === TireCondition::Recapada) {
+                $wear = match ($this->recap_wear) {
+                    'NUEVA' => 'Nueva',
+                    'USADA' => 'Usada',
+                    default => null,
+                };
+                $pattern = $this->recapPatternLabel();
+
+                return implode(' ', array_filter(['Recapada', $wear, $pattern ?: null]));
+            }
+
+            return $this->condition->label();
+        });
+    }
+
+    /**
+     * "Lineal" (arrastre/dirección — tren no motriz) o "Motriz" (tracción/mixta) según
+     * la aplicación del MODELO actual de la cubierta (`TireApplication`, ya existente).
+     * No es un estado nuevo: es la misma clasificación que ya se usa para compatibilidad
+     * de posiciones (`PositionFitService`), solo expuesta también en el estado visible.
+     */
+    private function recapPatternLabel(): string
+    {
+        return match ($this->model?->application) {
+            TireApplication::Arrastre, TireApplication::Direccion => 'Lineal',
+            TireApplication::Traccion, TireApplication::Mixto => 'Motriz',
+            default => '',
+        };
     }
 
     /**

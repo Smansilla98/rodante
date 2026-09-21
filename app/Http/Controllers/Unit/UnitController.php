@@ -26,7 +26,6 @@ use App\Services\IncidentService;
 use App\Services\MeasurementService;
 use App\Services\PositionFitService;
 use App\Services\ReportService;
-use App\Services\RotationPatternService;
 use App\Services\TireOperationService;
 use App\Support\AccessScope;
 use Illuminate\Http\Request;
@@ -109,7 +108,7 @@ class UnitController extends Controller
         return redirect()->route('units.show', $unit)->with('success', 'Unidad creada.');
     }
 
-    public function show(FleetUnit $unit, ReportService $reports, PositionFitService $fit, RotationPatternService $patterns, Request $request)
+    public function show(FleetUnit $unit, ReportService $reports, PositionFitService $fit, Request $request)
     {
         $this->authorizeVisible('view', $unit);
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
@@ -162,7 +161,6 @@ class UnitController extends Controller
                 : collect($unit->currentCouplingAsTrailer ? [$unit->currentCouplingAsTrailer] : []),
             'history' => $reports->unitHistory($unit),
             'slotMap' => $canOperate ? $this->slotMap($unit, $layout, $fit) : [],
-            'rotationPatterns' => $canOperate ? $patterns->forLayout($layout, $fit, $unit) : [],
             'spareSlotId' => $unit->configuration->positions->firstWhere('is_spare', true)?->id,
             'canOperate' => $canOperate,
             'incidentTypes' => collect(IncidentType::cases())
@@ -348,7 +346,6 @@ class UnitController extends Controller
         TireOperationService $operations,
         IncidentService $incidents,
         MeasurementService $measurements,
-        RotationPatternService $patterns,
         PositionFitService $fit,
     ) {
         $this->authorizeVisible('view', $unit);
@@ -356,7 +353,7 @@ class UnitController extends Controller
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
         $mounted = ['cambio', 'pinchadura', 'rotacion', 'retirar', 'incidencia', 'medicion'];
         $data = $request->validate([
-            'action' => 'required|in:install,cambio,pinchadura,rotacion,retirar,incidencia,medicion,patron',
+            'action' => 'required|in:install,cambio,pinchadura,rotacion,retirar,incidencia,medicion',
             'odometer' => 'nullable|integer|min:0',
             'position_id' => 'nullable|exists:unit_positions,id',
             'tire_id' => 'nullable|exists:tires,id',
@@ -368,7 +365,6 @@ class UnitController extends Controller
             ],
             'expected_to_tire_id' => 'nullable|integer|exists:tires,id',
             'to_position_id' => 'nullable|exists:unit_positions,id',
-            'pattern' => 'nullable|in:longitudinal,cruzado,diagonal',
             'reason_id' => 'nullable|exists:movement_reasons,id',
             'destination' => 'nullable|string',
             'incident_type' => 'nullable|string',
@@ -381,13 +377,8 @@ class UnitController extends Controller
         $data = $this->withResolvedOdometer($data, $unit);
 
         try {
-            DB::transaction(function () use ($unit, $data, $operations, $incidents, $measurements, $patterns, $fit, $request) {
+            DB::transaction(function () use ($unit, $data, $operations, $incidents, $measurements, $fit, $request) {
                 FleetUnit::lockForUpdate()->findOrFail($unit->id);
-                if ($data['action'] === 'patron') {
-                    $this->slotPatron($unit, $data, $operations, $patterns, $fit, $request->user());
-
-                    return;
-                }
                 if (empty($data['position_id'])) {
                     throw new DomainException('Elegí una ubicación.');
                 }
@@ -429,7 +420,6 @@ class UnitController extends Controller
             'retirar' => 'Cubierta retirada. La ubicación quedó libre.',
             'incidencia' => 'Incidencia registrada sobre la cubierta.',
             'medicion' => 'Medición de profundidad guardada.',
-            'patron' => 'Esquema de rotación aplicado. Los kilómetros del periodo siguen abiertos.',
         };
 
         return redirect()->route('units.show', $unit)->with('success', $message);
@@ -826,30 +816,6 @@ class UnitController extends Controller
             $expect['to'] = [(int) $data['to_position_id'] => $toOccupant];
         }
         $operations->rotate($unit, $current->id, (int) $data['to_position_id'], (int) $data['odometer'], $user, $data['notes'] ?? null, $expect);
-    }
-
-    private function slotPatron(
-        FleetUnit $unit,
-        array $data,
-        TireOperationService $operations,
-        RotationPatternService $patterns,
-        PositionFitService $fit,
-        $user,
-    ): void {
-        if (empty($data['pattern'])) {
-            throw new DomainException('Elegí un esquema de rotación.');
-        }
-
-        $layout = $unit->tireLayout();
-        $chosen = collect($patterns->forLayout($layout, $fit, $unit))->firstWhere('code', $data['pattern']);
-        if (! $chosen) {
-            throw new DomainException('Ese esquema no aplica a esta configuración.');
-        }
-        if (! $chosen['ready']) {
-            throw new DomainException($chosen['blocked'] ?? 'El esquema no se puede aplicar.');
-        }
-
-        $operations->applyPattern($unit, $chosen['pairs'], (int) $data['odometer'], $user, $data['notes'] ?? $chosen['name']);
     }
 
     private function slotRetirar(FleetUnit $unit, UnitPosition $position, array $data, TireOperationService $operations, $user): void
