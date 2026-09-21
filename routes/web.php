@@ -130,6 +130,7 @@ Route::middleware('auth')->group(function () {
         Route::post('/punto-de-partida/stock', [StartingPointController::class, 'importStock'])->name('starting-point.import-stock');
         Route::post('/neumaticos/{tire}/incidencias', [TireController::class, 'storeIncident'])->name('tires.incidents.store');
         Route::post('/neumaticos/{tire}/mediciones', [TireController::class, 'storeMeasurement'])->name('tires.measurements.store');
+        Route::post('/neumaticos/{tire}/desgaste-recapado', [TireController::class, 'setRecapWear'])->name('tires.recap-wear');
         Route::post('/neumaticos/{tire}/stock', [TireController::class, 'returnToStock'])->name('tires.return-stock');
         Route::post('/neumaticos/{tire}/traslado', [TireController::class, 'transferBase'])->name('tires.transfer-base');
 

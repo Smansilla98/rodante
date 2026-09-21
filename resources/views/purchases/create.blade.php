@@ -24,6 +24,7 @@
         </div>
         <h3 class="font-semibold mb-3">Líneas</h3>
         <p class="hint mb-3">Primero la marca, después el diseño de esa marca, después la medida en la que se fabrica. El DOT (garantía) se carga si la cantidad es 1; si son varias, después en cada ficha.</p>
+        <p class="hint mb-3">Costo: dejalo vacío o en 0 si es una <strong>puesta a punto</strong> (una cubierta que la empresa ya tenía y solo se está cargando al sistema) — no vas a generar un gasto nuevo.</p>
         <script type="application/json" id="tireCatalog">@json($catalog)</script>
         <div class="space-y-3 mb-4">
             @for($i=0;$i<3;$i++)

@@ -182,6 +182,27 @@ class TireController extends Controller
         return back()->with('success', $msg);
     }
 
+    /**
+     * Acción rápida: clasificar el desgaste de una recapada (Nueva/Usada) — a diferencia
+     * del panel "Editar datos de la ficha" (solo Administrador), esto lo puede hacer
+     * cualquier rol con `canWrite()`, igual que en mobile (mismo criterio en las dos
+     * plataformas, ver TireApiController::setRecapWear).
+     */
+    public function setRecapWear(Request $request, Tire $tire)
+    {
+        $this->authorizeVisible('view', $tire);
+        abort_unless($request->user()->role->canWrite(), 403);
+
+        if ($tire->condition !== TireCondition::Recapada) {
+            return back()->withErrors(['recap_wear' => 'Solo se puede clasificar el desgaste de una cubierta recapada.']);
+        }
+
+        $data = $request->validate(['recap_wear' => 'required|in:NUEVA,USADA']);
+        $tire->update(['recap_wear' => $data['recap_wear']]);
+
+        return back()->with('success', 'Desgaste del recapado actualizado.');
+    }
+
     public function retire(RetireTireRequest $request, Tire $tire, RetirementService $retirements)
     {
         try {

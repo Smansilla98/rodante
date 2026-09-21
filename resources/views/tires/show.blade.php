@@ -193,6 +193,27 @@
                     </form>
                 </div>
             </details>
+
+            @if($tire->condition->value === 'RECAPADA')
+                <details class="action-card">
+                    <summary class="action-card__summary">
+                        <span class="action-card__title">Clasificar desgaste del recapado</span>
+                        <span class="action-card__desc">Nueva o usada. Es manual — no se calcula solo por los km.</span>
+                    </summary>
+                    <div class="action-card__body">
+                        <form method="POST" action="{{ route('tires.recap-wear', $tire) }}" class="space-y-3">
+                            @csrf
+                            <label class="field"><span>Desgaste</span>
+                                <select name="recap_wear" required>
+                                    <option value="NUEVA" @selected(old('recap_wear', $tire->recap_wear) === 'NUEVA')>Nueva</option>
+                                    <option value="USADA" @selected(old('recap_wear', $tire->recap_wear) === 'USADA')>Usada</option>
+                                </select>
+                            </label>
+                            <button class="btn btn-primary action-card__btn">Guardar</button>
+                        </form>
+                    </div>
+                </details>
+            @endif
         @endif
 
         @if($loc?->unit)
