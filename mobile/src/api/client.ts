@@ -153,12 +153,30 @@ export const api = {
   inventorySessions: (page = 1) =>
     apiRequest<Paginated<InventorySession>>(`/inventory-sessions?page=${page}`),
 
-  tires: (opts?: { status?: string; page?: number }) => {
+  tires: (opts?: {
+    status?: string;
+    condition?: string;
+    q?: string;
+    base_id?: number;
+    tire_size_id?: number;
+    page?: number;
+  }) => {
     const qs = new URLSearchParams();
     if (opts?.status) qs.set('status', opts.status);
+    if (opts?.condition) qs.set('condition', opts.condition);
+    if (opts?.q) qs.set('q', opts.q);
+    if (opts?.base_id) qs.set('base_id', String(opts.base_id));
+    if (opts?.tire_size_id) qs.set('tire_size_id', String(opts.tire_size_id));
     qs.set('page', String(opts?.page ?? 1));
     return apiRequest<Paginated<Tire>>(`/tires?${qs.toString()}`);
   },
+
+  /** Acotado a NUEVA/NUEVA_USADA/USADA — ver TireApiController::setCondition. */
+  setCondition: (tireId: number, condition: 'NUEVA' | 'NUEVA_USADA' | 'USADA') =>
+    apiRequest<Tire>(`/tires/${tireId}/condition`, {
+      method: 'POST',
+      body: JSON.stringify({ condition }),
+    }),
 
   lookupTire: (q: string) =>
     apiRequest<LookupResult>('/tires/lookup', {

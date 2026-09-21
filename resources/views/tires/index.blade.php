@@ -74,7 +74,7 @@
                 </td>
                 <td>{{ $tire->size->displayName() }}</td>
                 <td><x-status :tone="$tire->status->tone()">{{ $tire->status->label() }}</x-status></td>
-                <td><x-status :tone="$tire->condition->tone()">{{ $tire->condition->label() }}</x-status></td>
+                <td><x-status :tone="$tire->condition->tone()">{{ $tire->display_condition }}</x-status></td>
                 <td>
                     @if($tire->currentLocation?->unit)
                         <a href="{{ route('units.show', $tire->currentLocation->unit) }}">{{ $tire->currentLocation->unit->plate }}</a>

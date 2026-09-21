@@ -16,7 +16,7 @@
         <div><span>Número individual</span><div class="mono">{{ $tire->individual_number }}</div></div>
         <div><span>Estado</span><div>{{ $tire->status->label() }}</div></div>
         <div><span>Marca / modelo</span><div>{{ $tire->fullName() }}</div></div>
-        <div><span>Condición</span><div>{{ $tire->condition->label() }}</div></div>
+        <div><span>Condición</span><div>{{ $tire->display_condition }}</div></div>
         <div><span>Medida</span><div>{{ $tire->size?->displayName() ?? '—' }}</div></div>
         <div><span>Vida</span><div>{{ $tire->currentLifecycle?->life_number ?? 1 }} de {{ $tire->lifecycles->count() ?: 1 }}</div></div>
         <div><span>Km acumulados</span><div class="mono">{{ number_format($tire->accumulated_km) }}</div></div>

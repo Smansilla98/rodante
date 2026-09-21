@@ -3,7 +3,7 @@ import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'r
 import { useRouter, type Href } from 'expo-router';
 import { api, ApiError } from '../../src/api/client';
 import { useAuth } from '../../src/auth/AuthContext';
-import { dashboardKpis, roleLabel } from '../../src/auth/permissions';
+import { canWrite, dashboardKpis, roleLabel } from '../../src/auth/permissions';
 import { colors, radius, space, touchTarget, type } from '../../src/theme';
 import { PageHeader } from '../../src/ui/PageHeader';
 import { Card, ErrorState, Icon, LoadingState, SectionLabel, StatTile } from '../../src/ui/primitives';
@@ -37,6 +37,7 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
 
   const kpis = dashboardKpis(user?.role).filter((k) => k !== 'km');
+  const writeAllowed = canWrite(user?.role);
 
   const load = useCallback(async () => {
     setError(null);
@@ -87,7 +88,15 @@ export default function DashboardScreen() {
         <Card style={{ marginTop: space.lg }}>
           <SectionLabel>Accesos rápidos</SectionLabel>
           <View style={{ gap: space.sm }}>
+            {writeAllowed ? (
+              <QuickLink
+                icon="add-circle-outline"
+                label="Nuevo neumático"
+                onPress={() => router.push('/(tabs)/tires/new')}
+              />
+            ) : null}
             <QuickLink icon="search-outline" label="Buscar neumático" onPress={() => router.push('/(tabs)/lookup')} />
+            <QuickLink icon="ellipse-outline" label="Neumáticos" onPress={() => router.push('/(tabs)/tires')} />
             <QuickLink icon="bus-outline" label="Unidades" onPress={() => router.push('/(tabs)/units')} />
             <QuickLink
               icon="build-outline"

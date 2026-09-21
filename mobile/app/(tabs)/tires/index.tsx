@@ -2,12 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { api, ApiError } from '../../../src/api/client';
-import type { Tire } from '../../../src/api/types';
+import type { Base, Tire, TireCatalogPayload } from '../../../src/api/types';
 import { useAuth } from '../../../src/auth/AuthContext';
 import { canWrite } from '../../../src/auth/permissions';
 import { colors, radius, space, touchTarget, type } from '../../../src/theme';
 import { TireStatusBadge } from '../../../src/ui/StatusBadge';
-import { Chip, EmptyState, ErrorState, LoadingState, PrimaryButton } from '../../../src/ui/primitives';
+import { Chip, EmptyState, ErrorState, Field, Icon, LoadingState, PrimaryButton } from '../../../src/ui/primitives';
 
 /** Dónde está la cubierta ahora mismo, en una línea — igual criterio en toda la app. */
 function locationLabel(tire: Tire): string {
@@ -21,30 +21,63 @@ function locationLabel(tire: Tire): string {
   return 'Stock';
 }
 
-const STATUS_FILTERS: Array<{ key: string | null; label: string }> = [
-  { key: null, label: 'Todas' },
-  { key: 'STOCK', label: 'Stock' },
-  { key: 'INSTALADA', label: 'Instalada' },
-  { key: 'RESERVA', label: 'Reserva' },
-  { key: 'AUXILIO', label: 'Auxilio' },
-  { key: 'EN_REPARACION', label: 'En reparación' },
-  { key: 'DE_BAJA', label: 'De baja' },
+/** Filtros rápidos por condición visible, no por status interno — así se ve en toda la app. */
+type QuickFilter = 'ALL' | 'NUEVA' | 'NUEVA_USADA' | 'USADA' | 'A_REPARAR' | 'RECAPADA' | 'BAJA';
+
+const QUICK_FILTERS: Array<{ key: QuickFilter; label: string }> = [
+  { key: 'ALL', label: 'Todos' },
+  { key: 'NUEVA', label: 'Nuevo' },
+  { key: 'NUEVA_USADA', label: 'Nuevo usado' },
+  { key: 'USADA', label: 'Usado' },
+  { key: 'A_REPARAR', label: 'A reparar' },
+  { key: 'RECAPADA', label: 'Recapada' },
+  { key: 'BAJA', label: 'Baja' },
 ];
+
+function paramsForQuickFilter(f: QuickFilter): { status?: string; condition?: string } {
+  if (f === 'A_REPARAR') return { status: 'EN_REPARACION' };
+  if (f === 'BAJA') return { status: 'DE_BAJA' };
+  if (f === 'ALL') return {};
+  return { condition: f };
+}
 
 export default function TiresListScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const writeAllowed = canWrite(user?.role);
-  const [status, setStatus] = useState<string | null>(null);
+
+  const [quick, setQuick] = useState<QuickFilter>('ALL');
+  const [search, setSearch] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [catalog, setCatalog] = useState<TireCatalogPayload | null>(null);
+  const [bases, setBases] = useState<Base[]>([]);
+  const [baseId, setBaseId] = useState<number | null>(null);
+  const [sizeId, setSizeId] = useState<number | null>(null);
+
   const [tires, setTires] = useState<Tire[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async (s: string | null) => {
+  useEffect(() => {
+    void Promise.all([api.tireCatalog(), api.bases()])
+      .then(([c, b]) => {
+        setCatalog(c);
+        setBases(b);
+      })
+      .catch(() => {});
+  }, []);
+
+  const load = useCallback(async () => {
     setError(null);
     try {
-      const res = await api.tires({ status: s ?? undefined, page: 1 });
+      const res = await api.tires({
+        ...paramsForQuickFilter(quick),
+        q: search.trim() || undefined,
+        base_id: baseId ?? undefined,
+        tire_size_id: sizeId ?? undefined,
+        page: 1,
+      });
       setTires(res.data);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No se pudieron cargar los neumáticos');
@@ -52,17 +85,20 @@ export default function TiresListScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [quick, search, baseId, sizeId]);
 
   useEffect(() => {
     setLoading(true);
-    void load(status);
-  }, [status, load]);
+    const t = setTimeout(() => void load(), search ? 350 : 0);
+    return () => clearTimeout(t);
+  }, [load, search]);
 
   const onRefresh = () => {
     setRefreshing(true);
-    void load(status);
+    void load();
   };
+
+  const activeFilterCount = (baseId ? 1 : 0) + (sizeId ? 1 : 0);
 
   return (
     <View style={styles.root}>
@@ -76,23 +112,76 @@ export default function TiresListScreen() {
           />
         </View>
       ) : null}
+
+      <View style={styles.searchWrap}>
+        <Field
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Buscar por número, patente, marca, modelo, medida, DOT…"
+          autoCapitalize="none"
+          returnKeyType="search"
+        />
+      </View>
+
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.filters}
         contentContainerStyle={{ gap: space.sm, paddingHorizontal: space.lg }}
       >
-        {STATUS_FILTERS.map((f) => (
-          <Chip key={f.label} label={f.label} selected={status === f.key} onPress={() => setStatus(f.key)} />
+        {QUICK_FILTERS.map((f) => (
+          <Chip key={f.key} label={f.label} selected={quick === f.key} onPress={() => setQuick(f.key)} />
         ))}
       </ScrollView>
+
+      <Pressable
+        onPress={() => setShowFilters((v) => !v)}
+        style={styles.filtersToggle}
+        accessibilityRole="button"
+        accessibilityLabel="Filtros avanzados"
+      >
+        <Icon name="options-outline" size={18} color={colors.primary} />
+        <Text style={styles.filtersToggleText}>
+          Filtros{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+        </Text>
+        <Icon name={showFilters ? 'chevron-up-outline' : 'chevron-down-outline'} size={18} color={colors.muted} />
+      </Pressable>
+
+      {showFilters && catalog ? (
+        <View style={styles.advancedPanel}>
+          <Text style={styles.advancedLabel}>Base</Text>
+          <View style={styles.chipRow}>
+            <Chip label="Todas" selected={baseId === null} onPress={() => setBaseId(null)} />
+            {bases.map((b) => (
+              <Chip key={b.id} label={b.name} selected={baseId === b.id} onPress={() => setBaseId(b.id)} />
+            ))}
+          </View>
+          <Text style={styles.advancedLabel}>Medida</Text>
+          <View style={styles.chipRow}>
+            <Chip label="Todas" selected={sizeId === null} onPress={() => setSizeId(null)} />
+            {catalog.sizes.map((s) => (
+              <Chip key={s.id} label={s.alias ?? s.code} selected={sizeId === s.id} onPress={() => setSizeId(s.id)} />
+            ))}
+          </View>
+          {activeFilterCount > 0 ? (
+            <PrimaryButton
+              title="Limpiar filtros"
+              variant="ghost"
+              onPress={() => {
+                setBaseId(null);
+                setSizeId(null);
+              }}
+            />
+          ) : null}
+        </View>
+      ) : null}
 
       {loading ? (
         <LoadingState />
       ) : error ? (
-        <ErrorState message={error} onRetry={() => load(status)} />
+        <ErrorState message={error} onRetry={load} />
       ) : tires.length === 0 ? (
-        <EmptyState title="Sin neumáticos" hint="No hay resultados para este filtro." />
+        <EmptyState title="Sin neumáticos" hint="No hay resultados para esta búsqueda o filtro." />
       ) : (
         <FlatList
           data={tires}
@@ -129,7 +218,29 @@ export default function TiresListScreen() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.page },
   newButtonWrap: { paddingHorizontal: space.lg, paddingTop: space.md },
+  searchWrap: { paddingHorizontal: space.lg, paddingTop: space.sm },
   filters: { flexGrow: 0, paddingVertical: space.md },
+  filtersToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.xs,
+    minHeight: 44,
+    paddingHorizontal: space.lg,
+    marginBottom: space.xs,
+  },
+  filtersToggleText: { color: colors.ink, fontSize: type.label, fontWeight: '700' },
+  advancedPanel: {
+    marginHorizontal: space.lg,
+    marginBottom: space.md,
+    padding: space.md,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.card,
+    gap: space.xs,
+  },
+  advancedLabel: { color: colors.muted, fontSize: type.label, fontWeight: '600' },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs, marginBottom: space.sm },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

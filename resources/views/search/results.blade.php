@@ -42,7 +42,9 @@
                     <td><a href="{{ route('tires.show', $tire) }}">{{ $tire->displayName() }}</a></td>
                     <td>
                         <x-status :tone="$tire->status->tone()">{{ $tire->status->label() }}</x-status>
-                        <x-status :tone="$tire->condition->tone()">{{ $tire->condition->label() }}</x-status>
+                        @unless(in_array($tire->status->value, ['DE_BAJA', 'EN_REPARACION'], true))
+                            <x-status :tone="$tire->condition->tone()">{{ $tire->display_condition }}</x-status>
+                        @endunless
                     </td>
                 </tr>
             @empty

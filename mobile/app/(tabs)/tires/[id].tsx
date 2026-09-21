@@ -31,6 +31,7 @@ export default function TireDetailScreen() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [modal, setModal] = useState<null | 'incident' | 'measurement' | 'return' | 'retire'>(null);
+  const [showConditionPicker, setShowConditionPicker] = useState(false);
 
   const canWriteThis = canWrite(user?.role);
   const canRetire = canRetireOrRecap(user?.role);
@@ -99,7 +100,40 @@ export default function TireDetailScreen() {
             <Text style={styles.title}>{history.display}</Text>
             <TireStatusBadge status={history.tire.status} />
           </View>
-          <Text style={styles.sub}>{history.tire.display_condition ?? '—'}</Text>
+          {canWriteThis && ['NUEVA', 'NUEVA_USADA', 'USADA'].includes(history.tire.condition ?? '') ? (
+            <Pressable
+              onPress={() => setShowConditionPicker((v) => !v)}
+              style={styles.conditionRow}
+              accessibilityRole="button"
+              accessibilityLabel={`Condición: ${history.tire.display_condition}. Tocá para cambiarla`}
+            >
+              <Text style={styles.sub}>{history.tire.display_condition ?? '—'}</Text>
+              <Text style={styles.changeLink}>Cambiar</Text>
+            </Pressable>
+          ) : (
+            <Text style={styles.sub}>{history.tire.display_condition ?? '—'}</Text>
+          )}
+          {showConditionPicker ? (
+            <View style={{ marginTop: space.xs }}>
+              <View style={styles.chipRow}>
+                {(
+                  [
+                    ['NUEVA', 'Nuevo'],
+                    ['NUEVA_USADA', 'Nuevo usado'],
+                    ['USADA', 'Usado'],
+                  ] as const
+                ).map(([value, label]) => (
+                  <Chip
+                    key={value}
+                    label={label}
+                    selected={history.tire.condition === value}
+                    onPress={() => void runAction(() => api.setCondition(tireId, value), 'Condición actualizada.')}
+                  />
+                ))}
+              </View>
+              <Text style={styles.hint}>Para recapado, reparación o baja usá las acciones de abajo.</Text>
+            </View>
+          ) : null}
           <Text style={styles.sub}>Km acumulados: {history.tire.accumulated_km ?? '—'}</Text>
           {canWriteThis && history.tire.condition === 'RECAPADA' ? (
             <View style={{ marginTop: space.sm }}>
@@ -361,6 +395,15 @@ const styles = StyleSheet.create({
   title: { color: colors.ink, fontSize: type.title, fontWeight: '700', flexShrink: 1 },
   sub: { color: colors.muted, fontSize: type.body, marginTop: space.xs },
   fieldLabel: { color: colors.muted, fontSize: type.label, fontWeight: '600', marginBottom: space.xs },
+  conditionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 36,
+  },
+  changeLink: { color: colors.primary, fontSize: type.label, fontWeight: '700' },
+  chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
+  hint: { color: colors.muted, fontSize: type.caption, marginTop: space.xs },
   mono: { color: colors.muted, fontSize: type.caption, fontFamily: 'monospace' },
   tabs: { flexDirection: 'row', gap: space.sm },
   tab: {

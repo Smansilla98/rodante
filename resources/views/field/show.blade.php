@@ -11,7 +11,7 @@
     <div class="panel__body space-y-4">
         <div class="dl">
             <div><span>Estado</span>{{ $tire->status->label() }}</div>
-            <div><span>Condición</span>{{ $tire->condition->label() }}</div>
+            <div><span>Condición</span>{{ $tire->display_condition }}</div>
             <div><span>Km</span><span class="mono">{{ number_format($tire->accumulated_km) }}</span></div>
             <div>
                 <span>DOT</span>

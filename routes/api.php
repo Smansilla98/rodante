@@ -29,6 +29,7 @@ Route::prefix('v1')->group(function () {
         Route::get('/units/{unit}/positions/{position}/candidates', [TireApiController::class, 'positionCandidates']);
 
         Route::post('/tires/{tire}/recap-wear', [TireApiController::class, 'setRecapWear'])->middleware('capability:write');
+        Route::post('/tires/{tire}/condition', [TireApiController::class, 'setCondition'])->middleware('capability:write');
         Route::post('/tires/{tire}/incident', [TireApiController::class, 'incident'])->middleware('capability:write');
         Route::post('/tires/{tire}/measurement', [TireApiController::class, 'measurement'])->middleware('capability:write');
         Route::post('/tires/{tire}/return-stock', [TireApiController::class, 'returnToStock'])->middleware('capability:write');

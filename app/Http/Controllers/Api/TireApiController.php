@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Enums\TireCondition;
+use App\Enums\TireStatus;
 use App\Exceptions\DomainException;
 use App\Exceptions\SheetConflictException;
 use App\Http\Controllers\Controller;
@@ -26,12 +27,39 @@ use Illuminate\Http\Request;
 
 class TireApiController extends Controller
 {
+    /**
+     * Listado con búsqueda global parcial (número, DOT, marca, modelo, medida, patente
+     * de la unidad, base) y filtros rápidos por status/condition — misma idea que
+     * `positionCandidates`, sin duplicar reglas: solo texto plano sobre columnas/relaciones.
+     */
     public function tires(Request $request)
     {
         $query = Tire::with('brand', 'model', 'size', 'currentLocation.unit', 'currentLocation.position', 'currentLocation.base');
         AccessScope::tires($query, $request->user());
         $tires = $query
             ->when($request->status, fn ($q, $s) => $q->where('status', $s))
+            ->when($request->condition, fn ($q, $c) => $q->where('condition', $c))
+            ->when($request->tire_size_id, fn ($q, $sizeId) => $q->where('tire_size_id', $sizeId))
+            ->when($request->base_id, fn ($q, $baseId) => $q->whereHas(
+                'currentLocation',
+                fn ($loc) => $loc->where('base_id', $baseId)
+            ))
+            ->when($request->q, function ($q, $term) {
+                $term = trim((string) $term);
+                $digits = preg_replace('/\D+/', '', $term);
+                $q->where(function ($inner) use ($term, $digits) {
+                    $inner->where('individual_number', 'like', "%{$term}%")
+                        ->orWhere('dot', 'like', "%{$term}%")
+                        ->orWhereHas('brand', fn ($b) => $b->where('name', 'like', "%{$term}%"))
+                        ->orWhereHas('model', fn ($m) => $m->where('name', 'like', "%{$term}%")->orWhere('code', 'like', "%{$term}%"))
+                        ->orWhereHas('size', fn ($s) => $s->where('code', 'like', "%{$term}%")->orWhere('alias', 'like', "%{$term}%"))
+                        ->orWhereHas('currentLocation.unit', fn ($u) => $u->where('plate', 'like', "%{$term}%"))
+                        ->orWhereHas('currentLocation.base', fn ($b) => $b->where('name', 'like', "%{$term}%"));
+                    if ($digits !== '') {
+                        $inner->orWhere('individual_number', $digits);
+                    }
+                });
+            })
             ->orderBy('individual_number')
             ->paginate(50);
 
@@ -263,6 +291,27 @@ class TireApiController extends Controller
 
         $data = $request->validate(['recap_wear' => 'required|in:NUEVA,USADA']);
         $tire->update(['recap_wear' => $data['recap_wear']]);
+
+        return response()->json($tire->fresh(['brand', 'model', 'size']));
+    }
+
+    /**
+     * Cambio rápido de condición — a propósito acotado a Nueva/Nueva usada/Usada: son
+     * simples columnas sin efectos colaterales. NO incluye Recapada (requiere pasar por
+     * una OT de recapado real, `WorkOrderService`) ni "A reparar"/"Baja" (son `status`,
+     * no `condition`, y tienen su propio flujo con motivo/auditoría que no hay que saltear).
+     */
+    public function setCondition(Request $request, Tire $tire)
+    {
+        $this->authorizeVisible('view', $tire);
+        abort_unless($request->user()->role->canWrite(), 403, 'No tiene permiso para cambiar la condición.');
+
+        if ($tire->status === TireStatus::DeBaja) {
+            return response()->json(['message' => 'No se puede cambiar la condición de una cubierta de baja.'], 422);
+        }
+
+        $data = $request->validate(['condition' => 'required|in:NUEVA,NUEVA_USADA,USADA']);
+        $tire->update(['condition' => $data['condition']]);
 
         return response()->json($tire->fresh(['brand', 'model', 'size']));
     }

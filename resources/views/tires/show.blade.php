@@ -56,7 +56,10 @@
         <h2 id="tireSummaryTitle" class="tire-summary__title">Situación actual</h2>
         <div class="tire-summary__chips">
             <x-status :tone="$tire->status->tone()">{{ $tire->status->label() }}</x-status>
-            <x-status :tone="$tire->condition->tone()">{{ $tire->condition->label() }}</x-status>
+            @unless(in_array($tire->status->value, ['DE_BAJA', 'EN_REPARACION'], true))
+                {{-- display_condition ya incluye Nueva/Usada + Lineal/Motriz para recapadas --}}
+                <x-status :tone="$tire->condition->tone()">{{ $tire->display_condition }}</x-status>
+            @endunless
         </div>
     </div>
 
