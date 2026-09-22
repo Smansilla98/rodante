@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Models\AuditLog;
 use App\Models\Tire;
 use App\Models\TireAssignment;
 use App\Models\TireAssignmentSegment;
@@ -41,6 +42,7 @@ class AppServiceProvider extends ServiceProvider
         TireAssignmentSegment::observe(TireAssignmentSegmentObserver::class);
         TireCurrentLocation::observe(TireCurrentLocationObserver::class);
         TireMovement::observe(ImmutableRecordObserver::class);
+        AuditLog::observe(ImmutableRecordObserver::class);
         WorkOrder::observe(WorkOrderObserver::class);
     }
 }

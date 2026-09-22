@@ -111,6 +111,18 @@ class NonNegotiableRulesTest extends TestCase
 
         $this->assertGreaterThan(0, (int) $service->fresh()->accumulated_km);
         $this->assertSame(0, (int) $spare->fresh()->accumulated_km);
+
+        // INC-11 (docs/AUDIT_OT_STOCK_RECAPADO.md): retirar desde auxilio debe
+        // quedar como FROM_SPARE, no como el genérico REMOVE_TO_STOCK que usa
+        // el retiro desde una posición normal.
+        $this->assertDatabaseHas('tire_movements', [
+            'tire_id' => $spare->id,
+            'type' => MovementType::FromSpare->value,
+        ]);
+        $this->assertDatabaseHas('tire_movements', [
+            'tire_id' => $service->id,
+            'type' => MovementType::RemoveToStock->value,
+        ]);
     }
 
     public function test_rule_history_events_are_immutable(): void

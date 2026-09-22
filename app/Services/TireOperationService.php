@@ -306,6 +306,7 @@ class TireOperationService
 
         $fromPositionId = $location->position_id;
         $fromBaseId = $location->base_id;
+        $wasSpare = $tire->status === TireStatus::Auxilio;
 
         $this->locations->place($tire, LocationKind::Stock, $unit->base_id);
         $this->locations->refreshAccumulatedKm($tire->fresh());
@@ -316,7 +317,7 @@ class TireOperationService
 
         $tire->movements()->create([
             'tire_operation_id' => $operation->id,
-            'type' => MovementType::RemoveToStock,
+            'type' => $wasSpare ? MovementType::FromSpare : MovementType::RemoveToStock,
             'occurred_at' => $occurredAt,
             'from_unit_id' => $unit->id,
             'from_position_id' => $fromPositionId,

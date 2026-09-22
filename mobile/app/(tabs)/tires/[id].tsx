@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { api, ApiError } from '../../../src/api/client';
 import type {
   LifeReportPayload,
+  MeasurementZone,
   PredictionPayload,
   TireHistoryPayload,
   TireIncident,
@@ -375,51 +376,30 @@ export default function TireDetailScreen() {
         )}
       </ScrollView>
 
-      <ActionModal
+      <IncidentModal
         visible={modal === 'incident'}
-        title="Registrar incidente"
-        confirmLabel="Guardar incidente"
-        onClose={() => setModal(null)}
         busy={busy}
-        onSubmit={(fields) =>
+        canRecap={canRetire}
+        onClose={() => setModal(null)}
+        onConfirm={(incidentType, description, notes) =>
           runAction(
-            () => api.createIncident(tireId, { type: fields.type || 'OTRA', description: fields.description, notes: fields.notes }),
+            () => api.createIncident(tireId, { type: incidentType, description, notes }),
             'Incidente registrado.',
           )
         }
-        fields={[
-          { key: 'type', label: 'Tipo (ej: PINCHADURA, PARCHE, INSPECCION)' },
-          { key: 'description', label: 'Descripción' },
-          { key: 'notes', label: 'Notas' },
-        ]}
       />
 
-      <ActionModal
+      <MeasurementModal
         visible={modal === 'measurement'}
-        title="Registrar medición"
-        confirmLabel="Guardar medición"
-        onClose={() => setModal(null)}
         busy={busy}
-        onSubmit={(fields) =>
+        zones={history.measurement_zones ?? []}
+        onClose={() => setModal(null)}
+        onConfirm={(readings, notes) =>
           runAction(
-            () =>
-              api.createMeasurement(tireId, {
-                notes: fields.notes,
-                readings: [
-                  {
-                    zone_id: Number(fields.zone_id || 0),
-                    millimeters: Number(fields.millimeters || 0),
-                  },
-                ],
-              }),
+            () => api.createMeasurement(tireId, { notes, readings }),
             'Medición registrada.',
           )
         }
-        fields={[
-          { key: 'zone_id', label: 'ID de zona de medición', keyboardType: 'number-pad' },
-          { key: 'millimeters', label: 'Milímetros', keyboardType: 'decimal-pad' },
-          { key: 'notes', label: 'Notas' },
-        ]}
       />
 
       <ActionModal
@@ -446,6 +426,149 @@ export default function TireDetailScreen() {
         ]}
       />
     </View>
+  );
+}
+
+/** Excluye RECAPADO salvo que el usuario pueda registrar recapados — mismo criterio que TireController::show() en la web. */
+function IncidentModal({
+  visible,
+  busy,
+  canRecap,
+  onClose,
+  onConfirm,
+}: {
+  visible: boolean;
+  busy: boolean;
+  canRecap: boolean;
+  onClose: () => void;
+  onConfirm: (type: string, description?: string, notes?: string) => void;
+}) {
+  const options = Object.keys(INCIDENT_TYPE_LABEL).filter((key) => key !== 'RECAPADO' || canRecap);
+  const [selected, setSelected] = useState(options[0] ?? 'OTRA');
+  const [description, setDescription] = useState('');
+  const [notes, setNotes] = useState('');
+
+  useEffect(() => {
+    if (visible) {
+      setSelected(options[0] ?? 'OTRA');
+      setDescription('');
+      setNotes('');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible]);
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <View style={styles.modalCard}>
+          <Text style={styles.title}>Registrar incidente</Text>
+          <SectionLabel>Tipo</SectionLabel>
+          <View style={styles.chipRow}>
+            {options.map((key) => (
+              <Chip key={key} label={INCIDENT_TYPE_LABEL[key] ?? key} selected={selected === key} onPress={() => setSelected(key)} />
+            ))}
+          </View>
+          <Field label="Descripción (opcional)" value={description} onChangeText={setDescription} />
+          <Field label="Notas (opcional)" value={notes} onChangeText={setNotes} />
+          <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md }}>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton title="Cancelar" onPress={onClose} variant="ghost" block />
+            </View>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton
+                title="Guardar incidente"
+                onPress={() => onConfirm(selected, description.trim() || undefined, notes.trim() || undefined)}
+                loading={busy}
+                block
+              />
+            </View>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+/**
+ * Un campo de milímetros por cada zona de la medida de la cubierta — el
+ * backend (MeasurementService::record) rechaza el guardado si falta la
+ * lectura de alguna zona, así que se piden todas de entrada.
+ */
+function MeasurementModal({
+  visible,
+  busy,
+  zones,
+  onClose,
+  onConfirm,
+}: {
+  visible: boolean;
+  busy: boolean;
+  zones: MeasurementZone[];
+  onClose: () => void;
+  onConfirm: (readings: Array<{ zone_id: number; millimeters: number }>, notes?: string) => void;
+}) {
+  const [values, setValues] = useState<Record<number, string>>({});
+  const [notes, setNotes] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (visible) {
+      setValues({});
+      setNotes('');
+      setError(null);
+    }
+  }, [visible]);
+
+  const submit = () => {
+    const readings: Array<{ zone_id: number; millimeters: number }> = [];
+    for (const zone of zones) {
+      const raw = (values[zone.id] ?? '').trim();
+      if (raw === '' || Number.isNaN(Number(raw))) {
+        setError(`Falta la medición de ${zone.name}.`);
+        return;
+      }
+      readings.push({ zone_id: zone.id, millimeters: Number(raw) });
+    }
+    setError(null);
+    onConfirm(readings, notes.trim() || undefined);
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View style={styles.modalBackdrop}>
+        <ScrollView style={styles.measurementModalScroll} contentContainerStyle={styles.modalCard}>
+          <Text style={styles.title}>Registrar medición</Text>
+          {zones.length === 0 ? (
+            <Text style={styles.sub}>
+              Esta cubierta no tiene una medida con zonas de profundidad cargadas — no se puede registrar la medición.
+            </Text>
+          ) : (
+            <>
+              <Text style={styles.sub}>Profundidad en cada zona de la banda (mm).</Text>
+              {zones.map((zone) => (
+                <Field
+                  key={zone.id}
+                  label={`${zone.name} (mm)`}
+                  value={values[zone.id] ?? ''}
+                  onChangeText={(v) => setValues((prev) => ({ ...prev, [zone.id]: v }))}
+                  keyboardType="decimal-pad"
+                />
+              ))}
+              <Field label="Notas (opcional)" value={notes} onChangeText={setNotes} />
+            </>
+          )}
+          {error ? <Text style={styles.errorText}>{error}</Text> : null}
+          <View style={{ flexDirection: 'row', gap: space.sm, marginTop: space.md }}>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton title="Cancelar" onPress={onClose} variant="ghost" block />
+            </View>
+            <View style={{ flex: 1 }}>
+              <PrimaryButton title="Guardar medición" onPress={submit} loading={busy} disabled={zones.length === 0} block />
+            </View>
+          </View>
+        </ScrollView>
+      </View>
+    </Modal>
   );
 }
 
@@ -571,4 +694,6 @@ const styles = StyleSheet.create({
     padding: space.lg,
     gap: space.xs,
   },
+  measurementModalScroll: { maxHeight: '85%' },
+  errorText: { color: colors.danger, fontSize: type.body, marginTop: space.xs },
 });

@@ -87,6 +87,14 @@ class TireApiController extends Controller
             'movements' => $tire->movements,
             'incidents' => $tire->incidents,
             'lifecycles' => $tire->lifecycles,
+            // MeasurementService::record() exige una lectura por cada zona de la medida
+            // (rechaza el guardado si falta alguna). Sin esto, el cliente no tiene forma
+            // de saber cuántas zonas pedir ni cómo se llaman (docs/AUDIT_OT_STOCK_RECAPADO.md, INC-09).
+            'measurement_zones' => $tire->size?->zones->map(fn ($zone) => [
+                'id' => $zone->id,
+                'code' => $zone->code,
+                'name' => $zone->name,
+            ])->values() ?? [],
         ]);
     }
 

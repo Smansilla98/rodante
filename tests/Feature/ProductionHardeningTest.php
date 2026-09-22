@@ -2,6 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\MovementType;
+use App\Enums\TireCondition;
+use App\Enums\TireStatus;
 use App\Enums\UserRole;
 use App\Enums\WorkOrderType;
 use App\Exceptions\DomainException;
@@ -21,6 +24,7 @@ use App\Services\TireIdentityService;
 use App\Services\WorkOrderService;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use Tests\Concerns\CreatesDomain;
 use Tests\TestCase;
 
@@ -58,6 +62,17 @@ class ProductionHardeningTest extends TestCase
 
         $this->expectException(DomainException::class);
         $movement->update(['notes' => 'hack']);
+    }
+
+    /** Cubre INC-07: el registro de auditoría ahora está protegido igual que tire_movements. */
+    public function test_audit_logs_are_immutable(): void
+    {
+        [$tire] = $this->purchaseTires(1, 88012);
+        $log = \App\Models\AuditLog::where('entity_type', Tire::class)->orWhere('action', 'purchase.confirmed')->first();
+        $this->assertNotNull($log);
+
+        $this->expectException(DomainException::class);
+        $log->update(['action' => 'hack']);
     }
 
     public function test_correction_creates_new_movement(): void
@@ -231,6 +246,102 @@ class ProductionHardeningTest extends TestCase
         $this->assertSame(2, $order->items()->count());
         $this->assertDatabaseHas('work_order_items', ['work_order_id' => $order->id, 'tire_id' => $a->id]);
         $this->assertDatabaseHas('work_order_items', ['work_order_id' => $order->id, 'tire_id' => $b->id]);
+    }
+
+    /**
+     * Cubre INC-02 (docs/AUDIT_OT_STOCK_RECAPADO.md): cerrar una OT de tipo
+     * Recapado no tenía ningún test. Verifica que deje exactamente el mismo
+     * rastro que el retorno directo a stock (vía B): vida nueva, condición
+     * RECAPADA, status de vuelta a STOCK y un tire_movements tipo FROM_REPAIR.
+     */
+    public function test_work_order_recap_close_opens_new_life_and_returns_to_stock(): void
+    {
+        [$tire] = $this->purchaseTires(1, 88070);
+        $shop = RetreadShop::create([
+            'company_id' => $this->admin->company_id,
+            'name' => 'Taller recap',
+            'is_active' => true,
+        ]);
+        $lifeBefore = (int) ($tire->currentLifecycle?->life_number ?? 1);
+
+        $service = app(WorkOrderService::class);
+        $order = $service->open($this->admin, $tire, $shop, WorkOrderType::Recapado, 'Recapado de prueba');
+        $service->sendToShop($order->fresh(), $this->admin);
+        $this->assertSame(TireStatus::EnReparacion, $tire->fresh()->status);
+
+        $closed = $service->close($order->fresh(), $this->admin, 2000, 'Listo');
+
+        $tire->refresh();
+        $this->assertSame(TireStatus::Stock, $tire->status);
+        $this->assertSame(TireCondition::Recapada, $tire->condition);
+        $this->assertSame($lifeBefore + 1, (int) $tire->currentLifecycle?->life_number);
+        $this->assertSame('RECAPADO', $tire->currentLifecycle?->started_by);
+        $this->assertDatabaseHas('tire_movements', [
+            'tire_id' => $tire->id,
+            'type' => MovementType::FromRepair->value,
+        ]);
+        $this->assertDatabaseHas('cost_entries', [
+            'company_id' => $this->admin->company_id,
+            'category' => 'RECAP',
+        ]);
+        $this->assertSame('CERRADA', $closed->status->value);
+    }
+
+    /** Mismo caso que arriba pero con un lote de 2 cubiertas: cada una debe abrir su propia vida y su propio movimiento. */
+    public function test_work_order_recap_close_with_multiple_tires_opens_a_life_and_movement_per_tire(): void
+    {
+        [$a, $b] = $this->purchaseTires(2, 88090);
+        $shop = RetreadShop::create([
+            'company_id' => $this->admin->company_id,
+            'name' => 'Taller recap lote',
+            'is_active' => true,
+        ]);
+
+        $service = app(WorkOrderService::class);
+        $order = $service->open($this->admin, collect([$a, $b]), $shop, WorkOrderType::Recapado, 'Lote');
+        $service->sendToShop($order->fresh(), $this->admin);
+        $service->close($order->fresh(), $this->admin, 1000, 'Listo lote');
+
+        foreach ([$a, $b] as $tire) {
+            $tire->refresh();
+            $this->assertSame(TireStatus::Stock, $tire->status);
+            $this->assertSame(TireCondition::Recapada, $tire->condition);
+            $this->assertDatabaseHas('tire_movements', [
+                'tire_id' => $tire->id,
+                'type' => MovementType::FromRepair->value,
+            ]);
+        }
+    }
+
+    /**
+     * Cubre INC-08: cerrar/cancelar una OT de Recapado debe exigir el mismo
+     * permiso que abrirla (canRetireOrRecap), no solo canWrite().
+     */
+    public function test_operario_cannot_close_recap_work_order_that_admin_opened(): void
+    {
+        [$tire] = $this->purchaseTires(1, 88095);
+        $shop = RetreadShop::create([
+            'company_id' => $this->admin->company_id,
+            'name' => 'Taller permisos',
+            'is_active' => true,
+        ]);
+        $operario = User::factory()->create([
+            'role' => UserRole::Operario,
+            'company_id' => $this->admin->company_id,
+        ]);
+        $operario->fleets()->sync($this->admin->fleets()->pluck('fleets.id'));
+        $operario->bases()->sync($this->admin->bases()->pluck('bases.id'));
+
+        $service = app(WorkOrderService::class);
+        $order = $service->open($this->admin, $tire, $shop, WorkOrderType::Recapado, 'Permisos');
+        $service->sendToShop($order->fresh(), $this->admin);
+
+        $this->assertFalse(Gate::forUser($operario)->allows('manage', $order->fresh()));
+
+        // Una OT de reparación sigue permitiendo el cierre con solo canWrite().
+        [$repairTire] = $this->purchaseTires(1, 88096);
+        $repairOrder = $service->open($this->admin, $repairTire, $shop, WorkOrderType::Reparacion, 'Parche');
+        $this->assertTrue(Gate::forUser($operario)->allows('manage', $repairOrder->fresh()));
     }
 
     public function test_work_order_repair_rejects_multiple_tires(): void

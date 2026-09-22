@@ -351,6 +351,12 @@ export interface TireLifecycle {
   condition_at_start?: string | null;
 }
 
+export interface MeasurementZone {
+  id: number;
+  code: string;
+  name: string;
+}
+
 export interface TireHistoryPayload {
   tire: Partial<Tire> & { id: number; individual_number: number; status: TireStatusValue };
   display: string;
@@ -358,6 +364,8 @@ export interface TireHistoryPayload {
   movements: TireMovement[];
   incidents: TireIncident[];
   lifecycles: TireLifecycle[];
+  /** Zonas de la medida de esta cubierta — hay que mandar una lectura por cada una al registrar una medición. */
+  measurement_zones: MeasurementZone[];
 }
 
 export interface PredictionZone {

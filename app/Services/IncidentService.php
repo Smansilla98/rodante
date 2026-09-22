@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Enums\IncidentType;
 use App\Enums\LocationKind;
+use App\Enums\MovementType;
 use App\Enums\TireCondition;
 use App\Enums\TireStatus;
 use App\Exceptions\DomainException;
@@ -101,5 +102,18 @@ class IncidentService
 
         $baseId = $tire->currentLocation?->base_id;
         $this->locations->place($tire, LocationKind::Stock, $baseId);
+
+        // Mismo tipo de movimiento que TireOperationService::returnToStock(asRecap: true),
+        // para que un recapado cerrado por OT deje el mismo rastro que uno registrado
+        // directamente desde la ficha del neumático (ver docs/AUDIT_OT_STOCK_RECAPADO.md, INC-01).
+        $tire->movements()->create([
+            'type' => MovementType::FromRepair,
+            'occurred_at' => now(),
+            'from_base_id' => $baseId,
+            'to_base_id' => $baseId,
+            'user_id' => $user->id,
+            'notes' => 'Vuelta a stock después de recapado (OT). Vida nueva.',
+            'created_at' => now(),
+        ]);
     }
 }
