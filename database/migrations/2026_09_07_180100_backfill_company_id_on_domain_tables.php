@@ -33,7 +33,15 @@ return new class extends Migration
         $this->bulkBackfill($driver, 'tire_lifecycles', 'tires', 'tire_id', $fallback);
         $this->bulkBackfill($driver, 'tire_current_locations', 'tires', 'tire_id', $fallback);
         $this->bulkBackfill($driver, 'tire_assignments', 'tires', 'tire_id', $fallback);
-        $this->bulkBackfill($driver, 'tire_movements', 'tires', 'tire_id', $fallback);
+        // tire_movements tiene triggers que bloquean cualquier UPDATE (ver
+        // 2026_08_21_140000_protect_tire_movements_with_triggers, que corre
+        // ANTES que esta migración por fecha) — hay que sacarlos antes de
+        // este backfill puntual y volver a crearlos después, si no el
+        // UPDATE de acá revienta con "tire_movements is immutable" y frena
+        // el resto del lote de migraciones en cada deploy, indefinidamente.
+        $this->withTireMovementsTriggersDisabled($driver, function () use ($driver, $fallback) {
+            $this->bulkBackfill($driver, 'tire_movements', 'tires', 'tire_id', $fallback);
+        });
         $this->bulkBackfill($driver, 'tire_incidents', 'tires', 'tire_id', $fallback);
         $this->bulkBackfill($driver, 'tire_measurements', 'tires', 'tire_id', $fallback);
         $this->bulkBackfill($driver, 'tire_number_changes', 'tires', 'tire_id', $fallback);
@@ -102,6 +110,57 @@ return new class extends Migration
         if ($orphans > 0) {
             DB::table($table)->whereNull('company_id')->update(['company_id' => $fallback]);
             Log::warning("Backfill {$table}: {$orphans} huérfanas → company_id={$fallback}.");
+        }
+    }
+
+    /**
+     * Saca los triggers de inmutabilidad de tire_movements, corre $callback,
+     * y los vuelve a crear (mismas definiciones que
+     * 2026_08_21_140000_protect_tire_movements_with_triggers) pase lo que
+     * pase — nunca deja la tabla desprotegida ni corta el resto del lote de
+     * migraciones si esto falla.
+     */
+    private function withTireMovementsTriggersDisabled(string $driver, \Closure $callback): void
+    {
+        if ($driver !== 'mysql') {
+            $callback();
+
+            return;
+        }
+
+        try {
+            DB::unprepared('DROP TRIGGER IF EXISTS tire_movements_prevent_update');
+            DB::unprepared('DROP TRIGGER IF EXISTS tire_movements_prevent_delete');
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
+        try {
+            $callback();
+        } catch (\Throwable $e) {
+            report($e);
+        } finally {
+            try {
+                DB::unprepared('DROP TRIGGER IF EXISTS tire_movements_prevent_update');
+                DB::unprepared(<<<'SQL'
+                    CREATE TRIGGER tire_movements_prevent_update
+                    BEFORE UPDATE ON tire_movements
+                    FOR EACH ROW
+                    SIGNAL SQLSTATE '45000'
+                        SET MESSAGE_TEXT = 'tire_movements is immutable: UPDATE is forbidden'
+                SQL);
+
+                DB::unprepared('DROP TRIGGER IF EXISTS tire_movements_prevent_delete');
+                DB::unprepared(<<<'SQL'
+                    CREATE TRIGGER tire_movements_prevent_delete
+                    BEFORE DELETE ON tire_movements
+                    FOR EACH ROW
+                    SIGNAL SQLSTATE '45000'
+                        SET MESSAGE_TEXT = 'tire_movements is immutable: DELETE is forbidden'
+                SQL);
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
     }
 };
