@@ -106,6 +106,11 @@ Una vez que arranca bien:
   en un teléfono real para sacar las capturas de pantalla que faltan en `LISTING.md` (mínimo 2, de pantallas
   reales con datos de ejemplo).
 
+**✅ Build de producción generado** — `.aab` listo:
+https://expo.dev/artifacts/eas/6MRrC4ging2-pn6CRSgbjBe812a0pxQZvZsoNiEY2pM.aab
+(este link de Expo puede expirar con el tiempo; si eso pasa, `npx eas-cli submit --latest` igual encuentra el
+build más reciente sin necesitarlo, o se puede generar uno nuevo con el mismo comando de arriba).
+
 ## 5. Crear la ficha en Google Play Console
 
 1. Entrá a https://play.google.com/console (ya está pago, según me confirmaste).
