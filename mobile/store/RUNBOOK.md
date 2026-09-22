@@ -17,11 +17,19 @@ credenciales de una cuenta que no controla. Son ~15-20 minutos de clicks, en est
 - [x] Guía para completar el formulario de "Seguridad de los datos" (`mobile/store/DATA_SAFETY.md`).
 - [x] Proyecto EAS creado (`d44353e5-8326-4445-a9ea-06d914decb2e`) y `owner` (`smansillas-team`) + `projectId` ya cargados en `app.config.ts` — el paso 3 de más abajo ya está hecho, se deja documentado por si hay que recrearlo alguna vez.
 
-## 1. Completar el email de contacto (2 minutos)
+## 1. Email de contacto y URL de privacidad — ✅ ya hecho
 
-Antes de publicar, reemplazá el placeholder de contacto en `mobile/store/privacy-policy.html` (sección 11,
-buscá el bloque con ⚠️) por un email de soporte real que vayas a monitorear. Volvé a publicar esa página donde
-la hayas alojado (o pedime que actualice la versión publicada en claude.ai con el email nuevo).
+La política de privacidad ya tiene el email de contacto real (`samansilla.998@gmail.com`) y además ahora se
+sirve directo desde el backend, sin depender de un link externo:
+
+```
+https://rodant-production.up.railway.app/privacidad
+```
+
+Es la URL a usar en Play Console (ver `LISTING.md`). El contenido vive en
+`resources/views/legal/privacy.blade.php`; hay una copia espejo en `mobile/store/privacy-policy.html` para
+referencia — si se edita el contenido más adelante, hay que actualizar los dos archivos (o pedirle a Claude que
+lo haga).
 
 ## 2. Iniciar sesión en Expo/EAS
 

@@ -1,3 +1,10 @@
+{{--
+    Política de privacidad pública de Rodante — sin login, pensada para
+    pegar como URL en Play Console y en la ficha de la app. Contenido
+    espejo de mobile/store/privacy-policy.html; si se edita uno, editar
+    el otro (o pedirle a Claude que sincronice ambos).
+--}}
+@verbatim
 <!doctype html>
 <html lang="es">
 <head>
@@ -139,20 +146,6 @@
   .grid-2 .card li{font-size:14.5px; margin-bottom:4px;}
   .yes h3{color:#3f9a5c;}
   .no h3{color:var(--muted);}
-
-  .placeholder{
-    background: var(--warn-bg);
-    border:1px solid var(--warn-line);
-    color: var(--warn-ink);
-    border-radius:10px;
-    padding:14px 18px;
-    font-size:14.5px;
-  }
-  .placeholder code{
-    background: rgba(0,0,0,0.12);
-    padding: 1px 6px;
-    border-radius:4px;
-  }
 
   table{width:100%; border-collapse:collapse; margin:14px 0; font-size:14.5px;}
   th,td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top;}
@@ -352,3 +345,4 @@
 </div>
 </body>
 </html>
+@endverbatim

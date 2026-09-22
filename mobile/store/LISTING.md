@@ -61,11 +61,19 @@ Se recomienda declarar el público objetivo como **18+ / uso profesional**, no u
 URL para pegar en Play Console → *Política de privacidad*:
 
 ```
-https://claude.ai/artifact/JZj3W4SowaDjS1SSgdkm9a
+https://rodant-production.up.railway.app/privacidad
 ```
 
-Esta es una página publicada y accesible, generada a partir de `mobile/store/privacy-policy.html` (que queda en el repo como fuente y respaldo). **Antes de publicar**, hay que completar el email de contacto real en la sección 11 de ese documento — quedó marcado como pendiente a propósito, en vez de inventar uno. Si se prefiere una URL propia del dominio de la empresa en vez de la de claude.ai, se puede alojar el mismo archivo `privacy-policy.html` en cualquier hosting estático (el mismo Railway donde corre el backend, por ejemplo) y usar esa URL en su lugar.
+Servida directamente desde el backend (`routes/web.php` → `legal.privacy` → `resources/views/legal/privacy.blade.php`), sin login, así que Google puede acceder sin problema. Es la URL a usar — más estable que un link externo, porque vive en la misma infraestructura que el resto del sistema.
+
+También existe una copia publicada en claude.ai, con el mismo contenido, útil para compartir rápido sin depender del deploy: https://claude.ai/artifact/JZj3W4SowaDjS1SSgdkm9a
+
+Ambas se generan a partir de la misma fuente (`resources/views/legal/privacy.blade.php` en el backend y `mobile/store/privacy-policy.html` como copia de referencia en el mobile) — si se edita el contenido, hay que actualizar las dos.
 
 ## Email de contacto del desarrollador (Play Console)
 
-**Pendiente** — Play Console pide un email de contacto público del desarrollador además del de la política de privacidad. No se completa acá porque no hay uno provisto; usar el mismo que se cargue en la política de privacidad.
+```
+samansilla.998@gmail.com
+```
+
+Play Console pide un email de contacto público del desarrollador además del de la política de privacidad — usar este mismo.

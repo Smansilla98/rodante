@@ -39,6 +39,7 @@ Route::get('/', function () {
         : redirect()->route('login');
 });
 Route::get('/qr/{token}', [QrController::class, 'show'])->name('qr.resolve');
+Route::get('/privacidad', fn () => view('legal.privacy'))->name('legal.privacy');
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
