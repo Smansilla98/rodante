@@ -54,16 +54,43 @@ crear un proyecto distinto desde cero (ahí sí te daría un `projectId` nuevo p
 ## 4. Generar el build de producción
 
 ```bash
-npx eas-cli build --profile production --platform android
+cd mobile
+EAS_NO_VCS=1 npx eas-cli build --profile production --platform android
 ```
 
+**Ojo con el prefijo `EAS_NO_VCS=1`, no es opcional acá.** Este repo es un monorepo: `mobile/` convive con el
+backend de Laravel en el mismo repo git. Por default, `eas build` intenta subir el proyecto completo a partir
+de la raíz del repo git (para soportar monorepos con dependencias compartidas), y en este caso se choca con
+`storage/framework/testing/disks` del backend — una carpeta que quedó con permisos `0770` y dueño `www-data`
+(la creó un proceso de test de PHP en algún momento), así que tu usuario no puede ni siquiera listarla:
+
+```
+✖ Compressing project files
+Failed to upload the project tarball to EAS Build
+Reason: EACCES: permission denied, scandir '.../storage/framework/testing/disks'
+```
+
+`EAS_NO_VCS=1` le dice a `eas-cli` que no use el modo monorepo basado en git y empaquete solo `mobile/` (que es
+lo único que hace falta para este build) — usando `mobile/.easignore` para decidir qué excluir en vez de
+`.gitignore`. Ya quedó agregado como default en los 4 perfiles de `eas.json`, así que en teoría no haría falta
+repetirlo a mano — pero ponelo igual la primera vez por las dudas, para no depender de que ese default se
+cargue a tiempo antes de armar el tarball.
+
+*Alternativa si preferís arreglar el permiso en vez de esquivarlo* (no es necesaria si usás `EAS_NO_VCS=1`,
+y de todos modos no evita que se suba el backend entero, que es peso muerto para este build):
+```bash
+sudo chmod -R o+rX storage/framework/testing
+```
+
+Una vez que arranca bien:
 - La primera vez, EAS te va a preguntar si querés que genere y gestione el keystore de firma de Android por
   vos — decile que sí, salvo que ya tengas un keystore propio de una publicación anterior (si es la primera
   vez que se publica esta app, no lo tenés).
 - El build corre en la nube de Expo, tarda unos 10-15 minutos. Al terminar te da un `.aab` (Android App Bundle),
   que es el formato que pide Play Store para el track de producción.
-- De paso, instalá el perfil `preview` (`--profile preview`) en un teléfono real para sacar las capturas de
-  pantalla que faltan en `LISTING.md` (mínimo 2, de pantallas reales con datos de ejemplo).
+- De paso, instalá el perfil `preview` (`EAS_NO_VCS=1 npx eas-cli build --profile preview --platform android`)
+  en un teléfono real para sacar las capturas de pantalla que faltan en `LISTING.md` (mínimo 2, de pantallas
+  reales con datos de ejemplo).
 
 ## 5. Crear la ficha en Google Play Console
 

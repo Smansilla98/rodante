@@ -1,0 +1,38 @@
+# Con EAS_NO_VCS=1, eas-cli arma el paquete a subir según este archivo (no
+# según .gitignore). Sin esto, subiría node_modules/ entero y demás carpetas
+# que EAS Build vuelve a generar solas en el servidor — más lento y sin
+# necesidad. Ver mobile/store/RUNBOOK.md para el porqué de EAS_NO_VCS.
+
+node_modules/
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+.metro-health-check*
+
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+.DS_Store
+*.pem
+
+.env
+.env*.local
+
+*.tsbuildinfo
+
+/ios
+/android
+
+# Documentación y assets de la ficha de Play Store — no los necesita el build.
+store/
