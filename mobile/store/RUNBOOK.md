@@ -58,9 +58,13 @@ cd mobile
 EAS_NO_VCS=1 npx eas-cli build --profile production --platform android
 ```
 
-**Ojo con el prefijo `EAS_NO_VCS=1`, no es opcional acá.** Este repo es un monorepo: `mobile/` convive con el
-backend de Laravel en el mismo repo git. Por default, `eas build` intenta subir el proyecto completo a partir
-de la raíz del repo git (para soportar monorepos con dependencias compartidas), y en este caso se choca con
+**Por qué falló y cómo se verificó el arreglo esta vez** (la primera corrección que hice acá quedó incompleta —
+lo explico porque vale la pena que quede claro, no solo "ya está"):
+
+Este repo es un monorepo: `mobile/` convive con el backend de Laravel en el mismo repo git. `eas-cli` arma el
+paquete a subir siempre a partir de la **raíz del repositorio git** (`git rev-parse --show-toplevel`), nunca de
+`mobile/` — esto pasa tanto en modo normal como con `EAS_NO_VCS=1` (lo confirmé leyendo el código fuente de
+`eas-cli`, no adivinando). Al armar ese paquete, camina el árbol completo buscando qué incluir, y se choca con
 `storage/framework/testing/disks` del backend — una carpeta que quedó con permisos `0770` y dueño `www-data`
 (la creó un proceso de test de PHP en algún momento), así que tu usuario no puede ni siquiera listarla:
 
@@ -70,14 +74,24 @@ Failed to upload the project tarball to EAS Build
 Reason: EACCES: permission denied, scandir '.../storage/framework/testing/disks'
 ```
 
-`EAS_NO_VCS=1` le dice a `eas-cli` que no use el modo monorepo basado en git y empaquete solo `mobile/` (que es
-lo único que hace falta para este build) — usando `mobile/.easignore` para decidir qué excluir en vez de
-`.gitignore`. Ya quedó agregado como default en los 4 perfiles de `eas.json`, así que en teoría no haría falta
-repetirlo a mano — pero ponelo igual la primera vez por las dudas, para no depender de que ese default se
-cargue a tiempo antes de armar el tarball.
+La solución real es un `.easignore` en la **raíz del repositorio** (no alcanza con uno adentro de `mobile/`,
+que es el error que cometí en el primer intento) que excluye todo el repo salvo `mobile/`. Ya está en
+`.easignore` (raíz del repo). **Importante si algún día lo tocás:** la negación tiene que escribirse `!/mobile`
+sin barra final — con barra final (`!/mobile/`) la librería que usa `eas-cli` no la reconoce como negación de
+directorio y `mobile/` queda excluido igual, lo que produciría un build vacío en vez de un error (un bug
+distinto, más silencioso). Antes de commitear esto se probó con una simulación real del recorrido de archivos
+que hace `eas-cli` (mismo paquete `ignore`, mismo comportamiento de "podar" un directorio ignorado sin entrar a
+leerlo) contra el filesystem real: cero errores, `storage/` nunca se toca, y los ~70 archivos reales de
+`mobile/` se incluyen bien.
 
-*Alternativa si preferís arreglar el permiso en vez de esquivarlo* (no es necesaria si usás `EAS_NO_VCS=1`,
-y de todos modos no evita que se suba el backend entero, que es peso muerto para este build):
+`EAS_NO_VCS=1` sigue siendo recomendable además del `.easignore` (evita el paso extra de clonar/diffear con
+git, que sin esto también camina el repo buscando todos los `.gitignore` anidados y se puede chocar con el
+mismo problema). Ya quedó como default en los 4 perfiles de `eas.json`; ponelo igual en el comando la primera
+vez, por las dudas de que ese default no se cargue a tiempo antes de armar el tarball.
+
+*Alternativa si en algún momento preferís arreglar el permiso en vez de excluir la carpeta* (no hace falta con
+el `.easignore` ya puesto, y de todos modos no te ahorra subir el backend entero, que es peso muerto para este
+build):
 ```bash
 sudo chmod -R o+rX storage/framework/testing
 ```

@@ -1,15 +1,20 @@
-# Con EAS_NO_VCS=1, eas-cli arma el paquete a subir según este archivo (no
-# según .gitignore). Sin esto, subiría node_modules/ entero y demás carpetas
-# que EAS Build vuelve a generar solas en el servidor — más lento y sin
-# necesidad. Ver mobile/store/RUNBOOK.md para el porqué de EAS_NO_VCS.
+# Solo se usa si eas-cli toma mobile/ como raíz del paquete (por ejemplo, si
+# se pasa EAS_PROJECT_ROOT apuntando acá). El caso normal en este repo — raíz
+# del paquete = raíz del repo git — usa el .easignore de la raíz del
+# repositorio, no este archivo. Se mantienen los dos por las dudas.
+#
+# Sin barra final en los directorios (node_modules, no node_modules/): con
+# barra final la librería "ignore" que usa eas-cli no poda el directorio
+# entero, solo su contenido — sigue leyéndolo igual, más lento sin necesidad
+# (verificado corriendo la librería real antes de commitear esto).
 
-node_modules/
-.expo/
-dist/
-web-build/
+node_modules
+.expo
+dist
+web-build
 expo-env.d.ts
 
-.kotlin/
+.kotlin
 *.orig.*
 *.jks
 *.p8
@@ -31,8 +36,8 @@ yarn-error.*
 
 *.tsbuildinfo
 
-/ios
-/android
+ios
+android
 
 # Documentación y assets de la ficha de Play Store — no los necesita el build.
-store/
+store

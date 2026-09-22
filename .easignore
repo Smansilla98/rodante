@@ -1,0 +1,27 @@
+# eas-cli (con EAS_NO_VCS=1, ver mobile/store/RUNBOOK.md) arma el paquete a
+# subir a EAS Build a partir de la raíz de este repositorio git, no de
+# mobile/ — por eso este archivo tiene que vivir ACÁ y no solo en
+# mobile/.easignore. Sin esto, intenta empaquetar también el backend de
+# Laravel y se rompe leyendo storage/framework/testing/disks (dueño
+# www-data, permisos 0770 — el usuario normal ni puede listarla).
+#
+# Rodante (mobile) es lo único que necesita EAS Build: se excluye todo lo
+# demás del repo y se vuelve a incluir solo mobile/.
+#
+# OJO con la sintaxis: la negación tiene que ir SIN barra final (!/mobile,
+# no !/mobile/) — con barra final la librería "ignore" que usa eas-cli no
+# la reconoce como negación de directorio y mobile/ queda excluido igual
+# (se verificó corriendo la librería real antes de commitear esto).
+/*
+!/mobile
+
+# Dentro de mobile/, lo que EAS Build regenera solo o no necesita para nada
+# (mismo motivo: sin barra final, para que pode el directorio entero en vez
+# de solo su contenido).
+mobile/node_modules
+mobile/.expo
+mobile/dist
+mobile/web-build
+mobile/ios
+mobile/android
+mobile/store
