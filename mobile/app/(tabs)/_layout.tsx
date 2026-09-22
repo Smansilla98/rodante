@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
-import { colors, type } from '../../src/theme';
+import { StyleSheet } from 'react-native';
+import { colors, touchTarget, type } from '../../src/theme';
 
 /**
  * Barra inferior con 5 accesos como máximo — más de eso es difícil de
@@ -18,13 +19,18 @@ export default function TabsLayout() {
         tabBarInactiveTintColor: colors.muted,
         tabBarStyle: {
           backgroundColor: colors.sidebar,
+          borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: colors.line,
           height: 76,
           paddingTop: 8,
           paddingBottom: 12,
+          // Barra plana — sin la sombra dura que Android agrega por default,
+          // que sobre un fondo oscuro se ve como una franja gris deslucida.
+          elevation: 0,
+          shadowOpacity: 0,
         },
-        tabBarLabelStyle: { fontSize: type.caption, fontWeight: '600' },
-        tabBarItemStyle: { minHeight: 56 },
+        tabBarLabelStyle: { fontSize: type.caption, fontWeight: '600', marginTop: 2, letterSpacing: 0.1 },
+        tabBarItemStyle: { minHeight: touchTarget.min },
       }}
     >
       <Tabs.Screen

@@ -743,7 +743,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   axleRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, justifyContent: 'center' },
-  backRow: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', minHeight: 36 },
+  backRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs, alignSelf: 'flex-start', minHeight: 36 },
   backText: { color: colors.muted, fontSize: type.label, fontWeight: '600' },
   candidateRow: {
     flexDirection: 'row',

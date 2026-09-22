@@ -162,11 +162,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     padding: space.xl,
-    gap: 4,
   },
+  // Sin `gap` acá a propósito: cada campo ya trae su propio margen (label
+  // arriba, input después) — sumarle un gap del contenedor encima duplicaba
+  // el espacio entre algunos pares y lo dejaba casi pegado entre otros.
   cardTitle: { color: colors.ink, fontSize: type.subtitle, fontWeight: '700' },
-  cardHint: { color: colors.muted, fontSize: type.caption, marginBottom: 12 },
-  label: { color: colors.muted, fontSize: type.label, marginTop: 12, marginBottom: 8, fontWeight: '600' },
+  cardHint: { color: colors.muted, fontSize: type.caption, marginTop: space.xs, marginBottom: space.sm },
+  label: { color: colors.muted, fontSize: type.label, marginTop: space.sm, marginBottom: space.xs, fontWeight: '600' },
   input: {
     backgroundColor: colors.card2,
     borderRadius: radius.md,
@@ -177,6 +179,6 @@ const styles = StyleSheet.create({
     fontSize: type.body,
     color: colors.ink,
   },
-  error: { color: colors.danger, marginTop: 12, marginBottom: 4, fontSize: type.body },
-  cta: { marginTop: 18 },
+  error: { color: colors.danger, marginTop: space.sm, marginBottom: space.xs, fontSize: type.body },
+  cta: { marginTop: space.lg },
 });

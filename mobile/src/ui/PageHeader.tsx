@@ -47,13 +47,13 @@ const styles = StyleSheet.create({
   back: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    gap: space.xs,
     minHeight: touchTarget.min,
     marginLeft: -8,
-    marginBottom: 2,
+    marginBottom: space.xs,
     alignSelf: 'flex-start',
   },
   backText: { color: colors.ink, fontSize: type.body, fontWeight: '600' },
   title: { color: colors.ink, fontSize: type.title, fontWeight: '800', letterSpacing: -0.5 },
-  subtitle: { color: colors.muted, fontSize: type.subtitle, marginTop: 4 },
+  subtitle: { color: colors.muted, fontSize: type.subtitle, marginTop: space.xs },
 });
