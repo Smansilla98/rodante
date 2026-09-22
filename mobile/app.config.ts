@@ -25,6 +25,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: 'Rodante',
   slug: 'rodante',
+  // Cuenta/equipo de Expo dueño del proyecto EAS. `eas init` lo pide para
+  // desambiguar — al ser config dinámica no puede escribirlo solo, igual
+  // que pasó con el projectId.
+  owner: 'smansillas-team',
   version: '1.0.0',
   orientation: 'portrait',
   scheme: 'rodante',

@@ -15,7 +15,7 @@ credenciales de una cuenta que no controla. Son ~15-20 minutos de clicks, en est
 - [x] Descripciones corta y larga de la ficha (`mobile/store/LISTING.md`).
 - [x] Política de privacidad escrita y publicada (`mobile/store/privacy-policy.html`, URL en `LISTING.md`).
 - [x] Guía para completar el formulario de "Seguridad de los datos" (`mobile/store/DATA_SAFETY.md`).
-- [x] Proyecto EAS creado (`d44353e5-8326-4445-a9ea-06d914decb2e`) y `projectId` ya cargado en `app.config.ts` — el paso 3 de más abajo ya está hecho, se deja documentado por si hay que recrearlo alguna vez.
+- [x] Proyecto EAS creado (`d44353e5-8326-4445-a9ea-06d914decb2e`) y `owner` (`smansillas-team`) + `projectId` ya cargados en `app.config.ts` — el paso 3 de más abajo ya está hecho, se deja documentado por si hay que recrearlo alguna vez.
 
 ## 1. Completar el email de contacto (2 minutos)
 
@@ -33,13 +33,23 @@ npx eas-cli login
 Te va a pedir usuario/contraseña de tu cuenta de Expo (o creás una gratis en https://expo.dev/signup si no
 tenés). Esto es intransferible: nadie más puede hacerlo por vos porque requiere tu login real.
 
-## 3. Crear el proyecto EAS — ✅ ya hecho
+## 3. Crear el proyecto EAS — ✅ ya hecho, no hace falta volver a correr `eas init`
 
-Ya se corrió `eas init` y el proyecto quedó creado: `d44353e5-8326-4445-a9ea-06d914decb2e`. Como el proyecto usa
-configuración dinámica (`app.config.ts`), el comando no pudo escribirlo solo — se cargó a mano directo en
-`app.config.ts` (variable `easProjectId`), así que no hace falta ninguna variable de entorno para esto. Si
-algún día hay que recrear el proyecto desde cero, `npx eas-cli init` te va a dar un `projectId` nuevo para
-reemplazar ese valor.
+Ya se corrió `eas init` y el proyecto quedó creado: `d44353e5-8326-4445-a9ea-06d914decb2e`, cuenta/equipo
+`smansillas-team`. Como el proyecto usa configuración dinámica (`app.config.ts`), el comando no puede escribir
+nada solo — los dos valores que pide (`projectId` y `owner`) ya se cargaron a mano directo en `app.config.ts`.
+
+**Si volvés a correr `npx eas-cli init` vas a ver esto, y es esperable (no es que algo esté roto):**
+
+```
+✔ Project already linked (ID: d44353e5-8326-4445-a9ea-06d914decb2e). To re-configure, remove the "extra.eas.projectId" field from your app config.
+```
+
+Eso es un ✔ (éxito) confirmando que el proyecto ya está bien linkeado — no hace falta hacer nada más ahí. La
+primera vez que se cargó el `projectId` sin el `owner`, el comando seguía este chequeo con un error porque
+además pedía el `owner` y no lo encontraba (`Cannot automatically write to dynamic config`); ya está resuelto
+con el campo agregado en `app.config.ts`. En resumen: **no vuelvas a correr `eas init`** salvo que quieras
+crear un proyecto distinto desde cero (ahí sí te daría un `projectId` nuevo para reemplazar el actual).
 
 ## 4. Generar el build de producción
 
