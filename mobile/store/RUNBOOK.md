@@ -114,10 +114,17 @@ Una vez que arranca bien:
   en un teléfono real para sacar las capturas de pantalla que faltan en `LISTING.md` (mínimo 2, de pantallas
   reales con datos de ejemplo).
 
-**✅ Build de producción generado** — `.aab` listo:
-https://expo.dev/artifacts/eas/6MRrC4ging2-pn6CRSgbjBe812a0pxQZvZsoNiEY2pM.aab
-(este link de Expo puede expirar con el tiempo; si eso pasa, `npx eas-cli submit --latest` igual encuentra el
-build más reciente sin necesitarlo, o se puede generar uno nuevo con el mismo comando de arriba).
+**⚠️ El primer build quedó obsoleto — hay que repetirlo.** Se había generado un `.aab` con el package
+`com.rodante.app`, pero después el `bundleIdentifier`/`package` de `app.config.ts` se corrigió a
+`com.rodant.app` (sin la "e" final — así lo lee Google Play). Ese `.aab` viejo ya no sirve: si lo subís,
+Play Console lo va a tratar como una app distinta a la que tengas registrada ahí. Correr de nuevo:
+
+```bash
+cd mobile
+EAS_NO_VCS=1 npx eas-cli build --profile production --platform android
+```
+
+(mismo comando de siempre — el `.aab` nuevo va a salir con `com.rodant.app`, que es el correcto).
 
 ## 5. Crear la ficha en Google Play Console
 
