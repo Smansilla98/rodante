@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../../../src/api/client';
 import type {
   LifeReportPayload,
@@ -447,6 +448,7 @@ function IncidentModal({
   const [selected, setSelected] = useState(options[0] ?? 'OTRA');
   const [description, setDescription] = useState('');
   const [notes, setNotes] = useState('');
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (visible) {
@@ -460,7 +462,9 @@ function IncidentModal({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
-        <View style={styles.modalCard}>
+        {/* Sin el inset acá, el botón de confirmar queda debajo de la barra
+            de gestos del teléfono y no se puede tocar. */}
+        <View style={[styles.modalCard, { paddingBottom: space.lg + insets.bottom }]}>
           <Text style={styles.title}>Registrar incidente</Text>
           <SectionLabel>Tipo</SectionLabel>
           <View style={styles.chipRow}>
@@ -510,6 +514,7 @@ function MeasurementModal({
   const [values, setValues] = useState<Record<number, string>>({});
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (visible) {
@@ -536,7 +541,12 @@ function MeasurementModal({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
-        <ScrollView style={styles.measurementModalScroll} contentContainerStyle={styles.modalCard}>
+        {/* Sin el inset acá, el botón de guardar queda debajo de la barra de
+            gestos del teléfono y no se puede tocar. */}
+        <ScrollView
+          style={styles.measurementModalScroll}
+          contentContainerStyle={[styles.modalCard, { paddingBottom: space.lg + insets.bottom }]}
+        >
           <Text style={styles.title}>Registrar medición</Text>
           {zones.length === 0 ? (
             <Text style={styles.sub}>
@@ -597,6 +607,7 @@ function ActionModal({
   onSubmit: (values: Record<string, string>) => void;
 }) {
   const [values, setValues] = useState<Record<string, string>>({});
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (visible) setValues({});
@@ -616,7 +627,9 @@ function ActionModal({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
-        <View style={styles.modalCard}>
+        {/* Sin el inset acá, el botón de confirmar queda debajo de la barra
+            de gestos del teléfono y no se puede tocar. */}
+        <View style={[styles.modalCard, { paddingBottom: space.lg + insets.bottom }]}>
           <Text style={styles.title}>{title}</Text>
           {fields.map((f) => (
             <Field

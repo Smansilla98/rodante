@@ -3,6 +3,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '../src/auth/AuthContext';
 import { ApiError } from '../src/api/client';
 import { colors, radius, space, touchTarget, type } from '../src/theme';
-import { PrimaryButton } from '../src/ui/primitives';
+import { Icon, PrimaryButton } from '../src/ui/primitives';
 
 const brandMark = require('../assets/splash-icon.png');
 
@@ -25,6 +26,7 @@ export default function LoginScreen() {
 
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [companyId, setCompanyId] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [needsCompany, setNeedsCompany] = useState(false);
@@ -97,20 +99,33 @@ export default function LoginScreen() {
             />
 
             <Text style={styles.label}>Contraseña</Text>
-            <TextInput
-              ref={passwordRef}
-              style={styles.input}
-              secureTextEntry
-              value={password}
-              onChangeText={setPassword}
-              placeholder="Tu contraseña"
-              placeholderTextColor={colors.muted}
-              autoComplete="password"
-              textContentType="password"
-              returnKeyType={needsCompany ? 'next' : 'go'}
-              onSubmitEditing={() => void onSubmit()}
-              accessibilityLabel="Contraseña"
-            />
+            <View style={styles.passwordRow}>
+              <TextInput
+                ref={passwordRef}
+                style={[styles.input, styles.passwordInput]}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                autoCorrect={false}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="Tu contraseña"
+                placeholderTextColor={colors.muted}
+                autoComplete="password"
+                textContentType="password"
+                returnKeyType={needsCompany ? 'next' : 'go'}
+                onSubmitEditing={() => void onSubmit()}
+                accessibilityLabel="Contraseña"
+              />
+              <Pressable
+                onPress={() => setShowPassword((v) => !v)}
+                style={styles.eyeBtn}
+                accessibilityRole="button"
+                accessibilityLabel={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                hitSlop={8}
+              >
+                <Icon name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.muted} />
+              </Pressable>
+            </View>
 
             {needsCompany ? (
               <>
@@ -178,6 +193,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     fontSize: type.body,
     color: colors.ink,
+  },
+  passwordRow: { justifyContent: 'center' },
+  passwordInput: { paddingRight: touchTarget.min },
+  eyeBtn: {
+    position: 'absolute',
+    right: 0,
+    height: touchTarget.min,
+    width: touchTarget.min,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   error: { color: colors.danger, marginTop: space.sm, marginBottom: space.xs, fontSize: type.body },
   cta: { marginTop: space.lg },

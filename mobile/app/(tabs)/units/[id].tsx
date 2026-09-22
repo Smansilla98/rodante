@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../../../src/api/client';
 import type {
   MovementReason,
@@ -338,10 +339,14 @@ function PositionSheet({
   ) => void;
   onMove: (target: UnitLayoutEntry, odometer?: number) => void;
 }) {
+  const insets = useSafeAreaInsets();
+
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
-        <View style={styles.modalCard}>
+        {/* Sin el inset acá, las acciones del final quedan debajo de la barra
+            de gestos del teléfono y no se pueden tocar. */}
+        <View style={[styles.modalCard, { paddingBottom: space.lg + insets.bottom }]}>
           {entry ? (
             <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: space.xs }}>
               {flow === 'actions' && entry.tire ? (

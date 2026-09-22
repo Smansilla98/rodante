@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, touchTarget, type } from '../../src/theme';
 
 /**
@@ -11,6 +12,8 @@ import { colors, touchTarget, type } from '../../src/theme';
  * y se ofrecen desde la pantalla "Más".
  */
 export default function TabsLayout() {
+  const insets = useSafeAreaInsets();
+
   return (
     <Tabs
       screenOptions={{
@@ -21,9 +24,12 @@ export default function TabsLayout() {
           backgroundColor: colors.sidebar,
           borderTopWidth: StyleSheet.hairlineWidth,
           borderTopColor: colors.line,
-          height: 76,
+          // Alto y padding fijos ignoraban la barra de gestos de Android (o
+          // el home indicator de iOS) — el tab quedaba tapado y sin poder
+          // tocarse. Sumamos el inset real del dispositivo acá.
+          height: 76 + insets.bottom,
           paddingTop: 8,
-          paddingBottom: 12,
+          paddingBottom: 12 + insets.bottom,
           // Barra plana — sin la sombra dura que Android agrega por default,
           // que sobre un fondo oscuro se ve como una franja gris deslucida.
           elevation: 0,

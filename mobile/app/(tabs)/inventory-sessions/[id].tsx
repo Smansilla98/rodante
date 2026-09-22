@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, FlatList, Modal, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../../../src/api/client';
 import type { InventoryLine, InventorySessionDetailPayload } from '../../../src/api/types';
 import { useAuth } from '../../../src/auth/AuthContext';
@@ -230,6 +231,7 @@ function CloseSessionModal({
 }) {
   const [applyFixes, setApplyFixes] = useState(false);
   const [notes, setNotes] = useState('');
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (visible) {
@@ -241,7 +243,9 @@ function CloseSessionModal({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
-        <View style={styles.modalCard}>
+        {/* El botón de confirmación es lo último tocable — sin el inset acá
+            queda debajo de la barra de gestos del teléfono y no se puede tocar. */}
+        <View style={[styles.modalCard, { paddingBottom: space.lg + insets.bottom }]}>
           <Text style={styles.title}>Cerrar inventario</Text>
           <View style={{ flexDirection: 'row', gap: space.xs, marginTop: space.sm }}>
             <Chip label="Solo auditar diferencias" selected={!applyFixes} onPress={() => setApplyFixes(false)} />

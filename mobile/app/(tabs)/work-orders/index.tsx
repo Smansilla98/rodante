@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../../../src/api/client';
 import type { RetreadShop, Tire, WorkOrder } from '../../../src/api/types';
 import { useAuth } from '../../../src/auth/AuthContext';
@@ -119,6 +120,7 @@ function NewWorkOrderModal({
   const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (!visible) return;
@@ -174,7 +176,9 @@ function NewWorkOrderModal({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
-        <View style={styles.modalCard}>
+        {/* Sin el inset acá, el botón de confirmar queda debajo de la barra
+            de gestos del teléfono y no se puede tocar. */}
+        <View style={[styles.modalCard, { paddingBottom: space.lg + insets.bottom }]}>
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: space.sm }}>
             <Text style={styles.rowTitle}>Nueva orden de trabajo</Text>
 

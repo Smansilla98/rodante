@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Alert, Modal, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../../../src/api/client';
 import type { WorkOrder } from '../../../src/api/types';
 import { useAuth } from '../../../src/auth/AuthContext';
@@ -139,6 +140,7 @@ function CloseOrderModal({
 }) {
   const [cost, setCost] = useState('');
   const [notes, setNotes] = useState('');
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (visible) {
@@ -150,7 +152,9 @@ function CloseOrderModal({
   return (
     <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
       <View style={styles.modalBackdrop}>
-        <View style={styles.modalCard}>
+        {/* Sin el inset acá, el botón de confirmar queda debajo de la barra
+            de gestos del teléfono y no se puede tocar. */}
+        <View style={[styles.modalCard, { paddingBottom: space.lg + insets.bottom }]}>
           <Text style={styles.title}>Cerrar orden</Text>
           <Text style={styles.sub}>La cubierta vuelve a stock. El costo es opcional.</Text>
           <Field label="Costo (opcional)" keyboardType="decimal-pad" value={cost} onChangeText={setCost} placeholder="0" />
