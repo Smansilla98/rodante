@@ -296,24 +296,29 @@ export interface InventorySessionDetailPayload {
   lines: Paginated<InventoryLine>;
 }
 
-/** Paginator por defecto de Laravel. */
+/**
+ * Paginador de Laravel tal como lo devuelve `response()->json($paginator)`
+ * (un LengthAwarePaginator crudo, sin envolver en un API Resource) — es el
+ * formato PLANO, no el `{data, links, meta}` de los Resources. `current_page`
+ * y `total` van directo en el objeto, no bajo `meta`. Verificado contra la
+ * respuesta real de producción antes de corregir este tipo — el tipo viejo
+ * declaraba `meta.total`, que no existe, y eso rompía el render de
+ * inventory-sessions/[id].tsx apenas cargaba.
+ */
 export interface Paginated<T> {
+  current_page: number;
   data: T[];
-  links: {
-    first: string | null;
-    last: string | null;
-    prev: string | null;
-    next: string | null;
-  };
-  meta: {
-    current_page: number;
-    from: number | null;
-    last_page: number;
-    path: string;
-    per_page: number;
-    to: number | null;
-    total: number;
-  };
+  first_page_url: string | null;
+  from: number | null;
+  last_page: number;
+  last_page_url: string | null;
+  links: Array<{ url: string | null; label: string; active: boolean }>;
+  next_page_url: string | null;
+  path: string;
+  per_page: number;
+  prev_page_url: string | null;
+  to: number | null;
+  total: number;
 }
 
 export interface TireMovement {

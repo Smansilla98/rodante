@@ -178,7 +178,7 @@ export default function InventorySessionDetailScreen() {
               <PrimaryButton title="Cancelar inventario" icon="close-circle-outline" onPress={confirmCancel} loading={busy} variant="danger" block />
             ) : null}
 
-            <SectionLabel>Diferencias ({lines.meta.total})</SectionLabel>
+            <SectionLabel>Diferencias ({lines.total})</SectionLabel>
           </View>
         }
         renderItem={({ item }) => <LineRow line={item} />}
