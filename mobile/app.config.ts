@@ -34,7 +34,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supportsTablet: true,
     bundleIdentifier: 'com.rodante.app',
     infoPlist: {
-      UIBackgroundModes: ['remote-notification'],
       ITSAppUsesNonExemptEncryption: false,
     },
   },
@@ -55,12 +54,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       {
         backgroundColor: '#0f141c',
         image: './assets/splash-icon.png',
-      },
-    ],
-    [
-      'expo-notifications',
-      {
-        color: '#c8102e',
       },
     ],
   ],

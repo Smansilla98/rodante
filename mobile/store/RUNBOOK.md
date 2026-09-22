@@ -1,0 +1,104 @@
+# Runbook — lo que falta para publicar Rodante en Play Store
+
+Todo lo que se podía resolver sin tu cuenta de Google/Expo ya está hecho (ver el resto de esta carpeta y el
+commit correspondiente). Lo que queda acá abajo son pasos que **solo vos podés hacer**, porque dependen de tu
+cuenta de Expo y de tu cuenta de Google Play — ninguna herramienta puede iniciar sesión en tu nombre ni generar
+credenciales de una cuenta que no controla. Son ~15-20 minutos de clicks, en este orden.
+
+## 0. Ya resuelto (no hace falta tocar nada de esto)
+
+- [x] Identidad de la app (`app.config.ts`): nombre, `package`/`bundleIdentifier`, versión.
+- [x] Íconos fuente (1024×1024) y perfiles de build (`eas.json`: development/preview/production/production-apk).
+- [x] Versionado automático de Android (`appVersionSource: "remote"` + `autoIncrement: true` en el perfil `production` — EAS le asigna el `versionCode` solo, no hay que tocarlo a mano).
+- [x] `expo-notifications` sacado (estaba instalado pero no conectado a nada — pedía permiso de notificaciones sin usarlo para nada real).
+- [x] Ícono de Play Store 512×512 y gráfico de funciones 1024×500 (`mobile/store/*.png`).
+- [x] Descripciones corta y larga de la ficha (`mobile/store/LISTING.md`).
+- [x] Política de privacidad escrita y publicada (`mobile/store/privacy-policy.html`, URL en `LISTING.md`).
+- [x] Guía para completar el formulario de "Seguridad de los datos" (`mobile/store/DATA_SAFETY.md`).
+
+## 1. Completar el email de contacto (2 minutos)
+
+Antes de publicar, reemplazá el placeholder de contacto en `mobile/store/privacy-policy.html` (sección 11,
+buscá el bloque con ⚠️) por un email de soporte real que vayas a monitorear. Volvé a publicar esa página donde
+la hayas alojado (o pedime que actualice la versión publicada en claude.ai con el email nuevo).
+
+## 2. Iniciar sesión en Expo/EAS
+
+```bash
+cd mobile
+npx eas-cli login
+```
+
+Te va a pedir usuario/contraseña de tu cuenta de Expo (o creás una gratis en https://expo.dev/signup si no
+tenés). Esto es intransferible: nadie más puede hacerlo por vos porque requiere tu login real.
+
+## 3. Crear el proyecto EAS (una sola vez)
+
+```bash
+npx eas-cli init
+```
+
+Esto crea el proyecto en tu cuenta de Expo y te devuelve un `projectId`. Guardalo como variable de entorno
+`EAS_PROJECT_ID` (por ejemplo en un `.env` local que **no** se commitea, o como secret si usás CI) — el código
+ya está preparado para tomarlo de ahí (`app.config.ts`, variable `easProjectId`) y hoy queda vacío a propósito
+porque este proyecto no existía todavía.
+
+## 4. Generar el build de producción
+
+```bash
+npx eas-cli build --profile production --platform android
+```
+
+- La primera vez, EAS te va a preguntar si querés que genere y gestione el keystore de firma de Android por
+  vos — decile que sí, salvo que ya tengas un keystore propio de una publicación anterior (si es la primera
+  vez que se publica esta app, no lo tenés).
+- El build corre en la nube de Expo, tarda unos 10-15 minutos. Al terminar te da un `.aab` (Android App Bundle),
+  que es el formato que pide Play Store para el track de producción.
+- De paso, instalá el perfil `preview` (`--profile preview`) en un teléfono real para sacar las capturas de
+  pantalla que faltan en `LISTING.md` (mínimo 2, de pantallas reales con datos de ejemplo).
+
+## 5. Crear la ficha en Google Play Console
+
+1. Entrá a https://play.google.com/console (ya está pago, según me confirmaste).
+2. Creá la app: nombre "Rodante", idioma predeterminado español (Argentina/Latam), tipo "App", gratuita.
+3. Pegá las descripciones de `mobile/store/LISTING.md`.
+4. Subí `mobile/store/play-store-icon-512.png` y `mobile/store/feature-graphic-1024x500.png`.
+5. Subí las capturas de pantalla del paso 4.
+6. Completá el cuestionario de "Seguridad de los datos" siguiendo `mobile/store/DATA_SAFETY.md` fila por fila.
+7. Completá el cuestionario de clasificación de contenido (debería salir "Para todo público" con las respuestas
+   de `LISTING.md`).
+8. Pegá la URL de la política de privacidad (en `LISTING.md`).
+9. **Recomendado, no obligatorio**: dado que Rodante es una app interna (login con cuenta de empresa, sin alta
+   pública), elegí el track de **"Prueba interna"** o **"Prueba cerrada"** en vez de "Producción" pública, y
+   cargá ahí los emails de las personas de tu empresa que la van a usar. Esto evita que quede listada para
+   búsqueda pública sin necesidad. Si preferís que sí sea pública, se puede publicar directo a producción sin
+   problema — es una decisión tuya, no técnica.
+
+## 6. Subir el build
+
+**Opción A — manual (no necesita nada más que lo ya hecho):** en Play Console, dentro del track elegido,
+subís el archivo `.aab` que te dio `eas build` a mano.
+
+**Opción B — automática con `eas submit`** (más cómoda para la próxima vez, pero necesita un paso extra en
+Google Cloud):
+
+1. En Google Cloud Console (con la misma cuenta de Google de tu Play Console), creá una cuenta de servicio
+   con el rol "Release Manager" sobre tu app en Play Console, y descargá su clave en formato JSON.
+   Guía oficial: https://docs.expo.dev/submit/android/#creating-a-service-account
+2. Corré:
+   ```bash
+   npx eas-cli submit --platform android --latest
+   ```
+   Te va a pedir la ruta a ese JSON la primera vez, y de ahí en adelante puede quedar guardado en
+   `eas.json` → `submit.production.android.serviceAccountKeyPath` (hoy ese bloque está vacío a propósito,
+   porque esa clave es tuya y no se genera ni se sube sin tu cuenta).
+
+## 7. Enviar a revisión
+
+Con la ficha completa y el build subido, mandás la app a revisión desde Play Console. Google suele tardar de
+unas horas a un par de días en la primera revisión.
+
+---
+
+Nada de este runbook se puede saltear de forma automática porque cada paso depende de una cuenta (Expo o
+Google) que es tuya, no de este entorno de trabajo — no tengo ni debo tener esas credenciales.

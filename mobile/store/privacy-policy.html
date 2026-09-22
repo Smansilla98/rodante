@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rodante — Privacidad</title>
+<meta name="description" content="Política de privacidad de la app Rodante (gestión de neumáticos y flota).">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg: #f4f1ea;
+    --surface: #ffffff;
+    --surface-2: #ece7dc;
+    --ink: #1c1a17;
+    --ink-soft: #4a463f;
+    --muted: #7a7468;
+    --line: #ddd6c7;
+    --accent: #a3102b;
+    --accent-ink: #ffffff;
+    --warn-bg: #fbe9d7;
+    --warn-ink: #7a4a10;
+    --warn-line: #e7c79a;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg: #0f141c;
+      --surface: #171e2a;
+      --surface-2: #1d2634;
+      --ink: #f4f6fb;
+      --ink-soft: #d7dced;
+      --muted: #9aa3bd;
+      --line: #2a3344;
+      --accent: #e0435c;
+      --accent-ink: #14060a;
+      --warn-bg: #2c2113;
+      --warn-ink: #f0c98a;
+      --warn-line: #4a3a1e;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg: #0f141c;
+    --surface: #171e2a;
+    --surface-2: #1d2634;
+    --ink: #f4f6fb;
+    --ink-soft: #d7dced;
+    --muted: #9aa3bd;
+    --line: #2a3344;
+    --accent: #e0435c;
+    --accent-ink: #14060a;
+    --warn-bg: #2c2113;
+    --warn-ink: #f0c98a;
+    --warn-line: #4a3a1e;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    background: var(--bg);
+    color: var(--ink);
+    margin:0;
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+  }
+  h1,h2{
+    font-family: 'Source Serif 4', Georgia, serif;
+    text-wrap: balance;
+  }
+  .wrap{
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 0 20px 64px;
+  }
+  header.top{
+    padding: 40px 0 28px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 40px;
+    display:flex;
+    align-items:center;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .mark{
+    width:48px;height:48px;border-radius:12px;
+    background: linear-gradient(160deg, var(--accent), #6b0f22);
+    color:#fff;
+    display:flex;align-items:center;justify-content:center;
+    font-family:'Source Serif 4',serif;
+    font-weight:700;font-size:22px;
+    flex-shrink:0;
+  }
+  .brand-block .app-name{
+    font-size:14px;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--muted); font-weight:600;
+  }
+  header.top h1{
+    margin:2px 0 0; font-size: clamp(28px, 5vw, 38px); font-weight:600; color:var(--ink);
+  }
+  .updated{
+    color:var(--muted); font-size:14px; margin-top:6px;
+  }
+
+  nav.toc{
+    background: var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:20px 24px;
+    margin-bottom:40px;
+  }
+  nav.toc p{margin:0 0 10px; font-weight:600; font-size:14px; letter-spacing:.04em; text-transform:uppercase; color:var(--muted);}
+  nav.toc ol{margin:0; padding-left:20px; columns: 2; column-gap:24px;}
+  nav.toc li{margin-bottom:6px; break-inside: avoid;}
+  nav.toc a{color:var(--ink-soft); text-decoration:none; font-size:15px;}
+  nav.toc a:hover{color:var(--accent); text-decoration:underline;}
+
+  section{margin-bottom:38px; scroll-margin-top:20px;}
+  section h2{
+    font-size: 22px; font-weight:600; color:var(--ink);
+    display:flex; align-items:baseline; gap:10px;
+    margin: 0 0 14px;
+  }
+  section h2 .num{color:var(--accent); font-family:'IBM Plex Sans',sans-serif; font-weight:700; font-size:15px;}
+  section p, section li{color:var(--ink-soft); font-size:15.5px;}
+  section ul{padding-left:22px; margin: 10px 0;}
+  section li{margin-bottom:6px;}
+  strong{color:var(--ink); font-weight:600;}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:18px 22px;
+    margin: 14px 0;
+  }
+  .grid-2{display:grid; grid-template-columns: 1fr 1fr; gap:16px;}
+  @media (max-width:600px){ .grid-2{grid-template-columns:1fr;} nav.toc ol{columns:1;} }
+  .grid-2 .card h3{margin:0 0 8px; font-size:15px; color:var(--ink);}
+  .grid-2 .card ul{margin:0; padding-left:18px;}
+  .grid-2 .card li{font-size:14.5px; margin-bottom:4px;}
+  .yes h3{color:#3f9a5c;}
+  .no h3{color:var(--muted);}
+
+  .placeholder{
+    background: var(--warn-bg);
+    border:1px solid var(--warn-line);
+    color: var(--warn-ink);
+    border-radius:10px;
+    padding:14px 18px;
+    font-size:14.5px;
+  }
+  .placeholder code{
+    background: rgba(0,0,0,0.12);
+    padding: 1px 6px;
+    border-radius:4px;
+  }
+
+  table{width:100%; border-collapse:collapse; margin:14px 0; font-size:14.5px;}
+  th,td{text-align:left; padding:10px 12px; border-bottom:1px solid var(--line); vertical-align:top;}
+  th{color:var(--muted); font-weight:600; font-size:13px; text-transform:uppercase; letter-spacing:.03em;}
+  td{color:var(--ink-soft);}
+
+  footer{
+    border-top:1px solid var(--line);
+    margin-top:50px;
+    padding-top:24px;
+    color:var(--muted);
+    font-size:13.5px;
+  }
+  .back-top{display:inline-block; margin-top:18px; color:var(--accent); text-decoration:none; font-size:14px; font-weight:600;}
+</style>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="mark">R</div>
+    <div class="brand-block">
+      <div class="app-name">Rodante</div>
+      <h1>Política de Privacidad</h1>
+      <div class="updated">Última actualización: 22 de septiembre de 2026</div>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="Índice">
+    <p>Contenido</p>
+    <ol>
+      <li><a href="#alcance">Alcance de esta política</a></li>
+      <li><a href="#datos">Qué datos recopilamos</a></li>
+      <li><a href="#no-datos">Qué NO recopilamos</a></li>
+      <li><a href="#uso">Cómo usamos los datos</a></li>
+      <li><a href="#comparticion">Con quién se comparten</a></li>
+      <li><a href="#almacenamiento">Dónde se almacenan</a></li>
+      <li><a href="#seguridad">Seguridad</a></li>
+      <li><a href="#retencion">Retención y baja de cuenta</a></li>
+      <li><a href="#menores">Menores de edad</a></li>
+      <li><a href="#cambios">Cambios a esta política</a></li>
+      <li><a href="#contacto">Contacto</a></li>
+    </ol>
+  </nav>
+
+  <section id="alcance">
+    <h2><span class="num">01</span> Alcance de esta política</h2>
+    <p>
+      Rodante es una aplicación de <strong>uso interno</strong> para que las empresas que la contratan gestionen
+      su flota de vehículos y neumáticos: altas, movimientos, órdenes de trabajo con talleres, recapado, inventario
+      físico y trazabilidad. No es una aplicación de consumo masivo: se accede con una cuenta que crea el
+      administrador de cada empresa, no hay registro público ni autoservicio de alta de cuenta.
+    </p>
+    <p>
+      Esta política aplica a la app móvil de Rodante (Android/iOS) y describe qué datos procesa, para qué
+      los usa y qué control tenés sobre ellos.
+    </p>
+  </section>
+
+  <section id="datos">
+    <h2><span class="num">02</span> Qué datos recopilamos</h2>
+    <p>Solo se recopilan los datos necesarios para operar la flota y para que las acciones queden trazadas (quién hizo qué y cuándo), algo central en un sistema que audita movimientos de un activo físico de valor.</p>
+    <table>
+      <tr><th>Categoría</th><th>Detalle</th></tr>
+      <tr>
+        <td>Cuenta</td>
+        <td>Usuario, contraseña (guardada siempre encriptada, nunca en texto plano), rol dentro de la empresa, y a qué flotas/depósitos tenés acceso.</td>
+      </tr>
+      <tr>
+        <td>Datos operativos que cargás</td>
+        <td>Fichas de neumáticos, movimientos, incidentes, mediciones de banda, órdenes de trabajo, sesiones de inventario físico. Cada registro queda asociado al usuario que lo generó y a la fecha/hora.</td>
+      </tr>
+      <tr>
+        <td>Datos de diagnóstico y auditoría</td>
+        <td>Dirección IP y user-agent del dispositivo al usar la API, guardados junto con cada acción crítica (alta, baja, cierre de orden, etc.) para el registro de auditoría interno de la empresa.</td>
+      </tr>
+      <tr>
+        <td>Sesión en el dispositivo</td>
+        <td>El token de acceso y tus datos básicos de usuario (nombre, rol) se guardan localmente en el almacenamiento seguro del sistema operativo (Keystore en Android / Keychain en iOS) para mantenerte conectado. Se borran al cerrar sesión.</td>
+      </tr>
+    </table>
+  </section>
+
+  <section id="no-datos">
+    <h2><span class="num">03</span> Qué NO recopilamos</h2>
+    <div class="grid-2">
+      <div class="card yes">
+        <h3>✓ Esto sí</h3>
+        <ul>
+          <li>Datos de cuenta y rol</li>
+          <li>Datos operativos de flota que vos cargás</li>
+          <li>IP y user-agent, solo para auditoría</li>
+          <li>Sesión guardada localmente y cifrada</li>
+        </ul>
+      </div>
+      <div class="card no">
+        <h3>✕ Esto no</h3>
+        <ul>
+          <li>Ubicación GPS/precisa del dispositivo</li>
+          <li>Fotos ni acceso a la cámara desde la app móvil</li>
+          <li>Identificadores publicitarios ni SDKs de publicidad</li>
+          <li>Analítica o rastreo de terceros</li>
+          <li>Acceso a contactos, calendario, mensajes o micrófono</li>
+        </ul>
+      </div>
+    </div>
+    <p>
+      Rodante no vende datos a terceros ni los usa con fines publicitarios, bajo ninguna circunstancia.
+    </p>
+  </section>
+
+  <section id="uso">
+    <h2><span class="num">04</span> Cómo usamos los datos</h2>
+    <ul>
+      <li>Para autenticarte y mostrarte solo la información de tu empresa y de los depósitos/flotas a los que tenés acceso.</li>
+      <li>Para operar las funciones de la app: registrar movimientos, cerrar órdenes de trabajo, hacer inventarios físicos, etc.</li>
+      <li>Para mantener el historial de auditoría que la propia empresa usa como control interno (quién hizo cada cambio).</li>
+      <li>Para diagnosticar errores técnicos cuando algo falla.</li>
+    </ul>
+  </section>
+
+  <section id="comparticion">
+    <h2><span class="num">05</span> Con quién se comparten los datos</h2>
+    <p>
+      Rodante es <strong>multiempresa</strong>: el sistema separa estrictamente los datos de cada empresa contratante,
+      y nunca son visibles para otra. Dentro de tu empresa, la información es visible según el rol y el
+      acceso a flotas/depósitos que te haya asignado tu administrador.
+    </p>
+    <p>
+      No compartimos datos con terceros para fines comerciales o publicitarios. El único "tercero" involucrado
+      es el proveedor de infraestructura donde corre el servidor (hosting), que aloja los datos pero no los usa
+      con fines propios.
+    </p>
+  </section>
+
+  <section id="almacenamiento">
+    <h2><span class="num">06</span> Dónde se almacenan los datos</h2>
+    <p>
+      Los datos operativos y de cuenta viven en el servidor de Rodante (base de datos del backend), no en tu
+      teléfono. En el dispositivo solo se guarda, de forma cifrada, el token de sesión y tu perfil básico —
+      lo suficiente para no tener que iniciar sesión cada vez que abrís la app.
+    </p>
+  </section>
+
+  <section id="seguridad">
+    <h2><span class="num">07</span> Seguridad</h2>
+    <ul>
+      <li>Las contraseñas se guardan siempre encriptadas (hash), nunca en texto plano.</li>
+      <li>Toda la comunicación entre la app y el servidor viaja cifrada (HTTPS).</li>
+      <li>El token de sesión en el celular se guarda en el almacenamiento seguro del sistema operativo (Keystore/Keychain), no en texto plano.</li>
+      <li>El historial de movimientos de stock es <strong>inalterable</strong>: una vez registrado, ni siquiera un administrador puede editarlo o borrarlo — solo se puede registrar una corrección aparte, quedando ambos eventos a la vista.</li>
+    </ul>
+  </section>
+
+  <section id="retencion">
+    <h2><span class="num">08</span> Retención de datos y baja de cuenta</h2>
+    <p>
+      Como Rodante es una herramienta de gestión y trazabilidad —parecida en ese sentido a un sistema contable—,
+      los registros operativos (movimientos, órdenes de trabajo, auditoría) se conservan mientras la empresa
+      contratante use el servicio, ya que son el historial que sostiene la trazabilidad de su flota.
+    </p>
+    <p>
+      El alta y la baja de usuarios las gestiona el administrador de cada empresa desde el sistema (no hay
+      autoservicio de baja de cuenta dentro de la app, porque el usuario pertenece a la organización que lo dio
+      de alta). Para solicitar la baja de tu acceso o una consulta sobre tus datos, contactá a tu administrador
+      de empresa o escribinos a la dirección de la sección de contacto.
+    </p>
+  </section>
+
+  <section id="menores">
+    <h2><span class="num">09</span> Menores de edad</h2>
+    <p>
+      Rodante es una herramienta de uso profesional para personal operativo y administrativo de empresas de
+      transporte/logística. No está dirigida a menores de edad y no se ofrece alta de cuenta a menores.
+    </p>
+  </section>
+
+  <section id="cambios">
+    <h2><span class="num">10</span> Cambios a esta política</h2>
+    <p>
+      Si esta política cambia de forma relevante, se actualizará la fecha al inicio de la página. Te recomendamos
+      revisarla de tanto en tanto si usás la app de forma habitual.
+    </p>
+  </section>
+
+  <section id="contacto">
+    <h2><span class="num">11</span> Contacto</h2>
+    <p>Ante cualquier duda sobre esta política o sobre tus datos, podés escribir a:</p>
+    <div class="placeholder">
+      ⚠️ <strong>Pendiente de completar antes de publicar:</strong> reemplazar por un email de soporte real y
+      monitoreado, por ejemplo <code>soporte@tudominio.com</code>. Google Play exige que este contacto funcione,
+      así que no se dejó un email inventado.
+    </div>
+    <a class="back-top" href="#alcance">↑ Volver al inicio</a>
+  </section>
+
+  <footer>
+    Rodante — sistema de gestión de neumáticos y flota. Este documento describe el tratamiento de datos de la
+    aplicación móvil y del sistema web asociado.
+  </footer>
+</div>
+</body>
+</html>
