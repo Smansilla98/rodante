@@ -15,6 +15,7 @@ credenciales de una cuenta que no controla. Son ~15-20 minutos de clicks, en est
 - [x] Descripciones corta y larga de la ficha (`mobile/store/LISTING.md`).
 - [x] Política de privacidad escrita y publicada (`mobile/store/privacy-policy.html`, URL en `LISTING.md`).
 - [x] Guía para completar el formulario de "Seguridad de los datos" (`mobile/store/DATA_SAFETY.md`).
+- [x] Proyecto EAS creado (`d44353e5-8326-4445-a9ea-06d914decb2e`) y `projectId` ya cargado en `app.config.ts` — el paso 3 de más abajo ya está hecho, se deja documentado por si hay que recrearlo alguna vez.
 
 ## 1. Completar el email de contacto (2 minutos)
 
@@ -32,16 +33,13 @@ npx eas-cli login
 Te va a pedir usuario/contraseña de tu cuenta de Expo (o creás una gratis en https://expo.dev/signup si no
 tenés). Esto es intransferible: nadie más puede hacerlo por vos porque requiere tu login real.
 
-## 3. Crear el proyecto EAS (una sola vez)
+## 3. Crear el proyecto EAS — ✅ ya hecho
 
-```bash
-npx eas-cli init
-```
-
-Esto crea el proyecto en tu cuenta de Expo y te devuelve un `projectId`. Guardalo como variable de entorno
-`EAS_PROJECT_ID` (por ejemplo en un `.env` local que **no** se commitea, o como secret si usás CI) — el código
-ya está preparado para tomarlo de ahí (`app.config.ts`, variable `easProjectId`) y hoy queda vacío a propósito
-porque este proyecto no existía todavía.
+Ya se corrió `eas init` y el proyecto quedó creado: `d44353e5-8326-4445-a9ea-06d914decb2e`. Como el proyecto usa
+configuración dinámica (`app.config.ts`), el comando no pudo escribirlo solo — se cargó a mano directo en
+`app.config.ts` (variable `easProjectId`), así que no hace falta ninguna variable de entorno para esto. Si
+algún día hay que recrear el proyecto desde cero, `npx eas-cli init` te va a dar un `projectId` nuevo para
+reemplazar ese valor.
 
 ## 4. Generar el build de producción
 

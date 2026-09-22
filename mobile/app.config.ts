@@ -14,12 +14,12 @@ const apiUrls: Record<string, string> = {
 };
 
 /**
- * TODO: no existe todavía un proyecto EAS real para Rodante.
- * Correr `eas init` (o `eas build:configure`) y setear EAS_PROJECT_ID (.env / EAS secret)
- * con el projectId generado. Hasta entonces queda vacío a propósito — nunca se
- * fabrica un UUID que parezca real.
+ * Proyecto EAS real de Rodante (creado con `eas init` el 2026-09-22).
+ * El projectId no es un secreto — se commitea igual que en cualquier app.json
+ * estático. EAS_PROJECT_ID sigue disponible como override manual si hiciera
+ * falta apuntar a otro proyecto (por ejemplo, para un fork o un entorno aparte).
  */
-const easProjectId = (process.env.EAS_PROJECT_ID ?? '').trim();
+const easProjectId = (process.env.EAS_PROJECT_ID ?? 'd44353e5-8326-4445-a9ea-06d914decb2e').trim();
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
