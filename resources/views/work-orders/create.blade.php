@@ -50,14 +50,22 @@
             <x-field-error name="tire_ids" />
         </div>
 
-        <label class="field"><span>Recapadora</span>
-            <select name="retread_shop_id" class="inp" required>
-                @foreach($shops as $shop)
-                    <option value="{{ $shop->id }}" @selected((string) old('retread_shop_id') === (string) $shop->id)>{{ $shop->name }}</option>
-                @endforeach
-            </select>
-            <x-field-error name="retread_shop_id" />
+        <label class="field field--check">
+            <input type="checkbox" id="woInternal" @checked($errors->any() && ! old('retread_shop_id'))>
+            <span>Taller interno — lo hizo personal propio, sin recapadora externa</span>
         </label>
+
+        <div id="woShopWrap">
+            <label class="field"><span>Recapadora</span>
+                <select name="retread_shop_id" id="woShopSelect" class="inp">
+                    <option value="">Elegí una recapadora</option>
+                    @foreach($shops as $shop)
+                        <option value="{{ $shop->id }}" @selected((string) old('retread_shop_id') === (string) $shop->id)>{{ $shop->name }}</option>
+                    @endforeach
+                </select>
+                <x-field-error name="retread_shop_id" />
+            </label>
+        </div>
         <label class="field"><span>Notas</span><textarea name="notes" rows="2" class="inp">{{ old('notes') }}</textarea></label>
         <x-field-error name="error" />
         <div class="form-actions">

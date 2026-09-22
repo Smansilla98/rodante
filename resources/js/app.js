@@ -830,6 +830,9 @@ const bindWorkOrderForm = () => {
     const multiWrap = document.getElementById('woMultiWrap');
     const single = document.getElementById('woSingleTire');
     const search = document.getElementById('woTireSearch');
+    const internalCheck = document.getElementById('woInternal');
+    const shopWrap = document.getElementById('woShopWrap');
+    const shopSelect = document.getElementById('woShopSelect');
     if (!form || !typeSelect || !singleWrap || !multiWrap) {
         return;
     }
@@ -847,7 +850,20 @@ const bindWorkOrderForm = () => {
         });
     };
 
+    const syncShop = () => {
+        if (!internalCheck || !shopWrap || !shopSelect) {
+            return;
+        }
+        const internal = internalCheck.checked;
+        shopWrap.hidden = internal;
+        shopSelect.disabled = internal;
+        if (internal) {
+            shopSelect.value = '';
+        }
+    };
+
     typeSelect.addEventListener('change', sync);
+    internalCheck?.addEventListener('change', syncShop);
     search?.addEventListener('input', () => {
         const q = search.value.trim().toLowerCase();
         form.querySelectorAll('.wo-pick__row').forEach((row) => {
@@ -855,6 +871,7 @@ const bindWorkOrderForm = () => {
         });
     });
     sync();
+    syncShop();
 };
 bindWorkOrderForm();
 

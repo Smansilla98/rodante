@@ -3,7 +3,7 @@
 @section('back', route('work-orders.show', $order))
 @section('reference', $order->number)
 @section('document', 'Orden de trabajo')
-@section('subtitle', $order->type->label().' · '.($order->shop?->name ?? 'Sin taller'))
+@section('subtitle', $order->type->label().' · '.$order->shopLabel())
 @section('code', $order->number)
 @section('body')
 <section class="section">
@@ -12,7 +12,7 @@
         <div><span>Estado</span><div>{{ $order->status->label() }}</div></div>
         <div><span>Tipo</span><div>{{ $order->type->label() }}</div></div>
         <div><span>{{ $order->tiresOnOrder()->count() > 1 ? 'Cubiertas' : 'Cubierta' }}</span><div>{{ $order->tiresOnOrder()->map->displayName()->implode(', ') }}</div></div>
-        <div><span>Recapadora</span><div>{{ $order->shop?->name ?? '—' }}</div></div>
+        <div><span>Taller</span><div>{{ $order->shopLabel() }}</div></div>
         <div><span>Abierta</span><div class="mono">{{ $order->created_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') }}</div></div>
         <div><span>Abierta por</span><div>{{ $order->opener?->name ?? '—' }}</div></div>
         <div><span>Enviada a taller</span><div class="mono">{{ $order->sent_at?->timezone(config('app.timezone'))->format('d/m/Y H:i') ?? '—' }}</div></div>

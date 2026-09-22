@@ -137,4 +137,41 @@ class CriticalFlowE2ETest extends TestCase
         $order = WorkOrder::latest('id')->firstOrFail();
         $this->assertSame(2, $order->items()->count());
     }
+
+    public function test_open_internal_work_order_without_a_shop_from_form(): void
+    {
+        $this->seedDomain();
+        $this->get('/login');
+        $csrf = csrf_token();
+        $this->post('/login', ['username' => 'admin-test', 'password' => 'password', '_token' => $csrf])
+            ->assertRedirect(route('dashboard'));
+        $csrf = csrf_token();
+
+        [$tire] = app(\App\Services\PurchaseService::class)->confirm(
+            app(\App\Services\PurchaseService::class)->create([
+                'supplier_id' => Supplier::firstOrFail()->id,
+                'base_id' => Base::firstOrFail()->id,
+                'purchased_at' => now()->toDateString(),
+                'items' => [[
+                    'tire_brand_id' => TireModel::with('sizes')->firstOrFail()->tire_brand_id,
+                    'tire_model_id' => TireModel::with('sizes')->firstOrFail()->id,
+                    'tire_size_id' => TireModel::with('sizes')->firstOrFail()->sizes->first()->id,
+                    'quantity' => 1,
+                    'first_number' => 88150,
+                ]],
+            ], $this->admin),
+            $this->admin
+        )->items->flatMap->tires->values()->all();
+
+        $this->post('/ordenes', [
+            '_token' => $csrf,
+            'tire_id' => $tire->id,
+            'type' => 'REPARACION',
+            'notes' => 'Gomero interno, sin recapadora',
+        ])->assertRedirect();
+
+        $order = WorkOrder::latest('id')->firstOrFail();
+        $this->assertNull($order->retread_shop_id);
+        $this->assertTrue($order->isInternal());
+    }
 }

@@ -39,6 +39,17 @@ class WorkOrder extends Model
         return $this->belongsTo(RetreadShop::class, 'retread_shop_id');
     }
 
+    /** Sin recapadora externa: el trabajo lo hizo personal propio en el taller de la empresa. */
+    public function isInternal(): bool
+    {
+        return $this->retread_shop_id === null;
+    }
+
+    public function shopLabel(): string
+    {
+        return $this->isInternal() ? 'Taller interno' : ($this->shop?->name ?? '—');
+    }
+
     public function opener(): BelongsTo
     {
         return $this->belongsTo(User::class, 'opened_by');

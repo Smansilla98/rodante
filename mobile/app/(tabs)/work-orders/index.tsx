@@ -82,7 +82,7 @@ export default function WorkOrdersScreen() {
                 </Text>
                 <WorkOrderStatusBadge status={item.status} />
               </View>
-              <Text style={styles.rowSub}>Taller: {item.shop?.name ?? '—'}</Text>
+              <Text style={styles.rowSub}>Taller: {item.shop?.name ?? 'Interno'}</Text>
               {item.tire ? <Text style={styles.rowSub}>Neumático: Nº{item.tire.individual_number}</Text> : null}
             </Pressable>
           )}
@@ -113,6 +113,7 @@ function NewWorkOrderModal({
   const [type, setType] = useState<'RECAPADO' | 'REPARACION'>('REPARACION');
   const [shops, setShops] = useState<RetreadShop[]>([]);
   const [shopId, setShopId] = useState<number | null>(null);
+  const [internal, setInternal] = useState(false);
   const [tireQuery, setTireQuery] = useState('');
   const [foundTire, setFoundTire] = useState<Tire | null>(null);
   const [searching, setSearching] = useState(false);
@@ -126,6 +127,7 @@ function NewWorkOrderModal({
     if (!visible) return;
     setType('REPARACION');
     setShopId(null);
+    setInternal(false);
     setTireQuery('');
     setFoundTire(null);
     setSearchError(null);
@@ -152,8 +154,8 @@ function NewWorkOrderModal({
   };
 
   const submit = async () => {
-    if (!shopId || !foundTire) {
-      setFormError('Elegí un taller y buscá el neumático.');
+    if ((!internal && !shopId) || !foundTire) {
+      setFormError('Elegí un taller (o marcá "Taller interno") y buscá el neumático.');
       return;
     }
     setBusy(true);
@@ -161,7 +163,7 @@ function NewWorkOrderModal({
     try {
       await api.createWorkOrder({
         tire_id: foundTire.id,
-        retread_shop_id: shopId,
+        retread_shop_id: internal ? undefined : (shopId ?? undefined),
         type,
         notes: notes.trim() || undefined,
       });
@@ -189,15 +191,30 @@ function NewWorkOrderModal({
             </View>
 
             <Text style={styles.fieldLabel}>Taller</Text>
-            {shops.length === 0 ? (
-              <Text style={styles.rowSub}>No hay talleres activos cargados.</Text>
-            ) : (
-              <View style={styles.chipRow}>
-                {shops.map((s) => (
-                  <Chip key={s.id} label={s.name} selected={shopId === s.id} onPress={() => setShopId(s.id)} />
-                ))}
-              </View>
-            )}
+            <View style={styles.chipRow}>
+              <Chip
+                label="Taller interno"
+                selected={internal}
+                onPress={() => {
+                  setInternal(true);
+                  setShopId(null);
+                }}
+              />
+              {shops.map((s) => (
+                <Chip
+                  key={s.id}
+                  label={s.name}
+                  selected={!internal && shopId === s.id}
+                  onPress={() => {
+                    setInternal(false);
+                    setShopId(s.id);
+                  }}
+                />
+              ))}
+            </View>
+            {!internal && shops.length === 0 ? (
+              <Text style={styles.rowSub}>No hay talleres externos activos cargados — podés usar "Taller interno".</Text>
+            ) : null}
 
             <Text style={styles.fieldLabel}>Neumático</Text>
             <View style={{ flexDirection: 'row', gap: space.sm, alignItems: 'flex-end' }}>
@@ -240,7 +257,7 @@ function NewWorkOrderModal({
                   title="Crear orden"
                   onPress={() => void submit()}
                   loading={busy}
-                  disabled={!shopId || !foundTire}
+                  disabled={(!internal && !shopId) || !foundTire}
                   block
                 />
               </View>

@@ -29,12 +29,16 @@ class WorkOrderService
         private AuditService $audit,
     ) {}
 
-    public function open(User $user, Tire|iterable $tires, RetreadShop $shop, WorkOrderType $type, ?string $notes = null): WorkOrder
+    /**
+     * $shop en null = orden interna (reparación/recapado hecho por personal
+     * propio en el taller de la empresa, sin recapadora externa).
+     */
+    public function open(User $user, Tire|iterable $tires, ?RetreadShop $shop, WorkOrderType $type, ?string $notes = null): WorkOrder
     {
         if (! $user->role->canWrite()) {
             throw new DomainException('No tiene permiso para abrir órdenes de trabajo.');
         }
-        if ((int) $shop->company_id !== (int) $user->company_id) {
+        if ($shop && (int) $shop->company_id !== (int) $user->company_id) {
             throw new DomainException('La recapadora no pertenece a tu empresa.');
         }
         if ($type === WorkOrderType::Recapado && ! $user->role->canRetireOrRecap()) {
@@ -59,7 +63,7 @@ class WorkOrderService
                 'company_id' => $user->company_id,
                 'number' => $this->numbers->next((int) $user->company_id, 'work_order', 'OT-'),
                 'tire_id' => $primary->id,
-                'retread_shop_id' => $shop->id,
+                'retread_shop_id' => $shop?->id,
                 'type' => $type,
                 'status' => WorkOrderStatus::Abierta,
                 'notes' => $notes,
@@ -81,7 +85,7 @@ class WorkOrderService
             $this->alerts->notifyCompany(
                 (int) $user->company_id,
                 'Orden de trabajo '.$order->number,
-                $this->tirePhrase($tires).' a '.$shop->name.' ('.$type->label().').',
+                $this->tirePhrase($tires).' a '.($shop?->name ?? 'taller interno').' ('.$type->label().').',
                 route('work-orders.show', $order),
                 ['ADMINISTRADOR', 'JEFE_SECTOR', 'LOGISTICA'],
             );

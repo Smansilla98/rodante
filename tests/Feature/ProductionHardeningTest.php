@@ -226,6 +226,33 @@ class ProductionHardeningTest extends TestCase
         ]);
     }
 
+    /** Sin recapadora externa: orden interna, hecha por personal propio en el taller de la empresa. */
+    public function test_work_order_can_be_internal_without_a_shop(): void
+    {
+        [$tire] = $this->purchaseTires(1, 88045);
+        $service = app(WorkOrderService::class);
+
+        $order = $service->open($this->admin, $tire, null, WorkOrderType::Reparacion, 'Gomero interno, parche');
+        $this->assertNull($order->retread_shop_id);
+        $this->assertTrue($order->isInternal());
+        $this->assertSame('Taller interno', $order->shopLabel());
+
+        $service->sendToShop($order->fresh(), $this->admin);
+        $service->close($order->fresh(), $this->admin, 500, 'listo');
+
+        $this->assertSame(1, $tire->fresh()->lifecycles()->count());
+        $this->assertSame('REPARADA', $tire->fresh()->condition->value);
+        $this->assertDatabaseHas('cost_entries', [
+            'company_id' => $this->admin->company_id,
+            'category' => 'REPAIR',
+        ]);
+        $this->assertDatabaseHas('work_orders', [
+            'id' => $order->id,
+            'retread_shop_id' => null,
+            'status' => 'CERRADA',
+        ]);
+    }
+
     public function test_work_order_recap_can_group_multiple_tires(): void
     {
         [$a, $b] = $this->purchaseTires(2, 88060);

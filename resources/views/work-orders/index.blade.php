@@ -25,7 +25,7 @@
                 <td><a href="{{ route('work-orders.show', $order) }}">{{ $order->number }}</a></td>
                 <td>{{ $order->tireSummary() }}</td>
                 <td>{{ $order->type->label() }}</td>
-                <td>{{ $order->shop?->name }}</td>
+                <td>{{ $order->shopLabel() }}</td>
                 <td>{{ $order->status->label() }}</td>
             </tr>
         @empty

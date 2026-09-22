@@ -165,7 +165,8 @@ export const api = {
   createWorkOrder: (body: {
     tire_id?: number;
     tire_ids?: number[];
-    retread_shop_id: number;
+    /** Sin este campo, la orden queda como interna (taller propio, sin recapadora externa). */
+    retread_shop_id?: number;
     type: 'RECAPADO' | 'REPARACION';
     notes?: string;
   }) =>

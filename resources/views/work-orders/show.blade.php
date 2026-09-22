@@ -1,7 +1,7 @@
 @extends('layouts.app')
 @section('title', $order->number)
 @section('content')
-<x-page-header kicker="Taller" :title="$order->number" :subtitle="$order->type->label().' · '.$order->shop->name">
+<x-page-header kicker="Taller" :title="$order->number" :subtitle="$order->type->label().' · '.$order->shopLabel()">
     <x-slot:actions>
         <a href="{{ route('work-orders.print', $order) }}" class="btn btn-ghost" target="_blank">Imprimir</a>
         <a href="{{ route('work-orders.index') }}" class="btn btn-ghost">Listado</a>
@@ -19,7 +19,7 @@
                     @endforeach
                 </div>
             </div>
-            <div><span>Taller</span>{{ $order->shop->name }}</div>
+            <div><span>Taller</span>{{ $order->shopLabel() }}</div>
             <div><span>Abierta por</span>{{ $order->opener?->name }}</div>
             <div><span>Costo</span>{{ $order->cost !== null ? '$ '.number_format($order->cost, 2, ',', '.') : '—' }}</div>
             <div><span>Notas</span>{{ $order->notes ?: '—' }}</div>

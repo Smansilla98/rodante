@@ -21,7 +21,8 @@ class StoreWorkOrderRequest extends FormRequest
             'tire_id' => 'nullable|exists:tires,id',
             'tire_ids' => 'nullable|array|min:1',
             'tire_ids.*' => 'integer|exists:tires,id',
-            'retread_shop_id' => 'required|exists:retread_shops,id',
+            // Sin recapadora = orden interna (taller propio de la empresa).
+            'retread_shop_id' => 'nullable|exists:retread_shops,id',
             'type' => ['required', Rule::enum(WorkOrderType::class)],
             'notes' => 'nullable|string',
         ];

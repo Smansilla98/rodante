@@ -81,7 +81,7 @@ export default function WorkOrderDetailScreen() {
             <Text style={styles.title}>Estado</Text>
             <WorkOrderStatusBadge status={order.status} />
           </View>
-          <Text style={styles.sub}>Taller: {order.shop?.name ?? '—'}</Text>
+          <Text style={styles.sub}>Taller: {order.shop?.name ?? 'Interno'}</Text>
           {order.tire ? (
             <Text style={styles.sub}>
               Neumático: Nº{order.tire.individual_number}

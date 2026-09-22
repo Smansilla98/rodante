@@ -48,7 +48,7 @@ class WorkOrderController extends Controller
             $order = $service->open(
                 $request->user(),
                 Tire::query()->whereIn('id', $request->tireIds())->get(),
-                RetreadShop::findOrFail($data['retread_shop_id']),
+                isset($data['retread_shop_id']) ? RetreadShop::findOrFail($data['retread_shop_id']) : null,
                 WorkOrderType::from($data['type']),
                 $data['notes'] ?? null,
             );
