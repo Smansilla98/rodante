@@ -126,6 +126,15 @@ EAS_NO_VCS=1 npx eas-cli build --profile production --platform android
 
 (mismo comando de siempre — el `.aab` nuevo va a salir con `com.rodant.app`, que es el correcto).
 
+**⚠️ Ese rebuild generó un keystore nuevo en EAS** (por el cambio de package), distinto al que ya había quedado
+registrado en Play Console de una subida anterior. Si Play Console rechaza el `.aab` con un error de "clave de
+firma incorrecta" (SHA1 esperado vs. SHA1 usado), es por esto — **no** es un build roto. Solución si la ficha en
+Play Console todavía es un borrador sin testers reales: borrarla y crearla de nuevo (así el `.aab` actual
+registra su clave limpia, sin trámites). Si ya tiene testers/versión publicada, hay que pedir el restablecimiento
+de la clave de carga desde **Configuración → Integridad de la app → Clave de firma de la app** en Play Console
+(pasa por revisión de Google, tarda días). **Nunca** elijas "generar keystore nuevo" en `eas credentials` una vez
+que Play Console ya tiene una clave registrada — solo empeora el problema.
+
 ## 5. Crear la ficha en Google Play Console
 
 1. Entrá a https://play.google.com/console (ya está pago, según me confirmaste).
