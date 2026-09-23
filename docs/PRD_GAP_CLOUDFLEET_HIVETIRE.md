@@ -32,14 +32,28 @@ explícitamente en un solo documento hasta ahora.
 ### P0.1 Esquema de cubiertas: diagnóstico de rotación/alineación
 
 cloudFleet tiene un motor de "Diagnóstico y sugerencias" **[confirmado]** que compara desgaste entre posiciones
-para sugerir rotación, y diferencia interior/exterior para detectar desalineación. Rodante ya capturaba los
-datos necesarios (`tire_measurement_readings` por zona, incluida `FLANCO_IZQ`/`FLANCO_DER`) pero no los cruzaba.
+para sugerir rotación, y diferencia interior/exterior para detectar desalineación. Al revisar qué tan cierta era
+esta brecha encontré que Rodante **ya tenía la mitad de esto sin exponerlo**: `MeasurementService::record()`
+calcula la diferencia flanco izq/der contra `tire_size.uneven_wear_threshold_mm` (configurable por medida,
+default 3mm) desde antes de esta sesión, guarda el resultado en `tire_measurements.raises_alert` y dispara una
+incidencia `DesgasteIrregular` — pero eso quedaba enterrado en el historial de incidencias, no se veía en el
+mapa de cubiertas. La primera versión de este cambio reimplementaba ese cálculo con un umbral propio (1.5mm)
+en vez de reusarlo, lo cual podía mostrar un aviso en el mapa que no coincidiera con si realmente se había
+generado la incidencia — corregido antes de este commit final para leer `raises_alert` directamente.
+
+También existe (y no se toca en este PRD) `App\Services\RotationPatternService`, que calcula patrones de
+rotación completos (longitudinal / en X / diagonal, al estilo Kananfleet) — pero **no está conectado a ningún
+controlador ni vista hoy**, es código ya escrito y sin usar. Es un candidato natural para dónde debería llevar
+el botón "Rotación sugerida" del punto P1.3 más abajo, pero conectarlo es una decisión de flujo (¿modal?
+¿pantalla nueva?) que no me corresponde tomar sin el dueño del producto.
 
 Implementado:
 
-- `App\Services\TireDiagnosticService` — compara flanco izq/der de la última medición de cada cubierta
-  (desalineación, umbral 1.5mm) y compara `current_tread_min` entre posiciones del mismo eje (rotación, umbral
-  2.0mm). Sin dependencias externas, corre sobre datos ya existentes.
+- `App\Services\TireDiagnosticService` — para desalineación, lee `raises_alert` de la última medición de cada
+  cubierta (mismo umbral por medida que ya usa `MeasurementService`, sin duplicarlo). Para rotación, compara
+  `current_tread_min` entre posiciones del mismo eje con un umbral propio nuevo (2.0mm) — esta comparación
+  cruzada entre posiciones no existía antes en ningún lado. Sin dependencias externas, corre sobre datos ya
+  existentes.
 - `FleetUnit::tireDiagnostics()` — expone el resultado indexado por `position_id`, reutilizado por web y API.
 - Web: `tire-sheet-unit.blade.php` → `tire-sheet-axle.blade.php` → `tire-box.blade.php` ahora reciben
   `diagnostics` y muestran una insignia "!" ámbar + el detalle en el tooltip. Leyenda actualizada.
@@ -76,6 +90,15 @@ cloudFleet exporta el informe de diagnóstico a PDF **[confirmado]**. Rodante ya
 (`resources/views/print/work-order.blade.php` para OT). Extender el mismo patrón a un
 `GET /unidades/{unit}/diagnostico.pdf` con el resultado de `tireDiagnostics()` en una planilla imprimible —
 reutiliza `TireDiagnosticService` tal cual, es agregar una vista + ruta, no lógica nueva.
+
+### P1.3 Conectar `RotationPatternService` al flag "Rotación sugerida"
+
+Hoy el aviso de rotación del mapa de cubiertas (P0.1) solo dice "hay desgaste desparejo en este eje" — no dice
+*cómo* rotar. `RotationPatternService` (ya escrito, sin usar en ningún controlador) calcula justamente eso:
+los 3 esquemas estándar de rotación (longitudinal/en X/diagonal) y si son ejecutables con las cubiertas
+puestas. Falta decidir con el dueño del producto dónde mostrarlo — ¿un botón "Ver rotación sugerida" que abre
+un modal con `RotationPatternService::forLayout()` al tocar el aviso ámbar? ¿Una pantalla aparte? — antes de
+conectarlo, para no inventarle una UI que no encaje con el resto de la app.
 
 ## P2 — mejora concreta, diferible
 
@@ -117,6 +140,11 @@ una función real a igualar, y Rodante no tiene ese caso de uso planteado hoy.
 
 ## Estado
 
-P0 implementado y verificado (`tsc --noEmit` 0 errores en mobile, `php -l` sin errores en los archivos PHP
-tocados) — falta el smoke test contra producción una vez deployado. P1/P2 quedan documentados para priorizar
-con el dueño del producto; P1.1 en particular necesita una decisión de negocio antes de tocar código.
+P0 implementado, deployado (Railway, rama `main`) y verificado en vivo contra `/api/v1/units/{unit}/layout`
+con el usuario demo: el campo `diagnostics` aparece por posición y viene vacío donde no hay medición o el
+desgaste está parejo (unidad 3, 10 posiciones sin flags — correcto, sin datos suficientes en ninguna) y sin
+falsos positivos donde solo una cubierta del eje tiene medición (unidad 8 — se filtra bien, no compara con
+`null`). Falta todavía un smoke test con un caso que SÍ dispare cada flag (cargar una medición con flanco
+desparejo real, o dos cubiertas del mismo eje con `current_tread_min` bien distinto) para confirmar el camino
+positivo end-to-end, no solo el negativo. P1/P2 quedan documentados para priorizar con el dueño del producto;
+P1.1 en particular necesita una decisión de negocio antes de tocar código.

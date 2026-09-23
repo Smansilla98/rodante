@@ -10,11 +10,16 @@ use Illuminate\Support\Collection;
  * rotación (diferencia de desgaste entre posiciones de un mismo eje). Inspirado en
  * el motor de "Diagnóstico y sugerencias" de cloudFleet, acotado a lo que ya
  * capturamos hoy (profundidad por zona) — sin presión ni hardware externo.
+ *
+ * La desalineación NO reimplementa el umbral: reusa `raises_alert`, que
+ * MeasurementService ya calcula contra `tire_size.uneven_wear_threshold_mm`
+ * (configurable por medida) al cargar la medición, y que además dispara la
+ * incidencia DesgasteIrregular. Duplicar el umbral acá con un valor propio
+ * podía mostrar un aviso en el mapa que no coincidiera con si se generó o no
+ * esa incidencia.
  */
 class TireDiagnosticService
 {
-    public const ALIGNMENT_DELTA_MM = 1.5;
-
     public const ROTATION_DELTA_MM = 2.0;
 
     /**
@@ -72,25 +77,20 @@ class TireDiagnosticService
     private function alignmentFlag(\App\Models\Tire $tire): ?array
     {
         $latest = $tire->measurements->sortByDesc('measured_at')->first();
-        if (! $latest) {
+        if (! $latest || ! $latest->raises_alert) {
             return null;
         }
 
         $izq = $latest->readings->first(fn ($r) => $r->zone?->code === 'FLANCO_IZQ')?->millimeters;
         $der = $latest->readings->first(fn ($r) => $r->zone?->code === 'FLANCO_DER')?->millimeters;
-        if ($izq === null || $der === null) {
-            return null;
-        }
-
-        $delta = abs((float) $izq - (float) $der);
-        if ($delta < self::ALIGNMENT_DELTA_MM) {
-            return null;
-        }
+        $detail = ($izq !== null && $der !== null)
+            ? 'Diferencia de '.round(abs((float) $izq - (float) $der), 1).'mm entre flanco izquierdo y derecho.'
+            : 'La última medición marcó desgaste lateral desparejo.';
 
         return [
             'code' => 'ALINEACION',
             'label' => 'Posible desalineación',
-            'detail' => 'Diferencia de '.round($delta, 1).'mm entre flanco izquierdo y derecho.',
+            'detail' => $detail,
         ];
     }
 }
