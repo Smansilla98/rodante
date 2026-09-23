@@ -174,6 +174,7 @@ class FleetUnit extends Model
             'locations.tire.model',
             'locations.tire.size',
             'locations.tire.openAssignment.openSegment',
+            'locations.tire.measurements.readings.zone',
             'locations.position',
         ]);
 
@@ -181,5 +182,16 @@ class FleetUnit extends Model
             'position' => $position,
             'tire' => $this->locations->firstWhere('position_id', $position->id)?->tire,
         ]);
+    }
+
+    /**
+     * Sugerencias de rotación/desalineación por posición, calculadas sobre
+     * {@see tireLayout()}. Ver App\Services\TireDiagnosticService.
+     *
+     * @return array<int, list<array{code: string, label: string, detail: string}>>
+     */
+    public function tireDiagnostics(): array
+    {
+        return app(\App\Services\TireDiagnosticService::class)->forLayout($this->tireLayout());
     }
 }

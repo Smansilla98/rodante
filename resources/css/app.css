@@ -1895,6 +1895,28 @@ textarea.inp,
     box-shadow: none;
 }
 
+.tire-box--flag {
+    outline: 2px solid #eab308;
+    outline-offset: 2px;
+}
+
+.tire-box__flag {
+    position: absolute;
+    top: -0.5rem;
+    right: -0.5rem;
+    z-index: 4;
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 999px;
+    background: #eab308;
+    color: #1f2937;
+    font-size: 0.7rem;
+    font-weight: 800;
+    line-height: 1.1rem;
+    text-align: center;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
+}
+
 .planilla-work {
     display: grid;
     gap: 0;

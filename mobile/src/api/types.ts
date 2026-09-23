@@ -208,9 +208,16 @@ export interface UnitConfiguration {
   positions?: UnitPosition[];
 }
 
+export interface TireDiagnosticFlag {
+  code: 'ALINEACION' | 'ROTACION';
+  label: string;
+  detail: string;
+}
+
 export interface UnitLayoutEntry {
   position: UnitPosition;
   tire: Tire | null;
+  diagnostics?: TireDiagnosticFlag[];
 }
 
 export interface PositionCandidate {

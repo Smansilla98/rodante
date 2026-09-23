@@ -1,4 +1,4 @@
-@props(['tire' => null, 'position', 'prefix', 'interactive' => false, 'mark' => null])
+@props(['tire' => null, 'position', 'prefix', 'interactive' => false, 'mark' => null, 'flags' => []])
 
 @php
     $code = $position->sheetCode($prefix);
@@ -7,9 +7,11 @@
     $role = $position->is_spare ? 'AUXILIO' : $position->axle_role;
     $mounted = $tire?->openAssignment?->started_at?->format('d/m/Y');
     $labelMark = $mark ?: $code;
-    $classes = 'tire-box tire-box--'.$tone.' tire-box--role-'.$role.($interactive ? ' tire-box--action' : '').($tire ? '' : ' tire-box--empty').($short ? ' tire-box--'.$short : '');
+    $hasFlags = count($flags) > 0;
+    $flagsText = collect($flags)->pluck('detail')->implode(' ');
+    $classes = 'tire-box tire-box--'.$tone.' tire-box--role-'.$role.($interactive ? ' tire-box--action' : '').($tire ? '' : ' tire-box--empty').($short ? ' tire-box--'.$short : '').($hasFlags ? ' tire-box--flag' : '');
     $label = $tire
-        ? $labelMark.' · '.$code.': '.$tire->displayName().', '.($tire->current_tread_min ? $tire->current_tread_min.' mm' : 'sin medición')
+        ? $labelMark.' · '.$code.': '.$tire->displayName().', '.($tire->current_tread_min ? $tire->current_tread_min.' mm' : 'sin medición').($hasFlags ? '. '.$flagsText : '')
         : $labelMark.' · '.$code.' vacío';
 @endphp
 
@@ -19,6 +21,7 @@
         data-empty="{{ $tire ? '0' : '1' }}"
         aria-label="{{ $label }}" title="{{ $label }}">
         <strong>{{ $mark ?? ($tire?->individual_number ?? '—') }}</strong>
+        @if($hasFlags)<span class="tire-box__flag" aria-hidden="true">!</span>@endif
         @if($tire)
             <span class="tire-tip">
                 <b>{{ $tire->displayName() }}</b>
@@ -26,6 +29,7 @@
                 {{ $tire->current_tread_min ? $tire->current_tread_min.' mm' : 'Sin medición' }}
                 · {{ number_format($tire->accumulated_km) }} km
                 @if($mounted)<br>Montaje {{ $mounted }}@endif
+                @if($hasFlags)<br><em>{{ $flagsText }}</em>@endif
             </span>
         @endif
     </button>
@@ -33,14 +37,16 @@
     <a href="{{ route('tires.show', $tire) }}"
        class="{{ $classes }}"
        aria-label="{{ $label }}"
-       title="{{ $code }} · {{ $tire->displayName() }}">
+       title="{{ $code }} · {{ $tire->displayName() }}{{ $hasFlags ? '. '.$flagsText : '' }}">
         <strong>{{ $mark ?? $tire->individual_number }}</strong>
+        @if($hasFlags)<span class="tire-box__flag" aria-hidden="true">!</span>@endif
         <span class="tire-tip">
             <b>{{ $tire->displayName() }}</b>
             {{ $tire->size->displayName() }}<br>
             {{ $tire->current_tread_min ? $tire->current_tread_min.' mm' : 'Sin medición' }}
             · {{ number_format($tire->accumulated_km) }} km<br>
             @if($mounted)Montaje {{ $mounted }}@endif
+            @if($hasFlags)<br><em>{{ $flagsText }}</em>@endif
         </span>
     </a>
 @else

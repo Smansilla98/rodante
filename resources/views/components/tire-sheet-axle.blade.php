@@ -1,4 +1,4 @@
-@props(['axle', 'slots', 'prefix', 'interactive' => false, 'marks' => []])
+@props(['axle', 'slots', 'prefix', 'interactive' => false, 'marks' => [], 'diagnostics' => []])
 
 @php
     $left = $slots->filter(fn ($slot) => $slot['position']->side === 'IZQ')->sortBy('position.grid_col');
@@ -13,13 +13,13 @@
     <span class="schematic-axle__n">E{{ $axle }}<em>{{ $role }}</em></span>
     <div class="schematic-axle__side">
         @foreach($left as $slot)
-            <x-tire-box :tire="$slot['tire']" :position="$slot['position']" :prefix="$prefix" :interactive="$interactive" :mark="$marks[$slot['position']->id] ?? null" />
+            <x-tire-box :tire="$slot['tire']" :position="$slot['position']" :prefix="$prefix" :interactive="$interactive" :mark="$marks[$slot['position']->id] ?? null" :flags="$diagnostics[$slot['position']->id] ?? []" />
         @endforeach
     </div>
     <div class="schematic-axle__beam" aria-hidden="true"></div>
     <div class="schematic-axle__side">
         @foreach($right as $slot)
-            <x-tire-box :tire="$slot['tire']" :position="$slot['position']" :prefix="$prefix" :interactive="$interactive" :mark="$marks[$slot['position']->id] ?? null" />
+            <x-tire-box :tire="$slot['tire']" :position="$slot['position']" :prefix="$prefix" :interactive="$interactive" :mark="$marks[$slot['position']->id] ?? null" :flags="$diagnostics[$slot['position']->id] ?? []" />
         @endforeach
     </div>
 </div>

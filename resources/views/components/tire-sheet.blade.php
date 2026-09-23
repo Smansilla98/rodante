@@ -7,6 +7,7 @@
                 :unit="$sheetUnit"
                 :current="$current"
                 :layout="$sheetUnit->tireLayout()"
+                :diagnostics="$sheetUnit->tireDiagnostics()"
                 :interactive="$interactive"
             />
         @endforeach
@@ -23,6 +24,7 @@
             <span><i class="ax ax--drive"></i> Eje tracción</span>
             <span><i class="ax ax--drag"></i> Eje muerto</span>
             <span><i class="ax ax--lift"></i> Eje levantable</span>
+            <span><span class="tire-box__flag" style="position: static; display: inline-block;" aria-hidden="true">!</span> Rotación o alineación sugerida</span>
         </div>
     </details>
 </section>

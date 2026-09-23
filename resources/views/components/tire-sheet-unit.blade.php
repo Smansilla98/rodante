@@ -1,4 +1,4 @@
-@props(['unit', 'current', 'layout', 'interactive' => false])
+@props(['unit', 'current', 'layout', 'diagnostics' => [], 'interactive' => false])
 
 @php
     $prefix = $unit->type->sheetPrefix();
@@ -40,7 +40,7 @@
         <div class="schematic__frame">
             <div class="schematic__spine" aria-hidden="true"></div>
             @foreach($axles as $axle => $slots)
-                <x-tire-sheet-axle :axle="$axle" :slots="$slots" :prefix="$prefix" :interactive="$onThisUnit" :marks="$marks" />
+                <x-tire-sheet-axle :axle="$axle" :slots="$slots" :prefix="$prefix" :interactive="$onThisUnit" :marks="$marks" :diagnostics="$diagnostics" />
             @endforeach
         </div>
         @if($spares->isNotEmpty())
@@ -54,6 +54,7 @@
                             :prefix="$prefix"
                             :interactive="$onThisUnit"
                             :mark="$marks[$slot['position']->id] ?? null"
+                            :flags="$diagnostics[$slot['position']->id] ?? []"
                         />
                     @endforeach
                 </div>

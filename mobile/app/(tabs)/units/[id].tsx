@@ -20,6 +20,7 @@ import {
   Field,
   Icon,
   InfoRow,
+  InfoTooltip,
   LoadingState,
   PrimaryButton,
   SectionLabel,
@@ -209,7 +210,10 @@ export default function UnitDetailScreen() {
         </Card>
 
         <Card>
-          <SectionLabel>Mapa de cubiertas</SectionLabel>
+          <View style={styles.sectionHeadRow}>
+            <SectionLabel>Mapa de cubiertas</SectionLabel>
+            <InfoTooltip text="Tocá una posición para instalar, cambiar, mover o retirar una cubierta. El aviso ⚠ marca una posición con desgaste desparejo entre lados o respecto al resto del eje — conviene revisar alineación o rotación." />
+          </View>
           {axles.map(({ axle, entries }) => (
             <View key={axle} style={styles.axleGroup}>
               <Text style={styles.axleLabel}>Eje {axle}</Text>
@@ -278,22 +282,34 @@ function PositionBox({
   disabled?: boolean;
 }) {
   const occupied = !!entry.tire;
+  const flags = entry.diagnostics ?? [];
+  const hasFlags = flags.length > 0;
   const tireLabel = entry.tire
     ? [entry.tire.brand?.name, entry.tire.model?.name].filter(Boolean).join(' ')
     : null;
+  const flagsText = flags.map((f) => f.detail).join(' ');
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
-      style={[styles.posBox, occupied ? styles.posBoxFilled : styles.posBoxEmpty]}
+      style={[
+        styles.posBox,
+        occupied ? styles.posBoxFilled : styles.posBoxEmpty,
+        hasFlags ? styles.posBoxFlag : null,
+      ]}
       accessibilityRole="button"
       accessibilityLabel={`Posición ${entry.position.code}, ${
         occupied ? `ocupada por neumático número ${entry.tire?.individual_number}` : 'vacía'
-      }`}
+      }${hasFlags ? `. ${flagsText}` : ''}`}
       accessibilityHint={
         disabled ? undefined : occupied ? 'Ver acciones para esta cubierta' : 'Instalar una cubierta en esta posición'
       }
     >
+      {hasFlags ? (
+        <View style={styles.flagBadge} accessibilityElementsHidden importantForAccessibility="no">
+          <Text style={styles.flagBadgeText}>!</Text>
+        </View>
+      ) : null}
       <Text style={styles.posCode}>{entry.position.code}</Text>
       <Text style={styles.posStatus} numberOfLines={1}>
         {occupied ? `Nº${entry.tire?.individual_number}` : 'Vacío'}
@@ -301,6 +317,11 @@ function PositionBox({
       {tireLabel ? (
         <Text style={styles.posMeta} numberOfLines={1}>
           {tireLabel}
+        </Text>
+      ) : null}
+      {hasFlags ? (
+        <Text style={styles.posFlagText} numberOfLines={2}>
+          {flags[0].label}
         </Text>
       ) : null}
     </Pressable>
@@ -739,6 +760,7 @@ const styles = StyleSheet.create({
   fieldLabel: { color: colors.muted, marginBottom: 8, fontSize: type.label, fontWeight: '600' },
   errorText: { color: colors.danger, fontSize: type.caption, fontWeight: '600' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },
+  sectionHeadRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   axleGroup: { marginTop: space.sm },
   axleLabel: {
     color: colors.muted,
@@ -761,6 +783,7 @@ const styles = StyleSheet.create({
   },
   candidateTitle: { color: colors.ink, fontSize: type.bodyStrong, fontWeight: '700' },
   posBox: {
+    position: 'relative',
     flexBasis: '47%',
     flexGrow: 1,
     minHeight: touchTarget.row,
@@ -774,8 +797,23 @@ const styles = StyleSheet.create({
   posCode: { fontSize: type.bodyStrong, fontWeight: '700', color: colors.ink },
   posStatus: { fontSize: type.caption, color: colors.inkSoft },
   posMeta: { fontSize: type.caption, color: colors.muted },
+  posFlagText: { fontSize: type.caption, color: '#92650a', fontWeight: '600', textAlign: 'center' },
   posBoxFilled: { backgroundColor: colors.primarySoft, borderColor: colors.primary },
   posBoxEmpty: { backgroundColor: colors.card2, borderColor: colors.line },
+  posBoxFlag: { borderColor: '#eab308', borderWidth: 2 },
+  flagBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -8,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#eab308',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 3,
+  },
+  flagBadgeText: { color: '#1f2937', fontSize: 11, fontWeight: '800', lineHeight: 13 },
   modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalCard: {
     backgroundColor: colors.card,

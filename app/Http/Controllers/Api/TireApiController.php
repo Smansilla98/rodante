@@ -157,13 +157,16 @@ class TireApiController extends Controller
     public function unitLayout(Request $request, FleetUnit $unit)
     {
         $this->authorizeVisible('view', $unit);
-        $unit->load('type', 'fleet', 'base', 'configuration.positions', 'locations.tire.brand', 'locations.tire.model', 'locations.position');
+        $unit->load('type', 'fleet', 'base');
+        $layout = $unit->tireLayout();
+        $flags = $unit->tireDiagnostics();
 
         return response()->json([
             'unit' => $unit,
-            'layout' => $unit->configuration->positions->map(fn ($p) => [
-                'position' => $p,
-                'tire' => $unit->locations->firstWhere('position_id', $p->id)?->tire,
+            'layout' => $layout->map(fn ($slot) => [
+                'position' => $slot['position'],
+                'tire' => $slot['tire'],
+                'diagnostics' => $flags[$slot['position']->id] ?? [],
             ]),
         ]);
     }
