@@ -38,7 +38,7 @@ eas build --platform ios --profile production
 
 Perfiles en `eas.json`: development / preview / production / production-apk.
 
-Bundle IDs: `com.rodante.app` — ver `docs/MOBILE_PLATFORM.md`.
+Bundle IDs: `com.rodant.app` — ver `docs/MOBILE_PLATFORM.md`.
 
 ## Pendiente antes de un build de producción real
 

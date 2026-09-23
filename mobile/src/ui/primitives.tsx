@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Modal,
   Pressable,
   StyleSheet,
   Text,
@@ -182,6 +183,49 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
+/**
+ * Ícono de "i" que al tocarlo muestra una aclaración corta en un popover
+ * chico — para no ocupar espacio permanente con texto explicativo que la
+ * mayoría no necesita leer siempre.
+ */
+export function InfoTooltip({ text }: { text: string }) {
+  const [visible, setVisible] = useState(false);
+
+  return (
+    <>
+      <Pressable
+        onPress={() => setVisible(true)}
+        hitSlop={10}
+        accessibilityRole="button"
+        accessibilityLabel="Más información"
+        accessibilityHint={text}
+      >
+        <Icon name="information-circle-outline" size={18} color={colors.muted} />
+      </Pressable>
+      <Modal visible={visible} transparent animationType="fade" onRequestClose={() => setVisible(false)}>
+        <Pressable style={styles.tooltipBackdrop} onPress={() => setVisible(false)}>
+          <Pressable style={styles.tooltipCard} onPress={() => {}}>
+            <Text style={styles.tooltipText}>{text}</Text>
+            <View style={{ marginTop: space.sm }}>
+              <PrimaryButton title="Entendido" onPress={() => setVisible(false)} variant="outline" block />
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
+
+/** Label de campo + ícono de info al lado — para no reinventar el layout cada vez. */
+export function FieldLabelWithInfo({ label, info }: { label: string; info: string }) {
+  return (
+    <View style={styles.fieldLabelRow}>
+      <Text style={styles.fieldLabelText}>{label}</Text>
+      <InfoTooltip text={info} />
+    </View>
+  );
+}
+
 export function StatTile({
   label,
   value,
@@ -319,6 +363,25 @@ const styles = StyleSheet.create({
     marginBottom: space.sm,
     fontWeight: '700',
   },
+  tooltipBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: space.lg,
+  },
+  tooltipCard: {
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: space.lg,
+    maxWidth: 340,
+    width: '100%',
+  },
+  tooltipText: { color: colors.ink, fontSize: type.body, lineHeight: 24 },
+  fieldLabelRow: { flexDirection: 'row', alignItems: 'center', gap: space.xs, marginTop: space.xs },
+  fieldLabelText: { color: colors.muted, fontSize: type.label, fontWeight: '600' },
   stat: {
     flexGrow: 1,
     flexBasis: '47%',

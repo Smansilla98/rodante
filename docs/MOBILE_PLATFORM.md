@@ -44,8 +44,8 @@ Expo SecureStore.
 | Campo | Valor |
 |-------|-------|
 | Nombre | Rodante |
-| Android package | `com.rodante.app` |
-| iOS bundle | `com.rodante.app` |
+| Android package | `com.rodant.app` |
+| iOS bundle | `com.rodant.app` |
 | Scheme | `rodante` |
 
 ## Auth móvil

@@ -9,7 +9,16 @@ import { canWrite } from '../../../src/auth/permissions';
 import { colors, radius, space, touchTarget, type } from '../../../src/theme';
 import { PageHeader } from '../../../src/ui/PageHeader';
 import { WorkOrderStatusBadge } from '../../../src/ui/StatusBadge';
-import { Card, Chip, EmptyState, ErrorState, Field, LoadingState, PrimaryButton } from '../../../src/ui/primitives';
+import {
+  Card,
+  Chip,
+  EmptyState,
+  ErrorState,
+  Field,
+  FieldLabelWithInfo,
+  LoadingState,
+  PrimaryButton,
+} from '../../../src/ui/primitives';
 
 export default function WorkOrdersScreen() {
   const router = useRouter();
@@ -184,7 +193,10 @@ function NewWorkOrderModal({
           <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: space.sm }}>
             <Text style={styles.rowTitle}>Nueva orden de trabajo</Text>
 
-            <Text style={styles.fieldLabel}>Tipo</Text>
+            <FieldLabelWithInfo
+              label="Tipo"
+              info="La cubierta tiene que estar en stock para poder mandarla a Recapado o Reparación. Desde el celular se elige una por vez — para mandar varias juntas a Recapado, usá la web."
+            />
             <View style={styles.chipRow}>
               <Chip label="Reparación" selected={type === 'REPARACION'} onPress={() => setType('REPARACION')} />
               <Chip label="Recapado" selected={type === 'RECAPADO'} onPress={() => setType('RECAPADO')} />
