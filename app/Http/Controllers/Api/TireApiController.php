@@ -14,6 +14,7 @@ use App\Http\Requests\StoreTireMeasurementRequest;
 use App\Http\Requests\UpdateTireRequest;
 use App\Models\FleetUnit;
 use App\Models\Tire;
+use App\Services\FleetUnitService;
 use App\Services\IncidentService;
 use App\Services\MeasurementService;
 use App\Models\UnitPosition;
@@ -380,6 +381,56 @@ class TireApiController extends Controller
         } catch (DomainException $e) {
             return response()->json(['message' => $e->getMessage()], 422);
         }
+    }
+
+    public function storeUnit(Request $request, FleetUnitService $units)
+    {
+        $unit = $units->create($request->all(), $request->user());
+
+        return response()->json($unit->load('type', 'configuration', 'fleet', 'base'), 201);
+    }
+
+    public function updateUnit(Request $request, FleetUnit $unit, FleetUnitService $units)
+    {
+        $this->authorize('manage', $unit);
+        AccessScope::abortUnlessUnit($request->user(), $unit->id);
+        $unit = $units->update($unit, $request->all(), $request->user());
+
+        return response()->json($unit->load('type', 'configuration', 'fleet', 'base'));
+    }
+
+    public function destroyUnit(Request $request, FleetUnit $unit, FleetUnitService $units)
+    {
+        $this->authorize('manage', $unit);
+        AccessScope::abortUnlessUnit($request->user(), $unit->id);
+        $result = $units->remove($unit);
+        if ($result['blocked']) {
+            return response()->json(['message' => $result['message']], 422);
+        }
+
+        return response()->json($result);
+    }
+
+    public function unitHistory(Request $request, FleetUnit $unit, ReportService $reports)
+    {
+        $this->authorizeVisible('view', $unit);
+        AccessScope::abortUnlessUnit($request->user(), $unit->id);
+
+        return response()->json([
+            'data' => $reports->unitHistory($unit)->map(fn ($movement) => [
+                'id' => $movement->id,
+                'type' => $movement->type?->value,
+                'type_label' => $movement->type?->label(),
+                'occurred_at' => $movement->occurred_at,
+                'tire_id' => $movement->tire_id,
+                'tire_number' => $movement->tire?->individual_number,
+                'from_position' => $movement->fromPosition?->code,
+                'to_position' => $movement->toPosition?->code,
+                'km_delta' => $movement->km_delta,
+                'notes' => $movement->notes,
+                'user_id' => $movement->user_id,
+            ])->values(),
+        ]);
     }
 
     public function retire(RetireTireRequest $request, Tire $tire, RetirementService $retirements)

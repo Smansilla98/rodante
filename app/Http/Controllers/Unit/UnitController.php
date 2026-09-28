@@ -6,7 +6,6 @@ use App\Enums\IncidentType;
 use App\Enums\TireApplication;
 use App\Enums\TireStatus;
 use App\Enums\UnitDuty;
-use App\Enums\UnitStatus;
 use App\Exceptions\DomainException;
 use App\Exceptions\SheetConflictException;
 use App\Http\Controllers\Controller;
@@ -21,6 +20,7 @@ use App\Models\UnitCoupling;
 use App\Models\UnitPosition;
 use App\Models\UnitType;
 use App\Services\ConfigurationChangeService;
+use App\Services\FleetUnitService;
 use App\Services\CouplingService;
 use App\Services\IncidentService;
 use App\Services\MeasurementService;
@@ -64,46 +64,9 @@ class UnitController extends Controller
         return view('units.create', $this->formData());
     }
 
-    public function store(Request $request)
+    public function store(Request $request, FleetUnitService $units)
     {
-        $data = $request->validate([
-            'fleet_id' => 'required|exists:fleets,id',
-            'base_id' => 'required|exists:bases,id',
-            'unit_type_id' => 'required|exists:unit_types,id',
-            'unit_configuration_id' => 'required|exists:unit_configurations,id',
-            'plate' => 'required|string|max:20|unique:fleet_units,plate',
-            'brand' => 'nullable|string|max:40',
-            'model_name' => 'nullable|string|max:40',
-            'current_odometer' => 'nullable|integer|min:0',
-            'duty' => ['nullable', Rule::enum(UnitDuty::class)],
-            'notes' => 'nullable|string',
-            'specs' => 'nullable|array',
-            'specs.capacity_l' => 'nullable|integer|min:0',
-            'specs.compartments' => 'nullable|integer|min:0|max:20',
-            'specs.material' => 'nullable|string|max:40',
-            'specs.product' => 'nullable|string|max:80',
-            'specs.suspension' => 'nullable|string|max:40',
-            'specs.tire_width' => 'nullable|in:295,385',
-        ]);
-        $type = UnitType::findOrFail($data['unit_type_id']);
-        $configuration = UnitConfiguration::findOrFail($data['unit_configuration_id']);
-        if (! $configuration->isCompatibleWith($type)) {
-            return back()->withErrors(['unit_configuration_id' => 'Esa configuración no aplica al tipo '.$type->name.'.'])->withInput();
-        }
-        $data['status'] = UnitStatus::Activa->value;
-        $data['current_odometer'] = $type->has_odometer ? ($data['current_odometer'] ?? 0) : 0;
-        $data['plate'] = strtoupper(trim($data['plate']));
-        $data['duty'] = $data['duty'] ?? null;
-        if ($type->has_odometer) {
-            $data['specs'] = null;
-        } else {
-            if (empty($data['specs']['tire_width'] ?? null)) {
-                return back()->withErrors(['specs.tire_width' => 'En tanque, semi o batea hay que indicar si lleva lineal 295 o 385.'])->withInput();
-            }
-            $data['specs'] = array_filter($data['specs'] ?? [], fn ($value) => $value !== null && $value !== '');
-            $data['specs'] = $data['specs'] ?: null;
-        }
-        $unit = FleetUnit::create($data);
+        $unit = $units->create($request->all(), $request->user());
 
         return redirect()->route('units.show', $unit)->with('success', 'Unidad creada.');
     }
@@ -555,73 +518,27 @@ class UnitController extends Controller
         ]);
     }
 
-    public function update(Request $request, FleetUnit $unit)
+    public function update(Request $request, FleetUnit $unit, FleetUnitService $units)
     {
         $this->authorizeVisible('view', $unit);
         $this->authorize('manage', $unit);
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
-        $data = $request->validate([
-            'fleet_id' => 'required|exists:fleets,id',
-            'base_id' => 'required|exists:bases,id',
-            'plate' => 'required|string|max:20|unique:fleet_units,plate,'.$unit->id,
-            'brand' => 'nullable|string|max:40',
-            'model_name' => 'nullable|string|max:40',
-            'status' => 'required|in:ACTIVA,INACTIVA,SPARE',
-            'duty' => ['nullable', Rule::enum(UnitDuty::class)],
-            'notes' => 'nullable|string',
-            'specs' => 'nullable|array',
-            'specs.capacity_l' => 'nullable|integer|min:0',
-            'specs.compartments' => 'nullable|integer|min:0|max:20',
-            'specs.material' => 'nullable|string|max:40',
-            'specs.product' => 'nullable|string|max:80',
-            'specs.suspension' => 'nullable|string|max:40',
-            'specs.tire_width' => 'nullable|in:295,385',
-        ]);
-        $data['plate'] = strtoupper(trim($data['plate']));
-        if ($unit->hasOdometer()) {
-            $data['specs'] = null;
-        } else {
-            if (empty($data['specs']['tire_width'] ?? null)) {
-                return back()->withErrors(['specs.tire_width' => 'En tanque, semi o batea hay que indicar si lleva lineal 295 o 385.'])->withInput();
-            }
-            $data['specs'] = array_filter($data['specs'] ?? [], fn ($value) => $value !== null && $value !== '');
-            $data['specs'] = $data['specs'] ?: null;
-        }
-        $unit->update($data);
+        $units->update($unit, $request->all(), $request->user());
 
         return redirect()->route('units.show', $unit)->with('success', 'Unidad actualizada.');
     }
 
-    public function destroy(Request $request, FleetUnit $unit)
+    public function destroy(Request $request, FleetUnit $unit, FleetUnitService $units)
     {
         $this->authorizeVisible('view', $unit);
         $this->authorize('manage', $unit);
         AccessScope::abortUnlessUnit($request->user(), $unit->id);
-        if ($unit->locations()->exists()) {
-            return back()->withErrors(['delete' => 'Retirá las cubiertas antes de eliminar la unidad.']);
+        $result = $units->remove($unit);
+        if ($result['blocked']) {
+            return back()->withErrors(['delete' => $result['message']]);
         }
-        $open = UnitCoupling::query()
-            ->where(function ($query) use ($unit) {
-                $query->where('tractor_id', $unit->id)->orWhere('trailer_id', $unit->id);
-            })
-            ->whereNull('uncoupled_at')
-            ->exists();
-        if ($open) {
-            return back()->withErrors(['delete' => 'Desacoplá la unidad antes de eliminarla.']);
-        }
-        $history = UnitCoupling::query()
-            ->where(function ($query) use ($unit) {
-                $query->where('tractor_id', $unit->id)->orWhere('trailer_id', $unit->id);
-            })
-            ->exists();
-        if ($history) {
-            $unit->update(['status' => UnitStatus::Inactiva]);
 
-            return redirect()->route('units.index')->with('success', 'La unidad tiene historial: quedó inactiva.');
-        }
-        $unit->delete();
-
-        return redirect()->route('units.index')->with('success', 'Unidad eliminada.');
+        return redirect()->route('units.index')->with('success', $result['message']);
     }
 
     private function slotMap(FleetUnit $unit, Collection $layout, PositionFitService $fit): array

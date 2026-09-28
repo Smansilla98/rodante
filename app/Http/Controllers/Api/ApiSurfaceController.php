@@ -7,11 +7,19 @@ use App\Exceptions\DomainException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreWorkOrderRequest;
 use App\Models\Base;
+use App\Models\Fleet;
+use App\Models\FleetUnit;
 use App\Models\InventorySession;
 use App\Models\MovementReason;
 use App\Models\RetreadShop;
 use App\Models\Supplier;
 use App\Models\Tire;
+use App\Models\UnitConfiguration;
+use App\Models\UnitType;
+use App\Models\User;
+use App\Services\ReportService;
+use App\Services\SearchService;
+use App\Services\UserAdminService;
 use App\Models\TireBrand;
 use App\Models\TireModel;
 use App\Models\TireSize;
@@ -55,11 +63,27 @@ class ApiSurfaceController extends Controller
         AccessScope::inventorySessions($inventoryQuery, $user);
         $openInventorySessions = (clone $inventoryQuery)->whereNotIn('status', ['CLOSED', 'CANCELLED'])->count();
 
+        $unitQuery = FleetUnit::query();
+        AccessScope::units($unitQuery, $user);
+
+        $byCondition = (clone $tireQuery)
+            ->select('condition', DB::raw('count(*) as total'))
+            ->groupBy('condition')
+            ->pluck('total', 'condition');
+
+        $recapInShop = (clone $workOrderQuery)
+            ->where('type', 'RECAPADO')
+            ->whereIn('status', ['ABIERTA', 'EN_TALLER'])
+            ->count();
+
         return response()->json([
             'tires_total' => (int) $byStatus->sum(),
             'tires_by_status' => $byStatus,
+            'tires_by_condition' => $byCondition,
+            'units_total' => $unitQuery->count(),
             'open_work_orders' => $openWorkOrders,
             'open_inventory_sessions' => $openInventorySessions,
+            'recap_in_shop' => $recapInShop,
         ]);
     }
 
@@ -379,5 +403,111 @@ class ApiSurfaceController extends Controller
         return $tire
             ? response()->json($tire)
             : response()->json(['message' => 'Neumático no encontrado.'], 404);
+    }
+
+    public function search(Request $request, SearchService $search): JsonResponse
+    {
+        $data = $request->validate(['q' => 'required|string|max:80']);
+        [$tires, $units] = $search->hits($request->user(), trim($data['q']), 20);
+
+        return response()->json([
+            'tires' => $tires->map(fn (Tire $tire) => [
+                'id' => $tire->id,
+                'individual_number' => $tire->individual_number,
+                'status' => $tire->status,
+                'display_condition' => $tire->display_condition,
+                'dot' => $tire->dot,
+                'brand' => $tire->brand?->name,
+                'model' => $tire->model?->code,
+                'plate' => $tire->currentLocation?->unit?->plate,
+            ])->values(),
+            'units' => $units->map(fn (FleetUnit $unit) => [
+                'id' => $unit->id,
+                'plate' => $unit->plate,
+                'status' => $unit->status,
+                'type' => $unit->type?->name,
+                'fleet' => $unit->fleet?->name,
+            ])->values(),
+        ]);
+    }
+
+    public function reportsSummary(Request $request, ReportService $reports): JsonResponse
+    {
+        $user = $request->user();
+        $costs = $reports->costByUnit($user);
+        if (! AccessScope::seesEverything($user)) {
+            $visible = FleetUnit::query();
+            AccessScope::units($visible, $user);
+            $ids = $visible->pluck('id');
+            $costs = $costs->filter(fn ($row) => $ids->contains($row->fleet_unit_id))->values();
+        }
+
+        return response()->json([
+            'cost_by_unit' => $costs->take(8)->values(),
+        ]);
+    }
+
+    public function unitOptions(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $fleets = Fleet::query()->where('is_active', true)->orderBy('name');
+        $bases = Base::query()->where('is_active', true)->orderBy('name');
+        if (! AccessScope::seesEverything($user)) {
+            $fleetIds = AccessScope::fleetIds($user);
+            $baseIds = AccessScope::visibleBaseIds($user);
+            $fleets->whereIn('id', $fleetIds ?: [0]);
+            $bases->whereIn('id', $baseIds ?: [0]);
+        }
+
+        return response()->json([
+            'fleets' => $fleets->get(['id', 'name']),
+            'bases' => $bases->get(['id', 'name']),
+            'types' => UnitType::query()->where('is_active', true)->orderBy('id')->get(['id', 'code', 'name', 'has_odometer']),
+            'configurations' => UnitConfiguration::query()->where('is_active', true)->orderBy('id')->get(['id', 'code', 'name', 'compatible_types']),
+            'duties' => collect(\App\Enums\UnitDuty::cases())->map(fn ($duty) => [
+                'value' => $duty->value,
+                'label' => $duty->label(),
+            ])->values(),
+        ]);
+    }
+
+    public function users(Request $request): JsonResponse
+    {
+        $this->authorize('viewAny', User::class);
+
+        return response()->json(
+            User::query()
+                ->with('fleets:id,name', 'bases:id,name')
+                ->where('company_id', $request->user()->company_id)
+                ->orderBy('name')
+                ->get()
+        );
+    }
+
+    public function storeUser(Request $request, UserAdminService $users): JsonResponse
+    {
+        $this->authorize('viewAny', User::class);
+
+        return response()->json($users->create($request->all(), $request->user()), 201);
+    }
+
+    public function updateUser(Request $request, User $user, UserAdminService $users): JsonResponse
+    {
+        abort_unless((int) $user->company_id === (int) $request->user()->company_id, 404);
+        $this->authorize('manage', $user);
+
+        return response()->json($users->update($user, $request->all(), $request->user()));
+    }
+
+    public function destroyUser(Request $request, User $user, UserAdminService $users): JsonResponse
+    {
+        abort_unless((int) $user->company_id === (int) $request->user()->company_id, 404);
+        $this->authorize('manage', $user);
+        $result = $users->remove($user, $request->user());
+        if ($result['blocked']) {
+            return response()->json(['message' => $result['message']], 422);
+        }
+
+        return response()->json($result);
     }
 }

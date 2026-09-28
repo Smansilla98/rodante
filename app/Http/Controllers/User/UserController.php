@@ -7,19 +7,18 @@ use App\Http\Controllers\Controller;
 use App\Models\Base;
 use App\Models\Fleet;
 use App\Models\User;
+use App\Services\UserAdminService;
 use App\Support\AccessScope;
-use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
     public function index(Request $request)
     {
         $this->authorize('viewAny', User::class);
-        $users = User::with('fleets', 'bases')->orderBy('name');
-        AccessScope::applyCompany($users, $request->user());
+        $users = User::with('fleets', 'bases')
+            ->where('company_id', $request->user()->company_id)
+            ->orderBy('name');
         $fleets = Fleet::orderBy('name');
         AccessScope::applyCompany($fleets, $request->user());
         $bases = Base::orderBy('name');
@@ -33,83 +32,32 @@ class UserController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, UserAdminService $users)
     {
         $this->authorize('viewAny', User::class);
-        $data = $this->validated($request);
-        $user = User::create([
-            'company_id' => $request->user()->company_id,
-            'name' => $data['name'],
-            'username' => $data['username'],
-            'email' => $data['email'] ?? null,
-            'password' => $data['password'],
-            'role' => $data['role'],
-            'is_active' => true,
-        ]);
-        $user->fleets()->sync($data['fleet_ids'] ?? []);
-        $user->bases()->sync($data['base_ids'] ?? []);
+        $users->create($request->all(), $request->user());
 
         return back()->with('success', 'Usuario creado.');
     }
 
-    public function update(Request $request, User $user)
+    public function update(Request $request, User $user, UserAdminService $users)
     {
         $this->authorize('manage', $user);
         abort_unless((int) $user->company_id === (int) $request->user()->company_id, 404);
-        $data = $this->validated($request, $user);
-        $payload = [
-            'name' => $data['name'],
-            'username' => $data['username'],
-            'email' => $data['email'] ?? null,
-            'role' => $data['role'],
-            'is_active' => $request->boolean('is_active'),
-        ];
-        if (! empty($data['password'])) {
-            $payload['password'] = $data['password'];
-        }
-        $user->update($payload);
-        $user->fleets()->sync($data['fleet_ids'] ?? []);
-        $user->bases()->sync($data['base_ids'] ?? []);
+        $users->update($user, $request->all(), $request->user());
 
         return back()->with('success', 'Usuario actualizado.');
     }
 
-    public function destroy(Request $request, User $user)
+    public function destroy(Request $request, User $user, UserAdminService $users)
     {
         $this->authorize('manage', $user);
         abort_unless((int) $user->company_id === (int) $request->user()->company_id, 404);
-        if ($user->is($request->user())) {
-            return back()->withErrors(['delete' => 'No podés eliminar tu propio usuario.']);
-        }
-        try {
-            $user->fleets()->detach();
-            $user->bases()->detach();
-            $user->delete();
-        } catch (QueryException) {
-            $user->update(['is_active' => false]);
-
-            return back()->with('success', 'El usuario tiene historial: quedó inactivo para conservarlo.');
+        $result = $users->remove($user, $request->user());
+        if ($result['blocked']) {
+            return back()->withErrors(['delete' => $result['message']]);
         }
 
-        return back()->with('success', 'Usuario eliminado.');
-    }
-
-    private function validated(Request $request, ?User $user = null): array
-    {
-        $password = $user
-            ? ['nullable', 'string', Password::defaults()]
-            : ['required', 'string', Password::defaults()];
-
-        return $request->validate([
-            'name' => 'required|string|max:80',
-            'username' => ['required', 'string', 'max:40', Rule::unique('users', 'username')->where(fn ($q) => $q->where('company_id', $request->user()->company_id))->ignore($user)],
-            'email' => ['nullable', 'email', Rule::unique('users', 'email')->where(fn ($q) => $q->where('company_id', $request->user()->company_id))->ignore($user)],
-            'password' => $password,
-            'role' => ['required', Rule::enum(UserRole::class)],
-            'fleet_ids' => 'array',
-            'fleet_ids.*' => 'exists:fleets,id',
-            'base_ids' => 'array',
-            'base_ids.*' => 'exists:bases,id',
-        ]);
+        return back()->with('success', $result['message']);
     }
 }

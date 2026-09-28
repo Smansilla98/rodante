@@ -38,8 +38,19 @@ Route::prefix('v1')->group(function () {
         Route::get('/tires/{tire}/prediction', [TireApiController::class, 'prediction']);
         Route::get('/tires/{tire}/life-report', [TireApiController::class, 'lifeReport']);
         Route::get('/telemetry', [TireApiController::class, 'telemetry'])->middleware('capability:retire');
+        Route::get('/search', [ApiSurfaceController::class, 'search']);
+        Route::get('/reports/summary', [ApiSurfaceController::class, 'reportsSummary']);
+        Route::get('/unit-options', [ApiSurfaceController::class, 'unitOptions']);
+        Route::get('/users', [ApiSurfaceController::class, 'users'])->middleware('capability:abm');
+        Route::post('/users', [ApiSurfaceController::class, 'storeUser'])->middleware('capability:abm');
+        Route::put('/users/{user}', [ApiSurfaceController::class, 'updateUser'])->middleware('capability:abm');
+        Route::delete('/users/{user}', [ApiSurfaceController::class, 'destroyUser'])->middleware('capability:abm');
         Route::get('/units', [TireApiController::class, 'units']);
+        Route::post('/units', [TireApiController::class, 'storeUnit'])->middleware('capability:write');
+        Route::put('/units/{unit}', [TireApiController::class, 'updateUnit'])->middleware('capability:abm');
+        Route::delete('/units/{unit}', [TireApiController::class, 'destroyUnit'])->middleware('capability:abm');
         Route::get('/units/{unit}/layout', [TireApiController::class, 'unitLayout']);
+        Route::get('/units/{unit}/history', [TireApiController::class, 'unitHistory']);
         Route::get('/units/{unit}/positions/{position}/candidates', [TireApiController::class, 'positionCandidates']);
 
         Route::post('/tires/{tire}/recap-wear', [TireApiController::class, 'setRecapWear'])->middleware('capability:write');
