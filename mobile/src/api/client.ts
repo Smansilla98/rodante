@@ -17,6 +17,26 @@ import type {
   WorkOrder,
 } from './types';
 
+/** Mensaje útil para la persona que opera. Si el backend ya explicó el error, se respeta. */
+export function messageForStatus(
+  status: number,
+  body: { message?: string; errors?: Record<string, string[]> },
+): string {
+  const first = body.errors ? Object.values(body.errors).flat().find((item) => item && item.trim() !== '') : undefined;
+  if (first) return first;
+  if (status === 403) return 'No tenés permisos para realizar esta operación.';
+  if (status === 404) return 'No encontramos ese registro.';
+  if (status === 409) return body.message?.trim() || 'El neumático ya fue modificado por otro usuario.';
+  if (status === 422) {
+    const msg = body.message?.trim();
+    if (msg && !/^the given data was invalid\.?$/i.test(msg)) return msg;
+    return 'Revisá los datos ingresados.';
+  }
+  if (status === 429) return 'Demasiados intentos. Esperá un momento y reintentá.';
+  if (status >= 500) return 'El servidor no pudo completar la operación. Reintentá.';
+  return body.message?.trim() || `Error ${status}`;
+}
+
 export class ApiError extends Error {
   status: number;
   code?: string;
@@ -88,7 +108,7 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
 
   if (!res.ok) {
     const body = json as { message?: string; errors?: Record<string, string[]> };
-    throw new ApiError(body.message ?? `Error ${res.status}`, res.status, undefined, body.errors);
+    throw new ApiError(messageForStatus(res.status, body), res.status, undefined, body.errors);
   }
 
   return json as T;
@@ -332,4 +352,33 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+
+  search: (q: string) =>
+    apiRequest<import('./types').SearchPayload>(`/search?q=${encodeURIComponent(q)}`),
+
+  reportsSummary: () => apiRequest<import('./types').ReportsSummaryPayload>('/reports/summary'),
+
+  unitOptions: () => apiRequest<import('./types').UnitOptionsPayload>('/unit-options'),
+
+  createUnit: (body: import('./types').UnitWritePayload) =>
+    apiRequest<FleetUnit>('/units', { method: 'POST', body: JSON.stringify(body) }),
+
+  updateUnit: (id: number, body: import('./types').UnitWritePayload) =>
+    apiRequest<FleetUnit>(`/units/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+
+  deleteUnit: (id: number) =>
+    apiRequest<{ deleted: boolean; blocked: boolean; message: string }>(`/units/${id}`, { method: 'DELETE' }),
+
+  unitHistory: (id: number) => apiRequest<import('./types').UnitHistoryPayload>(`/units/${id}/history`),
+
+  users: () => apiRequest<import('./types').DirectoryUser[]>('/users'),
+
+  createUser: (body: import('./types').UserWritePayload) =>
+    apiRequest<import('./types').DirectoryUser>('/users', { method: 'POST', body: JSON.stringify(body) }),
+
+  updateUser: (id: number, body: import('./types').UserWritePayload) =>
+    apiRequest<import('./types').DirectoryUser>(`/users/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+
+  deleteUser: (id: number) =>
+    apiRequest<{ deleted: boolean; blocked: boolean; message: string }>(`/users/${id}`, { method: 'DELETE' }),
 };

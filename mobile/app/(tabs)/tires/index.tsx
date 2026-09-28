@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { api, ApiError } from '../../../src/api/client';
 import type { Base, Tire, TireCatalogPayload } from '../../../src/api/types';
 import { useAuth } from '../../../src/auth/AuthContext';
@@ -43,10 +43,12 @@ function paramsForQuickFilter(f: QuickFilter): { status?: string; condition?: st
 
 export default function TiresListScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ filter?: string }>();
   const { user } = useAuth();
   const writeAllowed = canWrite(user?.role);
 
-  const [quick, setQuick] = useState<QuickFilter>('ALL');
+  const initialFilter = QUICK_FILTERS.some((item) => item.key === params.filter) ? (params.filter as QuickFilter) : 'ALL';
+  const [quick, setQuick] = useState<QuickFilter>(initialFilter);
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [catalog, setCatalog] = useState<TireCatalogPayload | null>(null);
@@ -58,6 +60,12 @@ export default function TiresListScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+
+  useEffect(() => {
+    if (QUICK_FILTERS.some((item) => item.key === params.filter)) {
+      setQuick(params.filter as QuickFilter);
+    }
+  }, [params.filter]);
 
   useEffect(() => {
     void Promise.all([api.tireCatalog(), api.bases()])

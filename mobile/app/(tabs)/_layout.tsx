@@ -86,6 +86,10 @@ export default function TabsLayout() {
       />
 
       {/* Rutas alcanzables desde "Más" — ocultas de la barra inferior. */}
+      <Tabs.Screen name="scan" options={{ href: null }} />
+      <Tabs.Screen name="stock" options={{ href: null }} />
+      <Tabs.Screen name="reports" options={{ href: null }} />
+      <Tabs.Screen name="users" options={{ href: null }} />
       <Tabs.Screen name="work-orders" options={{ href: null }} />
       <Tabs.Screen name="inventory-sessions" options={{ href: null }} />
       <Tabs.Screen name="telemetry" options={{ href: null }} />

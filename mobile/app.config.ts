@@ -39,6 +39,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: 'com.rodant.app',
     infoPlist: {
       ITSAppUsesNonExemptEncryption: false,
+      NSCameraUsageDescription: 'Rodante usa la cámara para escanear códigos QR de neumáticos y unidades.',
     },
   },
   android: {
@@ -52,6 +53,13 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   plugins: [
     'expo-router',
     'expo-secure-store',
+    [
+      'expo-camera',
+      {
+        cameraPermission: 'Rodante usa la cámara para escanear códigos QR de neumáticos y unidades.',
+        barcodeScannerEnabled: true,
+      },
+    ],
     'expo-font',
     [
       'expo-splash-screen',

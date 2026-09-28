@@ -70,32 +70,52 @@ export default function DashboardScreen() {
             </Card>
 
             <View style={styles.miniRow}>
-              <Pressable
-                style={({ pressed }) => [styles.miniTile, pressed && styles.miniTilePressed]}
+              <MiniTile
+                value={data.open_work_orders}
+                label="OTs abiertas"
                 onPress={() => router.push('/(tabs)/work-orders' as Href)}
-                accessibilityRole="button"
-                accessibilityLabel={`${data.open_work_orders} órdenes de trabajo abiertas`}
-              >
-                <Text style={styles.miniValue}>{data.open_work_orders}</Text>
-                <Text style={styles.miniLabel}>OTs abiertas</Text>
-              </Pressable>
-              <Pressable
-                style={({ pressed }) => [styles.miniTile, pressed && styles.miniTilePressed]}
+              />
+              <MiniTile
+                value={data.units_total ?? 0}
+                label="Unidades"
+                onPress={() => router.push('/(tabs)/units' as Href)}
+              />
+            </View>
+            <View style={styles.miniRow}>
+              <MiniTile
+                value={data.tires_by_status.EN_REPARACION ?? 0}
+                label="A reparar"
+                onPress={() => router.push('/(tabs)/stock' as Href)}
+              />
+              <MiniTile
+                value={data.recap_in_shop ?? 0}
+                label="En recapado"
+                onPress={() => router.push('/(tabs)/work-orders' as Href)}
+              />
+            </View>
+            <View style={styles.miniRow}>
+              <MiniTile
+                value={data.tires_by_status.STOCK ?? 0}
+                label="En stock"
+                onPress={() => router.push('/(tabs)/stock' as Href)}
+              />
+              <MiniTile
+                value={data.open_inventory_sessions}
+                label="Inventarios"
                 onPress={() => router.push('/(tabs)/inventory-sessions' as Href)}
-                accessibilityRole="button"
-                accessibilityLabel={`${data.open_inventory_sessions} inventarios en curso`}
-              >
-                <Text style={styles.miniValue}>{data.open_inventory_sessions}</Text>
-                <Text style={styles.miniLabel}>Inventarios en curso</Text>
-              </Pressable>
+              />
             </View>
           </>
         ) : null}
 
         <Text style={styles.section}>Accesos rápidos</Text>
         <View style={{ gap: space.sm }}>
+          <QuickLink icon="qr-code-outline" label="Escanear QR" onPress={() => router.push('/(tabs)/scan' as Href)} />
           {writeAllowed ? (
             <QuickLink icon="add-circle-outline" label="Nuevo neumático" onPress={() => router.push('/(tabs)/tires/new')} />
+          ) : null}
+          {writeAllowed ? (
+            <QuickLink icon="bus-outline" label="Nueva unidad" onPress={() => router.push('/(tabs)/units/new' as Href)} />
           ) : null}
           <QuickLink icon="search-outline" label="Buscar neumático" onPress={() => router.push('/(tabs)/lookup')} />
           <QuickLink icon="ellipse-outline" label="Neumáticos" onPress={() => router.push('/(tabs)/tires')} />
@@ -113,6 +133,20 @@ export default function DashboardScreen() {
         </View>
       </ScrollView>
     </View>
+  );
+}
+
+function MiniTile({ value, label, onPress }: { value: number; label: string; onPress: () => void }) {
+  return (
+    <Pressable
+      style={({ pressed }) => [styles.miniTile, pressed && styles.miniTilePressed]}
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${value} ${label}`}
+    >
+      <Text style={styles.miniValue}>{value}</Text>
+      <Text style={styles.miniLabel}>{label}</Text>
+    </Pressable>
   );
 }
 

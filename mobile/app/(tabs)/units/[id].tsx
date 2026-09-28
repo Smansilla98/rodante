@@ -1,16 +1,17 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, type Href } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { api, ApiError } from '../../../src/api/client';
 import type {
   MovementReason,
   PositionCandidate,
+  UnitHistoryEvent,
   UnitLayoutEntry,
   UnitLayoutPayload,
 } from '../../../src/api/types';
 import { useAuth } from '../../../src/auth/AuthContext';
-import { canWrite } from '../../../src/auth/permissions';
+import { canManageAbm, canWrite } from '../../../src/auth/permissions';
 import { colors, radius, space, touchTarget, type, UNIT_DUTY_LABEL } from '../../../src/theme';
 import { UnitStatusBadge } from '../../../src/ui/StatusBadge';
 import {
@@ -54,6 +55,8 @@ export default function UnitDetailScreen() {
   const unitId = Number(id);
   const { user } = useAuth();
   const writeAllowed = canWrite(user?.role);
+  const canEditUnit = canManageAbm(user?.role);
+  const [history, setHistory] = useState<UnitHistoryEvent[]>([]);
 
   const [payload, setPayload] = useState<UnitLayoutPayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -65,7 +68,9 @@ export default function UnitDetailScreen() {
   const load = useCallback(async () => {
     setError(null);
     try {
-      setPayload(await api.unitLayout(unitId));
+      const [layout, events] = await Promise.all([api.unitLayout(unitId), api.unitHistory(unitId)]);
+      setPayload(layout);
+      setHistory(events.data);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : 'No se pudo cargar la unidad');
     } finally {
@@ -207,6 +212,17 @@ export default function UnitDetailScreen() {
               />
             ) : null}
           </View>
+          {canEditUnit ? (
+            <View style={{ marginTop: space.md }}>
+              <PrimaryButton
+                title="Editar unidad"
+                icon="create-outline"
+                variant="outline"
+                onPress={() => router.push(`/(tabs)/units/edit?unitId=${unit.id}` as Href)}
+                block
+              />
+            </View>
+          ) : null}
         </Card>
 
         <Card>
@@ -247,6 +263,32 @@ export default function UnitDetailScreen() {
             </View>
           </Card>
         ) : null}
+
+        <Card>
+          <SectionLabel>Historial de movimientos</SectionLabel>
+          {history.length === 0 ? (
+            <Text style={styles.sub}>Todavía no hay movimientos registrados para esta unidad.</Text>
+          ) : (
+            history.map((event) => (
+              <Pressable
+                key={event.id}
+                onPress={() => {
+                  if (event.tire_id) router.push(`/(tabs)/tires/${event.tire_id}`);
+                }}
+                style={styles.historyRow}
+                accessibilityRole="button"
+                accessibilityLabel={event.type_label ?? 'Movimiento'}
+              >
+                <Text style={styles.historyTitle}>{event.type_label ?? event.type ?? 'Movimiento'}</Text>
+                <Text style={styles.sub}>
+                  {event.tire_number ? `Nº ${event.tire_number}` : 'Sin cubierta'}
+                  {event.from_position ? ` · ${event.from_position}` : ''}
+                  {event.to_position ? ` → ${event.to_position}` : ''}
+                </Text>
+              </Pressable>
+            ))
+          )}
+        </Card>
       </ScrollView>
 
       <PositionSheet
@@ -757,6 +799,8 @@ const styles = StyleSheet.create({
   headRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { color: colors.ink, fontSize: type.title, fontWeight: '700' },
   sub: { color: colors.muted, fontSize: type.caption, marginTop: space.xs },
+  historyRow: { paddingVertical: space.sm, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.line },
+  historyTitle: { color: colors.ink, fontSize: type.body, fontWeight: '700' },
   fieldLabel: { color: colors.muted, marginBottom: 8, fontSize: type.label, fontWeight: '600' },
   errorText: { color: colors.danger, fontSize: type.caption, fontWeight: '600' },
   chipRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs },

@@ -134,6 +134,7 @@ export interface FleetUnit {
   status: UnitStatusValue;
   duty: UnitDutyValue;
   notes?: string | null;
+  specs?: { tire_width?: number | null } | null;
   type?: { id: number; code: string; name: string; has_odometer: boolean } | null;
   configuration?: UnitConfiguration | null;
   fleet?: { id: number; name: string } | null;
@@ -420,8 +421,119 @@ export interface TelemetryPayload {
 export interface DashboardPayload {
   tires_total: number;
   tires_by_status: Record<string, number>;
+  tires_by_condition?: Record<string, number>;
+  units_total?: number;
   open_work_orders: number;
   open_inventory_sessions: number;
+  recap_in_shop?: number;
+}
+
+export interface SearchTireHit {
+  id: number;
+  individual_number: number;
+  status: TireStatusValue;
+  display_condition?: string | null;
+  dot?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  plate?: string | null;
+}
+
+export interface SearchUnitHit {
+  id: number;
+  plate: string;
+  status: UnitStatusValue;
+  type?: string | null;
+  fleet?: string | null;
+}
+
+export interface SearchPayload {
+  tires: SearchTireHit[];
+  units: SearchUnitHit[];
+}
+
+export interface UnitOptionRef {
+  id: number;
+  name: string;
+  code?: string;
+  has_odometer?: boolean;
+  compatible_types?: string[] | null;
+}
+
+export interface UnitOptionsPayload {
+  fleets: UnitOptionRef[];
+  bases: UnitOptionRef[];
+  types: UnitOptionRef[];
+  configurations: UnitOptionRef[];
+  duties: Array<{ value: string; label: string }>;
+}
+
+export interface UnitWritePayload {
+  fleet_id: number;
+  base_id: number;
+  plate: string;
+  brand?: string;
+  model_name?: string;
+  duty?: string | null;
+  notes?: string;
+  status?: UnitStatusValue;
+  unit_type_id?: number;
+  unit_configuration_id?: number;
+  current_odometer?: number;
+  specs?: { tire_width?: 295 | 385 | null };
+}
+
+export interface UnitHistoryEvent {
+  id: number;
+  type: string | null;
+  type_label: string | null;
+  occurred_at: string | null;
+  tire_id: number | null;
+  tire_number: number | null;
+  from_position: string | null;
+  to_position: string | null;
+  km_delta: number | null;
+  notes: string | null;
+  user_id: number | null;
+}
+
+export interface UnitHistoryPayload {
+  data: UnitHistoryEvent[];
+}
+
+export interface CostByUnitRow {
+  fleet_unit_id: number;
+  plate: string;
+  total_amount: number;
+  entries_count: number;
+  tire_count: number;
+}
+
+export interface ReportsSummaryPayload {
+  cost_by_unit: CostByUnitRow[];
+}
+
+export interface DirectoryUser {
+  id: number;
+  name: string;
+  username: string;
+  email?: string | null;
+  role: UserRole;
+  is_active: boolean;
+  company_id: number;
+  fleets?: Array<{ id: number; name: string }>;
+  bases?: Array<{ id: number; name: string }>;
+}
+
+export interface UserWritePayload {
+  name: string;
+  username: string;
+  email?: string | null;
+  password?: string;
+  role: UserRole;
+  is_active?: boolean;
+  fleet_ids?: number[];
+  base_ids?: number[];
 }
 
 export interface LookupResult extends Tire {}

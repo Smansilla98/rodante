@@ -1,7 +1,7 @@
 import { useRouter, type Href } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useAuth } from '../../src/auth/AuthContext';
-import { canViewTelemetry } from '../../src/auth/permissions';
+import { canManageAbm, canViewTelemetry } from '../../src/auth/permissions';
 import { colors, radius, space, touchTarget, type } from '../../src/theme';
 import { PageHeader } from '../../src/ui/PageHeader';
 import { Icon } from '../../src/ui/primitives';
@@ -11,7 +11,7 @@ type MenuItem = {
   label: string;
   hint: string;
   icon: keyof typeof import('@expo/vector-icons').Ionicons.glyphMap;
-  href: Href;
+  href: string;
 };
 
 export default function MoreScreen() {
@@ -40,7 +40,32 @@ export default function MoreScreen() {
             label: 'Telemetría',
             hint: 'Métricas de la flota',
             icon: 'pulse-outline' as const,
-            href: '/(tabs)/telemetry' as Href,
+            href: '/(tabs)/telemetry',
+          },
+        ]
+      : []),
+    {
+      key: 'stock',
+      label: 'Stock',
+      hint: 'Neumáticos por estado',
+      icon: 'layers-outline',
+      href: '/(tabs)/stock',
+    },
+    {
+      key: 'reports',
+      label: 'Costos por unidad',
+      hint: 'Resumen calculado en el servidor',
+      icon: 'stats-chart-outline',
+      href: '/(tabs)/reports',
+    },
+    ...(canManageAbm(user?.role)
+      ? [
+          {
+            key: 'users',
+            label: 'Usuarios',
+            hint: 'Altas, roles y activación',
+            icon: 'people-outline' as const,
+            href: '/(tabs)/users',
           },
         ]
       : []),
@@ -60,7 +85,7 @@ export default function MoreScreen() {
         {items.map((item) => (
           <Pressable
             key={item.key}
-            onPress={() => router.push(item.href)}
+            onPress={() => router.push(item.href as Href)}
             style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
             accessibilityRole="button"
             accessibilityLabel={item.label}

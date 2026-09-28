@@ -1,7 +1,7 @@
 import { Stack } from 'expo-router';
 import { colors, type } from '../../../src/theme';
 
-export default function UnitsLayout() {
+export default function UsersLayout() {
   return (
     <Stack
       screenOptions={{
@@ -9,14 +9,11 @@ export default function UnitsLayout() {
         headerStyle: { backgroundColor: colors.sidebar },
         headerTintColor: colors.ink,
         headerTitleStyle: { fontSize: type.subtitle, fontWeight: '700' },
-        headerBackTitle: 'Volver',
         contentStyle: { backgroundColor: colors.page },
       }}
     >
-      <Stack.Screen name="index" options={{ title: 'Unidades' }} />
-      <Stack.Screen name="new" options={{ title: 'Nueva unidad' }} />
-      <Stack.Screen name="edit" options={{ title: 'Editar unidad' }} />
-      <Stack.Screen name="[id]" options={{ title: 'Unidad' }} />
+      <Stack.Screen name="index" options={{ title: 'Usuarios' }} />
+      <Stack.Screen name="form" options={{ title: 'Usuario' }} />
     </Stack>
   );
 }

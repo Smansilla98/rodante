@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, type Href } from 'expo-router';
 import { api, ApiError } from '../../../src/api/client';
 import type { FleetUnit } from '../../../src/api/types';
+import { useAuth } from '../../../src/auth/AuthContext';
+import { canWrite } from '../../../src/auth/permissions';
 import { colors, radius, space, touchTarget, type } from '../../../src/theme';
 import { UnitStatusBadge } from '../../../src/ui/StatusBadge';
-import { EmptyState, ErrorState, LoadingState } from '../../../src/ui/primitives';
+import { EmptyState, ErrorState, Field, LoadingState, PrimaryButton } from '../../../src/ui/primitives';
 
 export default function UnitsListScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const writeAllowed = canWrite(user?.role);
+  const [query, setQuery] = useState('');
   const [units, setUnits] = useState<FleetUnit[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -32,12 +37,29 @@ export default function UnitsListScreen() {
 
   if (loading) return <LoadingState />;
   if (error) return <ErrorState message={error} onRetry={load} />;
-  if (units.length === 0) return <EmptyState title="Sin unidades" />;
+
+  const needle = query.trim().toLowerCase();
+  const visible = needle
+    ? units.filter((unit) =>
+        [unit.plate, unit.brand, unit.model_name, unit.type?.name, unit.base?.name]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(needle)),
+      )
+    : units;
 
   return (
     <FlatList
       style={styles.root}
-      data={units}
+      data={visible}
+      ListHeaderComponent={
+        <>
+          <Field label="Buscar" value={query} onChangeText={setQuery} placeholder="Patente, marca o base" autoCapitalize="characters" />
+          {writeAllowed ? (
+            <PrimaryButton title="Nueva unidad" icon="add-outline" onPress={() => router.push('/(tabs)/units/new' as Href)} block />
+          ) : null}
+        </>
+      }
+      ListEmptyComponent={<EmptyState title="Sin unidades" hint={needle ? 'Ninguna coincide con la búsqueda.' : undefined} />}
       keyExtractor={(u) => String(u.id)}
       contentContainerStyle={{ padding: space.lg, gap: space.sm }}
       refreshControl={

@@ -1,4 +1,4 @@
-import { apiRequest, ApiError, setUnauthorizedHandler } from '../src/api/client';
+import { apiRequest, ApiError, messageForStatus, setUnauthorizedHandler } from '../src/api/client';
 import { clearToken, getToken, setToken } from '../src/auth/storage';
 
 function jsonResponse(body: unknown, status = 200): Response {
@@ -54,7 +54,7 @@ describe('apiRequest', () => {
     );
 
     await expect(apiRequest('/tires/1/measurement', { method: 'POST' })).rejects.toMatchObject({
-      message: 'Datos inválidos.',
+      message: 'El odómetro es requerido.',
       status: 422,
       errors: { odometer: ['El odómetro es requerido.'] },
     });
@@ -81,5 +81,13 @@ describe('apiRequest', () => {
 
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).code).toBe('NETWORK');
+  });
+
+  it('maps permission and validation errors to useful messages', () => {
+    expect(messageForStatus(403, { message: 'Forbidden' })).toBe('No tenés permisos para realizar esta operación.');
+    expect(messageForStatus(422, { message: 'The given data was invalid.', errors: { plate: ['La patente ya existe.'] } })).toBe(
+      'La patente ya existe.',
+    );
+    expect(messageForStatus(409, {})).toBe('El neumático ya fue modificado por otro usuario.');
   });
 });
