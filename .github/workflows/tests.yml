@@ -43,7 +43,7 @@ jobs:
       - run: npm run build
       - run: cp .env.example .env && php artisan key:generate
       - run: mkdir -p database && touch database/database.sqlite
-      - run: php artisan migrate --force
+      - run: php artisan migrate --force && php artisan db:seed --force
         env:
           APP_ENV: local
           DB_CONNECTION: sqlite
@@ -63,7 +63,8 @@ jobs:
           CACHE_STORE: file
           QUEUE_CONNECTION: sync
           MAIL_MAILER: array
-      - run: sleep 2 && npx playwright test e2e/a11y-login.spec.ts
+      # Accesibilidad (axe) y el flujo crítico con los usuarios demo.
+      - run: sleep 2 && npx playwright test e2e/a11y-login.spec.ts e2e/critical-flow.spec.ts
         env:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:8093
 

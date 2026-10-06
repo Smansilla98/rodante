@@ -69,8 +69,11 @@ cd mobile && npm install && npm start
 ## Tests
 
 ```bash
-docker compose exec app php artisan test
+docker compose exec app php artisan test     # o `make test`
 ```
+
+SQLite en memoria por defecto; también MySQL, estilo, e2e (Playwright) y app móvil:
+ver **[docs/TESTING.md](docs/TESTING.md)**.
 
 ## Reglas que no se negocian
 
