@@ -10,6 +10,7 @@ use App\Models\Tire;
 use App\Models\TireModel;
 use App\Models\TirePurchase;
 use App\Models\WorkOrder;
+use App\Services\PurchaseService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesDomain;
 use Tests\TestCase;
@@ -104,8 +105,8 @@ class CriticalFlowE2ETest extends TestCase
             ->assertRedirect(route('dashboard'));
         $csrf = csrf_token();
 
-        [$a, $b] = app(\App\Services\PurchaseService::class)->confirm(
-            app(\App\Services\PurchaseService::class)->create([
+        [$a, $b] = app(PurchaseService::class)->confirm(
+            app(PurchaseService::class)->create([
                 'supplier_id' => Supplier::firstOrFail()->id,
                 'base_id' => Base::firstOrFail()->id,
                 'purchased_at' => now()->toDateString(),
@@ -147,8 +148,8 @@ class CriticalFlowE2ETest extends TestCase
             ->assertRedirect(route('dashboard'));
         $csrf = csrf_token();
 
-        [$tire] = app(\App\Services\PurchaseService::class)->confirm(
-            app(\App\Services\PurchaseService::class)->create([
+        [$tire] = app(PurchaseService::class)->confirm(
+            app(PurchaseService::class)->create([
                 'supplier_id' => Supplier::firstOrFail()->id,
                 'base_id' => Base::firstOrFail()->id,
                 'purchased_at' => now()->toDateString(),

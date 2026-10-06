@@ -256,6 +256,7 @@ class InventoryService
                     $fromBase = $tire->currentLocation?->base_id;
                     if ((int) $fromBase === (int) $session->base_id) {
                         $line->update(['adjustment_applied' => true]);
+
                         continue;
                     }
 

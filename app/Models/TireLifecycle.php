@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TireLifecycle extends Model
 {
-
     use BelongsToCompany;
+
     public $timestamps = false;
 
     protected $fillable = [

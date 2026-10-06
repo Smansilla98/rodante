@@ -10,8 +10,8 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class TireAssignment extends Model
 {
-
     use BelongsToCompany;
+
     protected $fillable = [
         'company_id',
         'tire_id', 'tire_lifecycle_id', 'unit_id', 'start_position_id',

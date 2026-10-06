@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\UnitDuty;
 use App\Enums\WorkOrderType;
 use App\Exceptions\DomainException;
 use App\Http\Controllers\Controller;
@@ -14,18 +15,18 @@ use App\Models\MovementReason;
 use App\Models\RetreadShop;
 use App\Models\Supplier;
 use App\Models\Tire;
-use App\Models\UnitConfiguration;
-use App\Models\UnitType;
-use App\Models\User;
-use App\Services\ReportService;
-use App\Services\SearchService;
-use App\Services\UserAdminService;
 use App\Models\TireBrand;
 use App\Models\TireModel;
 use App\Models\TireSize;
+use App\Models\UnitConfiguration;
+use App\Models\UnitType;
+use App\Models\User;
 use App\Models\WorkOrder;
 use App\Services\InventoryService;
 use App\Services\PurchaseService;
+use App\Services\ReportService;
+use App\Services\SearchService;
+use App\Services\UserAdminService;
 use App\Services\WorkOrderService;
 use App\Support\AccessScope;
 use Illuminate\Http\JsonResponse;
@@ -464,7 +465,7 @@ class ApiSurfaceController extends Controller
             'bases' => $bases->get(['id', 'name']),
             'types' => UnitType::query()->where('is_active', true)->orderBy('id')->get(['id', 'code', 'name', 'has_odometer']),
             'configurations' => UnitConfiguration::query()->where('is_active', true)->orderBy('id')->get(['id', 'code', 'name', 'compatible_types']),
-            'duties' => collect(\App\Enums\UnitDuty::cases())->map(fn ($duty) => [
+            'duties' => collect(UnitDuty::cases())->map(fn ($duty) => [
                 'value' => $duty->value,
                 'label' => $duty->label(),
             ])->values(),

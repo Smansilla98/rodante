@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\Models\AuditLog;
-use App\Models\Company;
 use App\Models\User;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
@@ -38,6 +38,6 @@ class AuditService
             return (int) $entity->company_id;
         }
 
-        return app(\App\Support\Tenancy\TenantContext::class)->id();
+        return app(TenantContext::class)->id();
     }
 }

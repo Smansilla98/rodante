@@ -6,6 +6,7 @@ use App\Exceptions\DomainException;
 use App\Http\Controllers\Controller;
 use App\Models\Base;
 use App\Models\Supplier;
+use App\Models\Tire;
 use App\Models\TirePurchase;
 use App\Models\TireSize;
 use App\Services\PurchaseService;
@@ -60,7 +61,7 @@ class PurchaseController extends Controller
         $data['items'] = collect($data['items'])->filter(fn ($item) => ! empty($item['tire_brand_id']) && ! empty($item['quantity']))->values()->all();
         foreach ($data['items'] as &$item) {
             if (! empty($item['dot'])) {
-                $normalized = \App\Models\Tire::normalizeDot($item['dot']);
+                $normalized = Tire::normalizeDot($item['dot']);
                 if ($normalized === null || ! preg_match('/^[A-Za-z0-9]{8,20}$/', $normalized)) {
                     return back()->withErrors(['items' => 'El DOT debe tener entre 8 y 20 caracteres (letras y números).'])->withInput();
                 }

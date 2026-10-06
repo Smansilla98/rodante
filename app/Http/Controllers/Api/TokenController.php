@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -18,7 +19,7 @@ class TokenController extends Controller
         ]);
 
         $username = trim($data['username']);
-        $matches = \App\Models\User::query()->where('username', $username)->get();
+        $matches = User::query()->where('username', $username)->get();
         if ($matches->isEmpty()) {
             return response()->json(['message' => 'Credenciales incorrectas.'], 422);
         }

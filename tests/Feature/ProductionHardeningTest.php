@@ -8,6 +8,7 @@ use App\Enums\TireStatus;
 use App\Enums\UserRole;
 use App\Enums\WorkOrderType;
 use App\Exceptions\DomainException;
+use App\Models\AuditLog;
 use App\Models\Base;
 use App\Models\Company;
 use App\Models\RetreadShop;
@@ -68,7 +69,7 @@ class ProductionHardeningTest extends TestCase
     public function test_audit_logs_are_immutable(): void
     {
         [$tire] = $this->purchaseTires(1, 88012);
-        $log = \App\Models\AuditLog::where('entity_type', Tire::class)->orWhere('action', 'purchase.confirmed')->first();
+        $log = AuditLog::where('entity_type', Tire::class)->orWhere('action', 'purchase.confirmed')->first();
         $this->assertNotNull($log);
 
         $this->expectException(DomainException::class);

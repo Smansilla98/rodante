@@ -65,6 +65,7 @@ class TenantContext
 
     /**
      * @template T
+     *
      * @param  callable(): T  $callback
      * @return T
      */
@@ -85,6 +86,7 @@ class TenantContext
 
     /**
      * @template T
+     *
      * @param  callable(): T  $callback
      * @return T
      */

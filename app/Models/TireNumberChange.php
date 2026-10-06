@@ -8,10 +8,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TireNumberChange extends Model
 {
-
     use BelongsToCompany;
+
     protected $fillable = [
-        'company_id','tire_id', 'from_number', 'to_number', 'user_id', 'reason'];
+        'company_id', 'tire_id', 'from_number', 'to_number', 'user_id', 'reason'];
 
     public function tire(): BelongsTo
     {

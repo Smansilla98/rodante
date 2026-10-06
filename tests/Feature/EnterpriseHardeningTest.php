@@ -2,12 +2,20 @@
 
 namespace Tests\Feature;
 
+use App\Models\Base;
 use App\Models\DocumentCounter;
 use App\Models\OdometerReading;
+use App\Models\Supplier;
+use App\Models\TireAssignment;
 use App\Models\TireAssignmentSegment;
+use App\Models\TireModel;
+use App\Services\IntegrityService;
 use App\Services\OdometerService;
+use App\Services\PurchaseService;
 use App\Services\TireOperationService;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\Concerns\CreatesDomain;
 use Tests\TestCase;
 
@@ -65,11 +73,11 @@ class EnterpriseHardeningTest extends TestCase
             ->value('value');
         $this->assertSame(94001, (int) $counter);
 
-        $model = \App\Models\TireModel::first();
+        $model = TireModel::first();
         $size = $model->sizes()->orderBy('code')->first();
-        $withoutFirst = app(\App\Services\PurchaseService::class)->create([
-            'supplier_id' => \App\Models\Supplier::first()->id,
-            'base_id' => \App\Models\Base::first()->id,
+        $withoutFirst = app(PurchaseService::class)->create([
+            'supplier_id' => Supplier::first()->id,
+            'base_id' => Base::first()->id,
             'purchased_at' => now()->toDateString(),
             'items' => [[
                 'tire_brand_id' => $model->tire_brand_id,
@@ -78,7 +86,7 @@ class EnterpriseHardeningTest extends TestCase
                 'quantity' => 2,
             ]],
         ], $this->admin);
-        app(\App\Services\PurchaseService::class)->confirm($withoutFirst, $this->admin);
+        app(PurchaseService::class)->confirm($withoutFirst, $this->admin);
 
         $nums = $withoutFirst->fresh()->items->first()->tires()->orderBy('individual_number')->pluck('individual_number')->all();
         $this->assertSame([94002, 94003], array_map('intval', $nums));
@@ -94,15 +102,15 @@ class EnterpriseHardeningTest extends TestCase
             'installations' => [['tire_id' => $tire->id, 'position_id' => $position->id]],
         ], $this->admin);
 
-        $corromper = fn () => \App\Models\TireAssignment::query()
+        $corromper = fn () => TireAssignment::query()
             ->where('tire_id', $tire->id)
             ->whereNull('ended_at')
             ->update(['open_tire_id' => null, 'open_key' => null]);
 
         // En MySQL/MariaDB la propia base lo impide (CHECK chk_assignment_open_consistency):
         // es la primera línea de defensa. En SQLite no hay CHECK y lo detecta el chequeo.
-        if (in_array(\Illuminate\Support\Facades\DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
-            $this->expectException(\Illuminate\Database\QueryException::class);
+        if (in_array(DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+            $this->expectException(QueryException::class);
             $this->expectExceptionMessageMatches('/chk_assignment_open_consistency/');
             $corromper();
 
@@ -110,8 +118,8 @@ class EnterpriseHardeningTest extends TestCase
         }
         $corromper();
 
-        app(\App\Services\IntegrityService::class)->invalidateCompany((int) $this->admin->company_id);
-        $codes = app(\App\Services\IntegrityService::class)->findings($this->admin)->pluck('code');
+        app(IntegrityService::class)->invalidateCompany((int) $this->admin->company_id);
+        $codes = app(IntegrityService::class)->findings($this->admin)->pluck('code');
         $this->assertTrue($codes->contains('OPEN_ASSIGNMENT_NULL_KEY'));
     }
 }

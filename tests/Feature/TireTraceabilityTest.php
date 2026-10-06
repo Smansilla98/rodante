@@ -10,6 +10,7 @@ use App\Models\Base;
 use App\Models\FleetUnit;
 use App\Models\MovementReason;
 use App\Models\Supplier;
+use App\Models\Tire;
 use App\Models\TireBrand;
 use App\Models\TireCurrentLocation;
 use App\Models\TireModel;
@@ -890,8 +891,8 @@ class TireTraceabilityTest extends TestCase
         $this->assertStringNotContainsString('FR:01 Nº50610', $html);
 
         $ids = collect($this->getJson(route('units.stock', ['unit' => $tank, 'position_id' => $slot->id]))->json('data'))->pluck('id');
-        $this->assertTrue($ids->contains(fn ($id) => \App\Models\Tire::find($id)?->individual_number == 50610));
-        $this->assertFalse($ids->contains(fn ($id) => \App\Models\Tire::find($id)?->individual_number == 50600));
+        $this->assertTrue($ids->contains(fn ($id) => Tire::find($id)?->individual_number == 50610));
+        $this->assertFalse($ids->contains(fn ($id) => Tire::find($id)?->individual_number == 50600));
 
         $this->get(route('units.create'))->assertOk();
         $this->post(route('units.store'), [

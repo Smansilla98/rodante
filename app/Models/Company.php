@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -25,7 +26,7 @@ class Company extends Model
             ['slug' => 'demo'],
             ['name' => 'Empresa demo', 'is_active' => true],
         );
-        app(\App\Support\Tenancy\TenantContext::class)->set($company);
+        app(TenantContext::class)->set($company);
 
         return $company;
     }

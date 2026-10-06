@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class UnitConfigurationChange extends Model
 {
-
     use BelongsToCompany;
+
     protected $fillable = [
         'company_id',
         'unit_id', 'from_configuration_id', 'to_configuration_id',

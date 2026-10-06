@@ -16,6 +16,7 @@ use App\Models\TireSize;
 use App\Models\User;
 use App\Support\AccessScope;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class OpeningStockService
@@ -51,7 +52,7 @@ class OpeningStockService
             throw new DomainException('No tenés acceso a esa base.');
         }
 
-        $asOfDate = $asOf ? \Illuminate\Support\Carbon::parse($asOf)->startOfDay() : now()->startOfDay();
+        $asOfDate = $asOf ? Carbon::parse($asOf)->startOfDay() : now()->startOfDay();
         $companyId = (int) $user->company_id;
 
         return DB::transaction(function () use ($rows, $base, $user, $asOfDate, $companyId) {

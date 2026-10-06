@@ -12,6 +12,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Support\Facades\Log;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -42,7 +43,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // El tenant tiene que estar seteado ANTES del route model binding;
         // si no, BelongsToCompany filtra 1=0 y /unidades/{id} da 404 siempre.
         $middleware->prependToPriorityList(
-            before: \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            before: SubstituteBindings::class,
             prepend: SetTenantContext::class,
         );
 

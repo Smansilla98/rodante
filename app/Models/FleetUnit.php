@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
-use App\Enums\UnitStatus;
 use App\Enums\UnitDuty;
+use App\Enums\UnitStatus;
 use App\Models\Concerns\BelongsToCompany;
+use App\Services\TireDiagnosticService;
 use Database\Factories\FleetUnitFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -202,6 +203,6 @@ class FleetUnit extends Model
      */
     public function tireDiagnostics(): array
     {
-        return app(\App\Services\TireDiagnosticService::class)->forLayout($this->tireLayout());
+        return app(TireDiagnosticService::class)->forLayout($this->tireLayout());
     }
 }

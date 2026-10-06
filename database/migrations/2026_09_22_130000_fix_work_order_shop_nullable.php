@@ -52,7 +52,7 @@ return new class extends Migration
 
         try {
             DB::statement('ALTER TABLE `work_orders` MODIFY `retread_shop_id` BIGINT UNSIGNED NULL');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
         }
 
@@ -62,13 +62,13 @@ return new class extends Migration
                 'ADD CONSTRAINT `work_orders_retread_shop_id_foreign` '.
                 'FOREIGN KEY (`retread_shop_id`) REFERENCES `retread_shops` (`id`) ON DELETE RESTRICT'
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Puede ya existir si un intento anterior llegó hasta acá. No cortar el deploy por esto.
             report($e);
         }
 
         if (! $this->columnIsNullable()) {
-            report(new \RuntimeException(
+            report(new RuntimeException(
                 'work_orders.retread_shop_id sigue NOT NULL después de la migración correctiva — revisar a mano.'
             ));
         }
@@ -91,7 +91,7 @@ return new class extends Migration
 
         try {
             DB::statement('ALTER TABLE `work_orders` MODIFY `retread_shop_id` BIGINT UNSIGNED NOT NULL');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
         }
 
@@ -101,7 +101,7 @@ return new class extends Migration
                 'ADD CONSTRAINT `work_orders_retread_shop_id_foreign` '.
                 'FOREIGN KEY (`retread_shop_id`) REFERENCES `retread_shops` (`id`) ON DELETE RESTRICT'
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
         }
     }
@@ -116,7 +116,7 @@ return new class extends Migration
             );
 
             return isset($row[0]) && strtoupper((string) $row[0]->is_nullable) === 'YES';
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
 
             return false;
@@ -134,7 +134,7 @@ return new class extends Migration
             );
 
             return $row[0]->constraint_name ?? null;
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
 
             return null;
@@ -149,7 +149,7 @@ return new class extends Migration
 
         try {
             DB::statement("ALTER TABLE `work_orders` DROP FOREIGN KEY `{$name}`");
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // No existía con ese nombre, o ya se había soltado. Seguimos.
         }
     }

@@ -30,7 +30,7 @@ return new class extends Migration
                 SIGNAL SQLSTATE '45000'
                     SET MESSAGE_TEXT = 'tire_movements is immutable: DELETE is forbidden'
             SQL);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Railway/MySQL managed suele exigir SUPER o log_bin_trust_function_creators.
             // La inmutabilidad sigue en el observer de Eloquent.
             report($e);

@@ -18,6 +18,10 @@ jobs:
         with:
           node-version: '22'
       - run: composer install --no-interaction --prefer-dist
+      - name: Formato (Pint)
+        run: vendor/bin/pint --test
+      - name: Dependencias con vulnerabilidades conocidas
+        run: composer audit --no-interaction
       - run: npm ci
       - run: npm run build
       - run: php artisan test

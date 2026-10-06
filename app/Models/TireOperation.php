@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TireOperation extends Model
 {
-
     use BelongsToCompany;
+
     protected $fillable = [
         'company_id',
         'unit_id', 'odometer_unit_id', 'user_id', 'odometer', 'odometer_provisional', 'occurred_at', 'notes',

@@ -6,7 +6,6 @@ use App\Enums\UserRole;
 use App\Models\Base;
 use App\Models\Company;
 use App\Models\Fleet;
-use App\Models\FleetUnit;
 use App\Models\UnitConfiguration;
 use App\Models\UnitType;
 use App\Models\User;

@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TireAssignmentSegment extends Model
 {
-
     use BelongsToCompany;
+
     protected $fillable = [
         'company_id',
         'tire_assignment_id', 'odometer_unit_id', 'start_odometer', 'end_odometer',

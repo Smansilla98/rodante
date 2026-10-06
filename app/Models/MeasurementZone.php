@@ -8,12 +8,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class MeasurementZone extends Model
 {
-
     use BelongsToCompany;
+
     public $timestamps = false;
 
     protected $fillable = [
-        'company_id','tire_size_id', 'code', 'name', 'sort_order'];
+        'company_id', 'tire_size_id', 'code', 'name', 'sort_order'];
 
     public function size(): BelongsTo
     {

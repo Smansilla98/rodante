@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Enums\IncidentType;
+use App\Enums\TireStatus;
 use App\Models\AuditLog;
 use App\Models\FleetUnit;
 use App\Models\OdometerReading;
@@ -207,7 +208,7 @@ class ExportController extends Controller
             'Fecha', 'Usuario', 'Accion', 'Resumen',
         ], function ($write) use ($query) {
             $query->latest('created_at')->limit(5000)->get()->each(function ($log) use ($write) {
-                    $write([
+                $write([
                     $log->created_at?->format('Y-m-d H:i'),
                     $log->user?->name,
                     $log->actionLabel(),
@@ -435,9 +436,9 @@ class ExportController extends Controller
 
     public function reportInventoryCsv(Request $request, ReportService $reports): StreamedResponse
     {
-        $query = \App\Models\Tire::query()->with(['brand', 'model', 'size', 'currentLocation.base', 'currentLocation.unit']);
+        $query = Tire::query()->with(['brand', 'model', 'size', 'currentLocation.base', 'currentLocation.unit']);
         AccessScope::tires($query, $request->user());
-        $query->where('status', '!=', \App\Enums\TireStatus::DeBaja)
+        $query->where('status', '!=', TireStatus::DeBaja)
             ->orderBy('status')
             ->orderBy('individual_number');
 

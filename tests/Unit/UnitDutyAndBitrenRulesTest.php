@@ -3,6 +3,7 @@
 namespace Tests\Unit;
 
 use App\Enums\UnitDuty;
+use App\Models\FleetUnit;
 use PHPUnit\Framework\TestCase;
 
 class UnitDutyAndBitrenRulesTest extends TestCase
@@ -16,6 +17,6 @@ class UnitDutyAndBitrenRulesTest extends TestCase
 
     public function test_bitren_trailer_cap_is_at_least_two(): void
     {
-        $this->assertGreaterThanOrEqual(2, \App\Models\FleetUnit::MAX_BITREN_TRAILERS);
+        $this->assertGreaterThanOrEqual(2, FleetUnit::MAX_BITREN_TRAILERS);
     }
 }

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Unit;
 
 use App\Enums\IncidentType;
-use App\Enums\TireApplication;
 use App\Enums\TireStatus;
 use App\Enums\UnitDuty;
 use App\Exceptions\DomainException;
@@ -20,14 +19,15 @@ use App\Models\UnitCoupling;
 use App\Models\UnitPosition;
 use App\Models\UnitType;
 use App\Services\ConfigurationChangeService;
-use App\Services\FleetUnitService;
 use App\Services\CouplingService;
+use App\Services\FleetUnitService;
 use App\Services\IncidentService;
 use App\Services\MeasurementService;
 use App\Services\PositionFitService;
 use App\Services\ReportService;
 use App\Services\TireOperationService;
 use App\Support\AccessScope;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -367,7 +367,7 @@ class UnitController extends Controller
             return redirect()->route('units.show', $unit)->withErrors(['operation' => $e->getMessage()])->withInput();
         } catch (DomainException $e) {
             return redirect()->route('units.show', $unit)->withErrors(['operation' => $e->getMessage()])->withInput();
-        } catch (\Illuminate\Database\QueryException $e) {
+        } catch (QueryException $e) {
             report($e);
 
             return redirect()->route('units.show', $unit)

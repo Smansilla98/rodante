@@ -63,5 +63,4 @@ class SearchController extends Controller
 
         return response()->json(['items' => $items->take(10)->values()]);
     }
-
 }

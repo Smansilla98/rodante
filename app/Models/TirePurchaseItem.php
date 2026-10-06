@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TirePurchaseItem extends Model
 {
-
     use BelongsToCompany;
+
     protected $fillable = [
         'company_id',
         'tire_purchase_id', 'tire_brand_id', 'tire_model_id', 'tire_size_id',

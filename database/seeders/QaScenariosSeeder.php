@@ -29,7 +29,6 @@ use App\Services\LocationService;
 use App\Services\MeasurementService;
 use App\Services\PurchaseService;
 use App\Services\RetirementService;
-use App\Services\TireOperationService;
 use App\Services\WorkOrderService;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Database\Seeder;

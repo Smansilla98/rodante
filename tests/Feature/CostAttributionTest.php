@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Base;
 use App\Models\CostEntry;
 use App\Models\Supplier;
 use App\Models\TireModel;
@@ -111,7 +112,7 @@ class CostAttributionTest extends TestCase
 
         $purchase = app(PurchaseService::class)->create([
             'supplier_id' => Supplier::first()->id,
-            'base_id' => \App\Models\Base::first()->id,
+            'base_id' => Base::first()->id,
             'purchased_at' => now()->toDateString(),
             'items' => [[
                 'tire_brand_id' => $model->tire_brand_id,

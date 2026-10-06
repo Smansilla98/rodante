@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Enums\TireStatus;
 use App\Models\MovementReason;
 use App\Notifications\WeeklyReportNotification;
+use App\Services\ReportService;
 use App\Services\RetirementService;
 use App\Services\TireOperationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -148,7 +149,7 @@ class WeeklyReportTest extends TestCase
     {
         $this->purchaseTires(3, 76030);
 
-        $report = app(\App\Services\ReportService::class)
+        $report = app(ReportService::class)
             ->weeklyReport($this->admin, now()->startOfWeek(), now());
 
         $stockRow = collect($report['stock_counts'])->firstWhere('status', TireStatus::Stock->label());

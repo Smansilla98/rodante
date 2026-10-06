@@ -2,9 +2,12 @@
 
 namespace App\Support;
 
+use App\Enums\TireApplication;
+use App\Models\Company;
 use App\Models\TireBrand;
 use App\Models\TireModel;
 use App\Models\TireSize;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\Schema;
 
 class TireProductCatalog
@@ -95,9 +98,9 @@ class TireProductCatalog
         self::renameLegacyCodes();
 
         foreach (self::brands() as $brandName => $models) {
-            $companyId = app(\App\Support\Tenancy\TenantContext::class)->id();
+            $companyId = app(TenantContext::class)->id();
             if (! $companyId && Schema::hasTable('companies')) {
-                $companyId = \App\Models\Company::query()->orderBy('id')->value('id');
+                $companyId = Company::query()->orderBy('id')->value('id');
             }
             if (! $companyId) {
                 return;
@@ -165,7 +168,7 @@ class TireProductCatalog
                 ])
                 ->values()
                 ->all(),
-            'applications' => collect(\App\Enums\TireApplication::cases())
+            'applications' => collect(TireApplication::cases())
                 ->map(fn ($app) => ['value' => $app->value, 'label' => $app->label()])
                 ->values()
                 ->all(),

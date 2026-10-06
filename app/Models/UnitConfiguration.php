@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class UnitConfiguration extends Model
 {
-
     use BelongsToCompany;
+
     protected $fillable = [
         'company_id',
         'code', 'name', 'family_code', 'applies_to', 'compatible_types',

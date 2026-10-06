@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Tire;
 
 use App\Enums\IncidentType;
+use App\Enums\TireApplication;
 use App\Enums\TireCondition;
 use App\Enums\TireStatus;
 use App\Exceptions\DomainException;
@@ -82,7 +83,7 @@ class TireController extends Controller
         return view('tires.index', [
             'tires' => $tires,
             'catalog' => TireProductCatalog::uiPayload(),
-            'applications' => \App\Enums\TireApplication::cases(),
+            'applications' => TireApplication::cases(),
             'statuses' => TireStatus::cases(),
             'conditions' => TireCondition::cases(),
         ]);

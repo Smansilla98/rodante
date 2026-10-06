@@ -120,7 +120,7 @@ return new class extends Migration
      * pase — nunca deja la tabla desprotegida ni corta el resto del lote de
      * migraciones si esto falla.
      */
-    private function withTireMovementsTriggersDisabled(string $driver, \Closure $callback): void
+    private function withTireMovementsTriggersDisabled(string $driver, Closure $callback): void
     {
         if ($driver !== 'mysql') {
             $callback();
@@ -131,13 +131,13 @@ return new class extends Migration
         try {
             DB::unprepared('DROP TRIGGER IF EXISTS tire_movements_prevent_update');
             DB::unprepared('DROP TRIGGER IF EXISTS tire_movements_prevent_delete');
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
         }
 
         try {
             $callback();
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
         } finally {
             try {
@@ -158,7 +158,7 @@ return new class extends Migration
                     SIGNAL SQLSTATE '45000'
                         SET MESSAGE_TEXT = 'tire_movements is immutable: DELETE is forbidden'
                 SQL);
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 report($e);
             }
         }

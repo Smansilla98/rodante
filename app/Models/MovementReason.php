@@ -7,10 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class MovementReason extends Model
 {
-
     use BelongsToCompany;
+
     protected $fillable = [
-        'company_id','code', 'name', 'applies_to', 'is_active'];
+        'company_id', 'code', 'name', 'applies_to', 'is_active'];
 
     protected function casts(): array
     {

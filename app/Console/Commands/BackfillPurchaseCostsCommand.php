@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\CostEntry;
 use App\Models\TirePurchase;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class BackfillPurchaseCostsCommand extends Command
@@ -87,7 +88,7 @@ class BackfillPurchaseCostsCommand extends Command
     }
 
     /**
-     * @return array{allocations: array<int, int>, batch: \Illuminate\Support\Collection<int, CostEntry>, count: int, reason: string}
+     * @return array{allocations: array<int, int>, batch: Collection<int, CostEntry>, count: int, reason: string}
      */
     private function allocationFor(TirePurchase $purchase): array
     {
@@ -162,7 +163,7 @@ class BackfillPurchaseCostsCommand extends Command
     }
 
     /**
-     * @return array{allocations: array<int, int>, batch: \Illuminate\Support\Collection<int, CostEntry>, count: int, reason: string}
+     * @return array{allocations: array<int, int>, batch: Collection<int, CostEntry>, count: int, reason: string}
      */
     private function skip(string $reason): array
     {

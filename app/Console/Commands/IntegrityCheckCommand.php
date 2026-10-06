@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Enums\UserRole;
 use App\Models\User;
 use App\Services\IntegrityService;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -16,7 +17,7 @@ class IntegrityCheckCommand extends Command
 
     public function handle(IntegrityService $integrity): int
     {
-        $tenant = app(\App\Support\Tenancy\TenantContext::class);
+        $tenant = app(TenantContext::class);
         $user = null;
         if ($this->option('company')) {
             $tenant->setId((int) $this->option('company'));

@@ -8,12 +8,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TireMeasurementReading extends Model
 {
-
     use BelongsToCompany;
+
     public $timestamps = false;
 
     protected $fillable = [
-        'company_id','tire_measurement_id', 'measurement_zone_id', 'millimeters'];
+        'company_id', 'tire_measurement_id', 'measurement_zone_id', 'millimeters'];
 
     protected function casts(): array
     {

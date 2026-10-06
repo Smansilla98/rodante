@@ -6,8 +6,10 @@ use App\Enums\UserRole;
 use App\Models\Base;
 use App\Models\Fleet;
 use App\Models\User;
+use App\Services\CompanyProvisioningService;
 use App\Support\Qa\QaHttp;
 use App\Support\Qa\RoleQaRunner;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Console\Command;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 
@@ -41,7 +43,7 @@ class QaRolesCommand extends Command
             if ($user->role !== $role) {
                 $this->warn("{$username} no tiene el rol esperado ({$user->role->label()}).");
             }
-            app(\App\Support\Tenancy\TenantContext::class)->setId((int) $user->company_id);
+            app(TenantContext::class)->setId((int) $user->company_id);
             $user->fleets()->sync(Fleet::pluck('id'));
             $user->bases()->sync(Base::pluck('id'));
             $users->push($user);
@@ -53,19 +55,19 @@ class QaRolesCommand extends Command
         $this->info('Logs en '.$dir);
 
         $company = $users->first()->company;
-        app(\App\Support\Tenancy\TenantContext::class)->set($company);
+        app(TenantContext::class)->set($company);
 
         $otherUsers = collect();
         try {
-            $provisioned = app(\App\Services\CompanyProvisioningService::class)->provision(
+            $provisioned = app(CompanyProvisioningService::class)->provision(
                 ['name' => 'QA Empresa B', 'slug' => 'qa-b-'.strtolower(substr($tag, -5))],
                 ['name' => 'Admin B', 'username' => 'admin', 'password' => 'Password123a']
             );
             $otherAdmin = $provisioned['admin'];
             $otherAdmin->forceFill(['must_change_password' => false])->save();
-            \App\Support\Tenancy\TenantContext::for($provisioned['company'], function () use ($otherAdmin, &$otherUsers) {
-                $otherAdmin->fleets()->sync(\App\Models\Fleet::pluck('id'));
-                $otherAdmin->bases()->sync(\App\Models\Base::pluck('id'));
+            TenantContext::for($provisioned['company'], function () use ($otherAdmin, &$otherUsers) {
+                $otherAdmin->fleets()->sync(Fleet::pluck('id'));
+                $otherAdmin->bases()->sync(Base::pluck('id'));
             });
             $otherUsers->push($otherAdmin);
         } catch (\Throwable $e) {

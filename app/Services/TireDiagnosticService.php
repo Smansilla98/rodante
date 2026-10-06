@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Tire;
+use App\Models\UnitPosition;
 use Illuminate\Support\Collection;
 
 /**
@@ -23,7 +25,7 @@ class TireDiagnosticService
     public const ROTATION_DELTA_MM = 2.0;
 
     /**
-     * @param  Collection<int, array{position: \App\Models\UnitPosition, tire: ?\App\Models\Tire}>  $layout
+     * @param  Collection<int, array{position: UnitPosition, tire: ?Tire}>  $layout
      * @return array<int, list<array{code: string, label: string, detail: string}>>
      */
     public function forLayout(Collection $layout): array
@@ -74,7 +76,7 @@ class TireDiagnosticService
     /**
      * @return ?array{code: string, label: string, detail: string}
      */
-    private function alignmentFlag(\App\Models\Tire $tire): ?array
+    private function alignmentFlag(Tire $tire): ?array
     {
         $latest = $tire->measurements->sortByDesc('measured_at')->first();
         if (! $latest || ! $latest->raises_alert) {

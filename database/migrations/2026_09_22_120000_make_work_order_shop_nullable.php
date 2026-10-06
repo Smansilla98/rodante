@@ -44,7 +44,7 @@ return new class extends Migration
                 Schema::table('work_orders', function (Blueprint $table) use ($nullable) {
                     $table->unsignedBigInteger('retread_shop_id')->nullable($nullable)->change();
                 });
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 report($e);
             }
 
@@ -55,7 +55,7 @@ return new class extends Migration
             Schema::table('work_orders', function (Blueprint $table) use ($fk) {
                 $table->dropForeign($fk);
             });
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // No existía con ese nombre, o ya se había soltado en una corrida anterior.
             report($e);
         }
@@ -63,7 +63,7 @@ return new class extends Migration
         try {
             $nullSql = $nullable ? 'NULL' : 'NOT NULL';
             DB::statement("ALTER TABLE `work_orders` MODIFY `retread_shop_id` BIGINT UNSIGNED {$nullSql}");
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             report($e);
         }
 
@@ -71,7 +71,7 @@ return new class extends Migration
             Schema::table('work_orders', function (Blueprint $table) {
                 $table->foreign('retread_shop_id')->references('id')->on('retread_shops')->restrictOnDelete();
             });
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             // Puede ya existir si el DROP de arriba no encontró nada que soltar. No cortar el lote por esto.
             report($e);
         }

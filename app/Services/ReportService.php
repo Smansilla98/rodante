@@ -11,6 +11,7 @@ use App\Models\Tire;
 use App\Models\TireIncident;
 use App\Models\TireMovement;
 use App\Models\TirePurchase;
+use App\Models\UnitPosition;
 use App\Models\User;
 use App\Support\AccessScope;
 use Carbon\Carbon;
@@ -199,7 +200,7 @@ class ReportService
         }
 
         $rows = $query->get();
-        $positions = \App\Models\UnitPosition::query()
+        $positions = UnitPosition::query()
             ->whereIn('id', $rows->pluck('unit_position_id'))
             ->get()
             ->keyBy('id');
@@ -288,7 +289,7 @@ class ReportService
     }
 
     /**
-     * @return array{0: \Carbon\Carbon, 1: \Carbon\Carbon}
+     * @return array{0: Carbon, 1: Carbon}
      */
     public function weeklyPeriod(?string $from = null, ?string $to = null): array
     {

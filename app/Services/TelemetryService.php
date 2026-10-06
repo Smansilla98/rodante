@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\TelemetryEvent;
 use App\Models\User;
 use App\Support\AccessScope;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -54,7 +55,7 @@ class TelemetryService
     }
 
     /**
-     * @return array{totals: array<string,int>, sources: array<string,int>, events: \Illuminate\Contracts\Pagination\LengthAwarePaginator}
+     * @return array{totals: array<string,int>, sources: array<string,int>, events: LengthAwarePaginator}
      */
     public function dashboard(User $user, int $days = 7): array
     {

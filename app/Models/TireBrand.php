@@ -8,10 +8,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TireBrand extends Model
 {
-
     use BelongsToCompany;
+
     protected $fillable = [
-        'company_id','name', 'is_active'];
+        'company_id', 'name', 'is_active'];
 
     protected function casts(): array
     {

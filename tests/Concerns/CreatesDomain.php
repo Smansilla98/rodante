@@ -4,6 +4,7 @@ namespace Tests\Concerns;
 
 use App\Enums\UserRole;
 use App\Models\Base;
+use App\Models\Company;
 use App\Models\Fleet;
 use App\Models\FleetUnit;
 use App\Models\Supplier;
@@ -24,7 +25,7 @@ trait CreatesDomain
     protected function seedDomain(): void
     {
         $this->seed(CatalogSeeder::class);
-        $company = \App\Models\Company::demo();
+        $company = Company::demo();
         app(TenantContext::class)->set($company);
 
         $this->admin = User::factory()->create([

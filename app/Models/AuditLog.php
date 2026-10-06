@@ -9,7 +9,6 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class AuditLog extends Model
 {
-
     use BelongsToCompany;
 
     public $timestamps = false;

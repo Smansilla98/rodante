@@ -2,6 +2,7 @@
 
 namespace Tests;
 
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
@@ -9,8 +10,8 @@ abstract class TestCase extends BaseTestCase
     protected function setUp(): void
     {
         parent::setUp();
-        if ($this->app->bound(\App\Support\Tenancy\TenantContext::class)) {
-            $this->app->make(\App\Support\Tenancy\TenantContext::class)->clear();
+        if ($this->app->bound(TenantContext::class)) {
+            $this->app->make(TenantContext::class)->clear();
         }
     }
 

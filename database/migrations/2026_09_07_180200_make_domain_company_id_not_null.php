@@ -81,7 +81,7 @@ return new class extends Migration
                 Schema::table($table, function (Blueprint $blueprint) use ($fk) {
                     $blueprint->dropForeign($fk);
                 });
-            } catch (\Throwable) {
+            } catch (Throwable) {
                 // Puede no existir si falló a mitad de camino.
             }
 

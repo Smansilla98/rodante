@@ -4,12 +4,12 @@ namespace Tests\Feature;
 
 use App\Enums\InventoryLineDelta;
 use App\Enums\InventorySessionStatus;
-use App\Enums\LocationKind;
 use App\Enums\UserRole;
+use App\Exceptions\DomainException;
 use App\Models\Base;
-use App\Models\InventorySession;
 use App\Models\User;
 use App\Services\InventoryService;
+use App\Services\TireOperationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesDomain;
 use Tests\TestCase;
@@ -94,7 +94,7 @@ class PhysicalInventoryTest extends TestCase
         [$tire] = $this->purchaseTires(1, 96200);
         $unit = $this->createTractor();
         $position = $unit->configuration->positions()->where('is_spare', false)->first();
-        app(\App\Services\TireOperationService::class)->execute($unit, [
+        app(TireOperationService::class)->execute($unit, [
             'odometer' => 100000,
             'installations' => [['tire_id' => $tire->id, 'position_id' => $position->id]],
         ], $this->admin);
@@ -124,7 +124,7 @@ class PhysicalInventoryTest extends TestCase
         $service->startCounting($session, $operario);
         $service->submitForReview($session->fresh(), $operario);
 
-        $this->expectException(\App\Exceptions\DomainException::class);
+        $this->expectException(DomainException::class);
         $service->close($session->fresh(), $operario, true);
     }
 
@@ -140,7 +140,7 @@ class PhysicalInventoryTest extends TestCase
         $service = app(InventoryService::class);
         $service->open($this->admin, $base);
 
-        $this->expectException(\App\Exceptions\DomainException::class);
+        $this->expectException(DomainException::class);
         $service->open($this->admin, $base);
     }
 }

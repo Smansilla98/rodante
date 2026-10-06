@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\LocationKind;
 use App\Enums\TireCondition;
 use App\Enums\TireStatus;
 use App\Enums\UserRole;
@@ -9,9 +10,12 @@ use App\Models\Base;
 use App\Models\Fleet;
 use App\Models\FleetUnit;
 use App\Models\MovementReason;
+use App\Models\Tire;
+use App\Models\TireModel;
 use App\Models\UnitConfiguration;
 use App\Models\UnitType;
 use App\Models\User;
+use App\Services\LocationService;
 use App\Services\TireOperationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesDomain;
@@ -77,17 +81,17 @@ class ProductCycleTest extends TestCase
     public function test_slot_install_opens_lifecycle_when_missing(): void
     {
         $unit = $this->createTractor();
-        $model = \App\Models\TireModel::where('code', 'FH:01')->firstOrFail();
-        $tire = \App\Models\Tire::factory()->create([
+        $model = TireModel::where('code', 'FH:01')->firstOrFail();
+        $tire = Tire::factory()->create([
             'tire_brand_id' => $model->tire_brand_id,
             'tire_model_id' => $model->id,
             'tire_size_id' => $model->sizes()->firstOrFail()->id,
             'current_lifecycle_id' => null,
         ]);
-        app(\App\Services\LocationService::class)->place(
+        app(LocationService::class)->place(
             $tire,
-            \App\Enums\LocationKind::Stock,
-            \App\Models\Base::query()->firstOrFail()->id,
+            LocationKind::Stock,
+            Base::query()->firstOrFail()->id,
         );
         $steer = $unit->configuration->positions()->where('axle_number', 1)->where('is_spare', false)->first();
 
@@ -102,7 +106,7 @@ class ProductCycleTest extends TestCase
 
         $tire = $tire->fresh();
         $this->assertNotNull($tire->current_lifecycle_id);
-        $this->assertEquals(\App\Enums\TireStatus::Instalada, $tire->status);
+        $this->assertEquals(TireStatus::Instalada, $tire->status);
     }
 
     public function test_reserve_returns_to_stock(): void

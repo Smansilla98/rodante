@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
-use App\Models\Concerns\BelongsToCompany;
 use App\Enums\InventoryLineDelta;
 use App\Enums\LocationKind;
+use App\Models\Concerns\BelongsToCompany;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class InventoryLine extends Model
 {
-
     use BelongsToCompany;
+
     protected $fillable = [
         'company_id',
         'inventory_session_id', 'tire_id', 'expected_kind', 'expected_base_id', 'expected_unit_id',

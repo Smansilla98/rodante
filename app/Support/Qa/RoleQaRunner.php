@@ -20,6 +20,7 @@ use App\Models\UnitConfiguration;
 use App\Models\UnitType;
 use App\Models\User;
 use App\Services\PurchaseService;
+use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\File;
 use Illuminate\Testing\TestResponse;
@@ -63,7 +64,7 @@ class RoleQaRunner
 
         foreach ($ordered as $user) {
             $this->http->actingAs($user);
-            app(\App\Support\Tenancy\TenantContext::class)->setId((int) $user->company_id);
+            app(TenantContext::class)->setId((int) $user->company_id);
             $this->runRole($user);
             $this->writeUserLog($user);
         }
@@ -91,7 +92,7 @@ class RoleQaRunner
         }
 
         $this->http->actingAs($adminA);
-        app(\App\Support\Tenancy\TenantContext::class)->setId((int) $adminA->company_id);
+        app(TenantContext::class)->setId((int) $adminA->company_id);
         $response = $this->http->get('/neumaticos/'.$tireB->id);
         $status = $response instanceof TestResponse
             ? $response->status()

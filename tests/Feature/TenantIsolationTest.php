@@ -10,10 +10,12 @@ use App\Models\Fleet;
 use App\Models\FleetUnit;
 use App\Models\Tire;
 use App\Models\User;
+use App\Services\CompanyProvisioningService;
 use App\Support\Tenancy\TenantContext;
 use Database\Seeders\CatalogSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class TenantIsolationTest extends TestCase
@@ -38,7 +40,7 @@ class TenantIsolationTest extends TestCase
         $this->seed(CatalogSeeder::class);
         $this->companyA = Company::demo();
 
-        $provisioning = app(\App\Services\CompanyProvisioningService::class);
+        $provisioning = app(CompanyProvisioningService::class);
         $result = $provisioning->provision(
             ['name' => 'Empresa B', 'slug' => 'empresa-b'],
             ['name' => 'Admin B', 'username' => 'admin', 'password' => 'Password123a']
@@ -67,7 +69,7 @@ class TenantIsolationTest extends TestCase
                 // Marca visible distinta para assertDontSee en listados.
             ]);
             // Forzar un atributo único en la vista (DOT) si existe.
-            if (\Illuminate\Support\Facades\Schema::hasColumn('tires', 'dot')) {
+            if (Schema::hasColumn('tires', 'dot')) {
                 $this->tireB->update(['dot' => 'B-DOT-9999']);
             }
             Fleet::query()->firstOrCreate(
@@ -160,7 +162,7 @@ class TenantIsolationTest extends TestCase
                 continue;
             }
             $model = new $class;
-            if (! \Illuminate\Support\Facades\Schema::hasColumn($model->getTable(), 'company_id')) {
+            if (! Schema::hasColumn($model->getTable(), 'company_id')) {
                 continue;
             }
             if ($class === User::class || $class === Company::class) {

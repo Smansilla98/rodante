@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\FleetUnit;
+use App\Models\Tire;
 use App\Models\UnitPosition;
 use Illuminate\Support\Collection;
 
@@ -11,7 +12,7 @@ class RotationPatternService
     /**
      * Esquemas de rotación al estilo Kananfleet / Administra Flotilla.
      *
-     * @param  Collection<int, array{position:UnitPosition, tire:?\App\Models\Tire}>  $layout
+     * @param  Collection<int, array{position:UnitPosition, tire:?Tire}>  $layout
      * @return list<array{code:string,name:string,hint:string,pairs:list<array{0:int,1:int}>,ready:bool,blocked:?string}>
      */
     public function forLayout(Collection $layout, PositionFitService $fit, ?FleetUnit $unit = null): array
@@ -38,7 +39,7 @@ class RotationPatternService
     }
 
     /**
-     * @param  Collection<int, Collection<int, array{position:UnitPosition, tire:?\App\Models\Tire}>>  $byAxle
+     * @param  Collection<int, Collection<int, array{position:UnitPosition, tire:?Tire}>>  $byAxle
      * @return list<array{0:int,1:int}>
      */
     private function steerPair(Collection $byAxle): array
@@ -62,8 +63,8 @@ class RotationPatternService
     }
 
     /**
-     * @param  Collection<int, Collection<int, array{position:UnitPosition, tire:?\App\Models\Tire}>>  $byAxle
-     * @return list<Collection<int, array{position:UnitPosition, tire:?\App\Models\Tire}>>
+     * @param  Collection<int, Collection<int, array{position:UnitPosition, tire:?Tire}>>  $byAxle
+     * @return list<Collection<int, array{position:UnitPosition, tire:?Tire}>>
      */
     private function tandemDualAxles(Collection $byAxle): array
     {
@@ -86,7 +87,7 @@ class RotationPatternService
     }
 
     /**
-     * @param  list<Collection<int, array{position:UnitPosition, tire:?\App\Models\Tire}>>  $tandem
+     * @param  list<Collection<int, array{position:UnitPosition, tire:?Tire}>>  $tandem
      * @return list<array{0:int,1:int}>
      */
     private function longitudinal(array $tandem): array
@@ -97,7 +98,7 @@ class RotationPatternService
     }
 
     /**
-     * @param  list<Collection<int, array{position:UnitPosition, tire:?\App\Models\Tire}>>  $tandem
+     * @param  list<Collection<int, array{position:UnitPosition, tire:?Tire}>>  $tandem
      * @return list<array{0:int,1:int}>
      */
     private function lateralX(array $tandem): array
@@ -114,7 +115,7 @@ class RotationPatternService
     }
 
     /**
-     * @param  list<Collection<int, array{position:UnitPosition, tire:?\App\Models\Tire}>>  $tandem
+     * @param  list<Collection<int, array{position:UnitPosition, tire:?Tire}>>  $tandem
      * @return list<array{0:int,1:int}>
      */
     private function diagonal(array $tandem): array
@@ -132,7 +133,7 @@ class RotationPatternService
     }
 
     /**
-     * @param  list<Collection<int, array{position:UnitPosition, tire:?\App\Models\Tire}>>  $tandem
+     * @param  list<Collection<int, array{position:UnitPosition, tire:?Tire}>>  $tandem
      * @param  callable(UnitPosition): ?string  $rearKey
      * @return list<array{0:int,1:int}>
      */
@@ -162,7 +163,7 @@ class RotationPatternService
 
     /**
      * @param  list<array{0:int,1:int}>  $pairs
-     * @param  Collection<int, array{position:UnitPosition, tire:?\App\Models\Tire}>  $live
+     * @param  Collection<int, array{position:UnitPosition, tire:?Tire}>  $live
      * @return array{code:string,name:string,hint:string,pairs:list<array{0:int,1:int}>,ready:bool,blocked:?string}
      */
     private function describe(string $code, string $name, string $hint, array $pairs, Collection $live, PositionFitService $fit, ?FleetUnit $unit = null): array

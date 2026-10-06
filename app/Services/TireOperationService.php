@@ -43,68 +43,68 @@ class TireOperationService
 
         try {
             $operation = DB::transaction(function () use ($unit, $data, $user) {
-            $unit = FleetUnit::with('type', 'configuration.positions')->lockForUpdate()->findOrFail($unit->id);
-            $odometerUnit = $this->couplings->resolveOdometerUnit($unit);
-            $odometerUnit = FleetUnit::lockForUpdate()->findOrFail($odometerUnit->id);
-            $provisional = (bool) ($data['odometer_provisional'] ?? false);
-            if (! array_key_exists('odometer', $data) || $data['odometer'] === null || $data['odometer'] === '') {
-                $provisional = true;
-                $odometer = (int) $odometerUnit->current_odometer;
-            } else {
-                $odometer = (int) $data['odometer'];
-            }
-            $occurredAt = $data['occurred_at'] ?? now();
-            $notes = $data['notes'] ?? null;
-            if ($provisional) {
-                $notes = trim(($notes ? $notes.' | ' : '').'Km provisional — logística completa después');
-            }
+                $unit = FleetUnit::with('type', 'configuration.positions')->lockForUpdate()->findOrFail($unit->id);
+                $odometerUnit = $this->couplings->resolveOdometerUnit($unit);
+                $odometerUnit = FleetUnit::lockForUpdate()->findOrFail($odometerUnit->id);
+                $provisional = (bool) ($data['odometer_provisional'] ?? false);
+                if (! array_key_exists('odometer', $data) || $data['odometer'] === null || $data['odometer'] === '') {
+                    $provisional = true;
+                    $odometer = (int) $odometerUnit->current_odometer;
+                } else {
+                    $odometer = (int) $data['odometer'];
+                }
+                $occurredAt = $data['occurred_at'] ?? now();
+                $notes = $data['notes'] ?? null;
+                if ($provisional) {
+                    $notes = trim(($notes ? $notes.' | ' : '').'Km provisional — logística completa después');
+                }
 
-            $removals = $data['removals'] ?? [];
-            $installations = $data['installations'] ?? [];
-            if ($removals === [] && $installations === []) {
-                throw new DomainException('La operación debe retirar o instalar al menos un neumático.');
-            }
+                $removals = $data['removals'] ?? [];
+                $installations = $data['installations'] ?? [];
+                if ($removals === [] && $installations === []) {
+                    throw new DomainException('La operación debe retirar o instalar al menos un neumático.');
+                }
 
-            $tireIds = collect($removals)->pluck('tire_id')
-                ->merge(collect($installations)->pluck('tire_id'))
-                ->unique()
-                ->values();
+                $tireIds = collect($removals)->pluck('tire_id')
+                    ->merge(collect($installations)->pluck('tire_id'))
+                    ->unique()
+                    ->values();
 
-            Tire::whereIn('id', $tireIds)->lockForUpdate()->get();
-            TireCurrentLocation::whereIn('tire_id', $tireIds)->lockForUpdate()->get();
-            TireCurrentLocation::where('unit_id', $unit->id)->lockForUpdate()->get();
+                Tire::whereIn('id', $tireIds)->lockForUpdate()->get();
+                TireCurrentLocation::whereIn('tire_id', $tireIds)->lockForUpdate()->get();
+                TireCurrentLocation::where('unit_id', $unit->id)->lockForUpdate()->get();
 
-            $this->assertRemovalSlots($unit, $removals);
-            $this->assertInstallationSlots($unit, $installations, $removals);
+                $this->assertRemovalSlots($unit, $removals);
+                $this->assertInstallationSlots($unit, $installations, $removals);
 
-            $operation = TireOperation::create([
-                'unit_id' => $unit->id,
-                'odometer_unit_id' => $odometerUnit->id,
-                'user_id' => $user->id,
-                'odometer' => $odometer,
-                'odometer_provisional' => $provisional,
-                'occurred_at' => $occurredAt,
-                'notes' => $notes,
-            ]);
+                $operation = TireOperation::create([
+                    'unit_id' => $unit->id,
+                    'odometer_unit_id' => $odometerUnit->id,
+                    'user_id' => $user->id,
+                    'odometer' => $odometer,
+                    'odometer_provisional' => $provisional,
+                    'occurred_at' => $occurredAt,
+                    'notes' => $notes,
+                ]);
 
-            $this->odometers->record($odometerUnit, $odometer, $user, $operation->id, null, $provisional);
+                $this->odometers->record($odometerUnit, $odometer, $user, $operation->id, null, $provisional);
 
-            foreach ($removals as $removal) {
-                $this->removeToStock($unit, $operation, $removal, $odometerUnit, $odometer, $occurredAt, $user);
-            }
+                foreach ($removals as $removal) {
+                    $this->removeToStock($unit, $operation, $removal, $odometerUnit, $odometer, $occurredAt, $user);
+                }
 
-            foreach ($installations as $installation) {
-                $this->installFromStock($unit, $operation, $installation, $odometerUnit, $odometer, $occurredAt, $user);
-            }
+                foreach ($installations as $installation) {
+                    $this->installFromStock($unit, $operation, $installation, $odometerUnit, $odometer, $occurredAt, $user);
+                }
 
-            $this->audit->log('tire.operation', $operation, null, [
-                'unit' => $unit->plate,
-                'odometer' => $odometer,
-                'removals' => count($removals),
-                'installations' => count($installations),
-            ]);
+                $this->audit->log('tire.operation', $operation, null, [
+                    'unit' => $unit->plate,
+                    'odometer' => $odometer,
+                    'removals' => count($removals),
+                    'installations' => count($installations),
+                ]);
 
-            return $operation->load('movements.tire');
+                return $operation->load('movements.tire');
             });
         } catch (QueryException $e) {
             throw $this->mapQueryException($e);
@@ -153,113 +153,113 @@ class TireOperationService
     {
         try {
             DB::transaction(function () use ($unit, $tireToPosition, $odometer, $user, $notes, $expect) {
-            $unit = FleetUnit::lockForUpdate()->findOrFail($unit->id);
-            $odometerUnit = $this->couplings->resolveOdometerUnit($unit);
+                $unit = FleetUnit::lockForUpdate()->findOrFail($unit->id);
+                $odometerUnit = $this->couplings->resolveOdometerUnit($unit);
 
-            $tireIds = array_map('intval', array_keys($tireToPosition));
-            Tire::whereIn('id', $tireIds)->lockForUpdate()->get();
-            $locations = TireCurrentLocation::where('unit_id', $unit->id)->lockForUpdate()->get()->keyBy('tire_id');
+                $tireIds = array_map('intval', array_keys($tireToPosition));
+                Tire::whereIn('id', $tireIds)->lockForUpdate()->get();
+                $locations = TireCurrentLocation::where('unit_id', $unit->id)->lockForUpdate()->get()->keyBy('tire_id');
 
-            $this->assertRelocationExpect($locations, $expect);
+                $this->assertRelocationExpect($locations, $expect);
 
-            $resolved = [];
-            foreach ($tireToPosition as $tireId => $toPositionId) {
-                $tireId = (int) $tireId;
-                $toPositionId = (int) $toPositionId;
-                $location = $locations->get($tireId);
-                if (! $location || $location->unit_id !== $unit->id) {
-                    throw new DomainException('El neumático no está instalado en esta unidad.');
-                }
+                $resolved = [];
+                foreach ($tireToPosition as $tireId => $toPositionId) {
+                    $tireId = (int) $tireId;
+                    $toPositionId = (int) $toPositionId;
+                    $location = $locations->get($tireId);
+                    if (! $location || $location->unit_id !== $unit->id) {
+                        throw new DomainException('El neumático no está instalado en esta unidad.');
+                    }
 
-                $fromPositionId = (int) $location->position_id;
-                if ($fromPositionId === $toPositionId) {
-                    continue;
-                }
+                    $fromPositionId = (int) $location->position_id;
+                    if ($fromPositionId === $toPositionId) {
+                        continue;
+                    }
 
-                $toPosition = UnitPosition::where('unit_configuration_id', $unit->unit_configuration_id)
-                    ->where('id', $toPositionId)
-                    ->firstOrFail();
+                    $toPosition = UnitPosition::where('unit_configuration_id', $unit->unit_configuration_id)
+                        ->where('id', $toPositionId)
+                        ->firstOrFail();
 
-                $tire = Tire::findOrFail($tireId);
-                $this->fit->assertCanMount($tire, $toPosition, $unit);
+                    $tire = Tire::findOrFail($tireId);
+                    $this->fit->assertCanMount($tire, $toPosition, $unit);
 
-                $assignment = TireAssignment::where('tire_id', $tireId)->whereNull('ended_at')->lockForUpdate()->first();
-                if (! $assignment) {
-                    throw new DomainException('No hay un periodo de uso abierto para rotar.');
-                }
+                    $assignment = TireAssignment::where('tire_id', $tireId)->whereNull('ended_at')->lockForUpdate()->first();
+                    if (! $assignment) {
+                        throw new DomainException('No hay un periodo de uso abierto para rotar.');
+                    }
 
-                $occupant = $locations->first(fn ($row) => (int) $row->position_id === $toPositionId && (int) $row->tire_id !== $tireId);
-                if ($occupant && ! array_key_exists($occupant->tire_id, $tireToPosition)) {
-                    $other = Tire::findOrFail($occupant->tire_id);
-                    $fromPosition = UnitPosition::findOrFail($fromPositionId);
-                    $this->fit->assertCanMount($other, $fromPosition, $unit);
-                    $resolved[$occupant->tire_id] = [
-                        'from' => (int) $occupant->position_id,
-                        'to' => $fromPositionId,
-                        'position' => $fromPosition,
+                    $occupant = $locations->first(fn ($row) => (int) $row->position_id === $toPositionId && (int) $row->tire_id !== $tireId);
+                    if ($occupant && ! array_key_exists($occupant->tire_id, $tireToPosition)) {
+                        $other = Tire::findOrFail($occupant->tire_id);
+                        $fromPosition = UnitPosition::findOrFail($fromPositionId);
+                        $this->fit->assertCanMount($other, $fromPosition, $unit);
+                        $resolved[$occupant->tire_id] = [
+                            'from' => (int) $occupant->position_id,
+                            'to' => $fromPositionId,
+                            'position' => $fromPosition,
+                        ];
+                    }
+
+                    $resolved[$tireId] = [
+                        'from' => $fromPositionId,
+                        'to' => $toPositionId,
+                        'position' => $toPosition,
                     ];
                 }
 
-                $resolved[$tireId] = [
-                    'from' => $fromPositionId,
-                    'to' => $toPositionId,
-                    'position' => $toPosition,
-                ];
-            }
-
-            if ($resolved === []) {
-                throw new DomainException('No hay cubiertas para mover.');
-            }
-
-            $locationIds = TireCurrentLocation::whereIn('tire_id', array_keys($resolved))->pluck('id');
-            TireCurrentLocation::whereIn('id', $locationIds)->update(['position_id' => null]);
-
-            $occurredAt = now();
-            foreach ($resolved as $tireId => $move) {
-                $tire = Tire::findOrFail($tireId);
-                $kind = $move['position']->is_spare ? LocationKind::Auxilio : LocationKind::Instalada;
-                $this->locations->place($tire, $kind, $unit->base_id, $unit->id, $move['to']);
-                $countsKm = ! $move['position']->is_spare;
-                $assignment = TireAssignment::where('tire_id', $tireId)->whereNull('ended_at')->first();
-                if ($assignment) {
-                    $segment = $assignment->openSegment;
-                    if ($segment && (bool) $segment->counts_km !== $countsKm) {
-                        $this->couplings->closeSegment($segment, $odometer);
-                        TireAssignmentSegment::create([
-                            'tire_assignment_id' => $assignment->id,
-                            'odometer_unit_id' => $odometerUnit->id,
-                            'start_odometer' => $odometer,
-                            'counts_km' => $countsKm,
-                            'started_at' => $occurredAt,
-                            'open_key' => $assignment->id,
-                        ]);
-                        $this->locations->refreshAccumulatedKm($tire->fresh());
-                    }
-                    $assignment->update(['counts_km' => $countsKm]);
+                if ($resolved === []) {
+                    throw new DomainException('No hay cubiertas para mover.');
                 }
-                $tire->movements()->create([
-                    'type' => MovementType::Rotate,
-                    'occurred_at' => $occurredAt,
-                    'from_unit_id' => $unit->id,
-                    'from_position_id' => $move['from'],
-                    'from_odometer' => $odometer,
-                    'to_unit_id' => $unit->id,
-                    'to_position_id' => $move['to'],
-                    'to_odometer' => $odometer,
-                    'km_delta' => 0,
-                    'counts_km' => false,
-                    'user_id' => $user->id,
-                    'notes' => $notes,
-                    'created_at' => now(),
-                ]);
-            }
 
-            $this->odometers->record($odometerUnit, $odometer, $user);
-            $this->audit->log('tire.rotated', $unit, null, [
-                'moves' => count($resolved),
-                'unit' => $unit->plate,
-            ]);
-        });
+                $locationIds = TireCurrentLocation::whereIn('tire_id', array_keys($resolved))->pluck('id');
+                TireCurrentLocation::whereIn('id', $locationIds)->update(['position_id' => null]);
+
+                $occurredAt = now();
+                foreach ($resolved as $tireId => $move) {
+                    $tire = Tire::findOrFail($tireId);
+                    $kind = $move['position']->is_spare ? LocationKind::Auxilio : LocationKind::Instalada;
+                    $this->locations->place($tire, $kind, $unit->base_id, $unit->id, $move['to']);
+                    $countsKm = ! $move['position']->is_spare;
+                    $assignment = TireAssignment::where('tire_id', $tireId)->whereNull('ended_at')->first();
+                    if ($assignment) {
+                        $segment = $assignment->openSegment;
+                        if ($segment && (bool) $segment->counts_km !== $countsKm) {
+                            $this->couplings->closeSegment($segment, $odometer);
+                            TireAssignmentSegment::create([
+                                'tire_assignment_id' => $assignment->id,
+                                'odometer_unit_id' => $odometerUnit->id,
+                                'start_odometer' => $odometer,
+                                'counts_km' => $countsKm,
+                                'started_at' => $occurredAt,
+                                'open_key' => $assignment->id,
+                            ]);
+                            $this->locations->refreshAccumulatedKm($tire->fresh());
+                        }
+                        $assignment->update(['counts_km' => $countsKm]);
+                    }
+                    $tire->movements()->create([
+                        'type' => MovementType::Rotate,
+                        'occurred_at' => $occurredAt,
+                        'from_unit_id' => $unit->id,
+                        'from_position_id' => $move['from'],
+                        'from_odometer' => $odometer,
+                        'to_unit_id' => $unit->id,
+                        'to_position_id' => $move['to'],
+                        'to_odometer' => $odometer,
+                        'km_delta' => 0,
+                        'counts_km' => false,
+                        'user_id' => $user->id,
+                        'notes' => $notes,
+                        'created_at' => now(),
+                    ]);
+                }
+
+                $this->odometers->record($odometerUnit, $odometer, $user);
+                $this->audit->log('tire.rotated', $unit, null, [
+                    'moves' => count($resolved),
+                    'unit' => $unit->plate,
+                ]);
+            });
         } catch (QueryException $e) {
             throw $this->mapQueryException($e);
         }

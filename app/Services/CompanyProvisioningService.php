@@ -16,7 +16,6 @@ use App\Models\UnitType;
 use App\Models\User;
 use App\Support\Tenancy\TenantContext;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class CompanyProvisioningService

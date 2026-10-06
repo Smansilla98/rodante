@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class UnitPosition extends Model
 {
-
     use BelongsToCompany;
+
     public $timestamps = false;
 
     protected $fillable = [

@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class UnitCoupling extends Model
 {
-
     use BelongsToCompany;
+
     protected $fillable = [
         'company_id',
         'tractor_id', 'trailer_id', 'slot_order', 'tractor_odometer_start', 'tractor_odometer_end',

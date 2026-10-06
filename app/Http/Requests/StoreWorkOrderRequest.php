@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Enums\WorkOrderType;
+use App\Models\WorkOrder;
 use App\Support\AccessScope;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -12,7 +13,7 @@ class StoreWorkOrderRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('create', \App\Models\WorkOrder::class) ?? false;
+        return $this->user()?->can('create', WorkOrder::class) ?? false;
     }
 
     public function rules(): array

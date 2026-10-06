@@ -7,6 +7,7 @@ use App\Enums\TireStatus;
 use App\Exceptions\DomainException;
 use App\Models\Base;
 use App\Services\BaseTransferService;
+use App\Services\TireOperationService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\Concerns\CreatesDomain;
 use Tests\TestCase;
@@ -57,7 +58,7 @@ class BaseTransferServiceTest extends TestCase
         $unit = $this->createTractor();
         [$tire] = $this->purchaseTires(1, 97003, 'FH:01');
         $steer = $unit->configuration->positions()->where('axle_number', 1)->where('is_spare', false)->first();
-        app(\App\Services\TireOperationService::class)->execute($unit, [
+        app(TireOperationService::class)->execute($unit, [
             'odometer' => 150000,
             'installations' => [['tire_id' => $tire->id, 'position_id' => $steer->id]],
         ], $this->admin);

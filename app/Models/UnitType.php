@@ -8,10 +8,10 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class UnitType extends Model
 {
-
     use BelongsToCompany;
+
     protected $fillable = [
-        'company_id','code', 'name', 'has_odometer', 'is_active'];
+        'company_id', 'code', 'name', 'has_odometer', 'is_active'];
 
     protected function casts(): array
     {
