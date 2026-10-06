@@ -15,6 +15,16 @@ use Illuminate\Support\Collection;
 
 class FleetUnit extends Model
 {
+    /**
+     * Forma canónica de una patente: mayúsculas y sin espacios ("api 123" → "API123").
+     * Se aplica antes de validar, así la unicidad compara la misma forma que se guarda
+     * y la búsqueda (SearchService) encuentra la unidad escriba como la escriba.
+     */
+    public static function normalizePlate(?string $plate): string
+    {
+        return mb_strtoupper((string) preg_replace('/\s+/u', '', (string) $plate));
+    }
+
     /** @use HasFactory<FleetUnitFactory> */
     use BelongsToCompany, HasFactory;
 

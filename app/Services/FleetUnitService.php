@@ -24,6 +24,7 @@ class FleetUnitService
      */
     public function create(array $input, User $user): FleetUnit
     {
+        $input['plate'] = FleetUnit::normalizePlate($input['plate'] ?? null);
         $data = $this->validate($input);
         $type = UnitType::findOrFail($data['unit_type_id']);
         $configuration = UnitConfiguration::findOrFail($data['unit_configuration_id']);
@@ -32,7 +33,6 @@ class FleetUnitService
 
         $data['status'] = UnitStatus::Activa->value;
         $data['current_odometer'] = $type->has_odometer ? ($data['current_odometer'] ?? 0) : 0;
-        $data['plate'] = strtoupper(trim($data['plate']));
         $data['duty'] = $data['duty'] ?? null;
         $data['specs'] = $this->specsFor($type, $data['specs'] ?? null);
 
@@ -44,10 +44,10 @@ class FleetUnitService
      */
     public function update(FleetUnit $unit, array $input, User $user): FleetUnit
     {
+        $input['plate'] = FleetUnit::normalizePlate($input['plate'] ?? null);
         $data = $this->validate($input, $unit);
         $this->assertScope($user, (int) $data['fleet_id'], (int) $data['base_id']);
 
-        $data['plate'] = strtoupper(trim($data['plate']));
         $data['specs'] = $this->specsFor($unit->type, $data['specs'] ?? null);
         $unit->update($data);
 

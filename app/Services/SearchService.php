@@ -16,7 +16,7 @@ class SearchService
     public function hits(User $user, string $term, int $limit): array
     {
         $digits = preg_replace('/\D+/', '', $term) ?: null;
-        $plate = mb_strtoupper(preg_replace('/\s+/', '', $term) ?? '');
+        $plate = FleetUnit::normalizePlate($term);
         $dot = Tire::normalizeDot($term);
 
         $tires = Tire::query()->with(['brand', 'model', 'size', 'currentLocation.unit']);
