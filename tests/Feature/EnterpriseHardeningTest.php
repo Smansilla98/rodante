@@ -94,10 +94,21 @@ class EnterpriseHardeningTest extends TestCase
             'installations' => [['tire_id' => $tire->id, 'position_id' => $position->id]],
         ], $this->admin);
 
-        \App\Models\TireAssignment::query()
+        $corromper = fn () => \App\Models\TireAssignment::query()
             ->where('tire_id', $tire->id)
             ->whereNull('ended_at')
             ->update(['open_tire_id' => null, 'open_key' => null]);
+
+        // En MySQL/MariaDB la propia base lo impide (CHECK chk_assignment_open_consistency):
+        // es la primera línea de defensa. En SQLite no hay CHECK y lo detecta el chequeo.
+        if (in_array(\Illuminate\Support\Facades\DB::connection()->getDriverName(), ['mysql', 'mariadb'], true)) {
+            $this->expectException(\Illuminate\Database\QueryException::class);
+            $this->expectExceptionMessageMatches('/chk_assignment_open_consistency/');
+            $corromper();
+
+            return;
+        }
+        $corromper();
 
         app(\App\Services\IntegrityService::class)->invalidateCompany((int) $this->admin->company_id);
         $codes = app(\App\Services\IntegrityService::class)->findings($this->admin)->pluck('code');

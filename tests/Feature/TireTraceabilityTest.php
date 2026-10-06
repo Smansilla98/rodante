@@ -837,9 +837,10 @@ class TireTraceabilityTest extends TestCase
 
         $this->assertStringNotContainsString('Disponibles', $html);
         $this->assertStringContainsString('Auxilio', $html);
-        $this->assertStringContainsString('Longitudinal', $html);
-        $this->assertStringContainsString('En X', $html);
-        $this->assertStringContainsString('Diagonal', $html);
+        // Decisión de 41d51cc: el panel ya no ofrece rotación automática por esquema
+        // (Longitudinal / En X / Diagonal); se mueve cubierta por cubierta.
+        $this->assertStringNotContainsString('pattern-btn', $html);
+        $this->assertStringNotContainsString('id="formPatron"', $html);
         $this->assertStringContainsString('Tocá el auxilio del mapa para instalar', $html);
         $this->assertStringContainsString('Cambio', $html);
         $this->assertStringContainsString('Sale', $html);

@@ -12,7 +12,9 @@ class BackupCommandTest extends TestCase
 
     public function test_backup_refuses_sqlite_test_database(): void
     {
-        $this->assertSame('sqlite', config('database.default'));
+        if (config('database.default') !== 'sqlite') {
+            $this->markTestSkipped('Solo aplica a la suite con SQLite (en MySQL el backup sí corre).');
+        }
 
         $code = Artisan::call('rodante:backup');
         $this->assertSame(1, $code);
