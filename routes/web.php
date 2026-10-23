@@ -36,8 +36,8 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return auth()->check()
         ? redirect()->route('dashboard')
-        : redirect()->route('login');
-});
+        : view('landing');
+})->name('home');
 Route::get('/qr/{token}', [QrController::class, 'show'])->name('qr.resolve');
 Route::get('/privacidad', fn () => view('legal.privacy'))->name('legal.privacy');
 
