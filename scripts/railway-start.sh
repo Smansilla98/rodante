@@ -37,7 +37,7 @@ nginx -t
 if [[ -f artisan ]]; then
   echo "[railway-start] migraciones"
   php artisan migrate --force --no-interaction || true
-  if [[ "${SEED_DEMO:-1}" == "1" || "${SEED_DEMO:-1}" == "true" ]]; then
+  if [[ "${SEED_DEMO:-0}" == "1" || "${SEED_DEMO:-0}" == "true" ]]; then
     echo "[railway-start] seeders (usuarios de prueba)"
     php artisan db:seed --force --no-interaction || true
     echo "[railway-start] mapeo completo por patente"
