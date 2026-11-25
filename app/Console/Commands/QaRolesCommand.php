@@ -21,6 +21,13 @@ class QaRolesCommand extends Command
 
     public function handle(): int
     {
+        // Crea usuarios y empresas con contraseñas de prueba: nunca en producción.
+        if (app()->environment('production')) {
+            $this->error('qa:roles no se ejecuta en producción.');
+
+            return self::FAILURE;
+        }
+
         $http = new QaHttp($this->laravel);
         $http->withoutMiddleware(ValidateCsrfToken::class);
 
