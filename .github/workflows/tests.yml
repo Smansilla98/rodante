@@ -118,3 +118,5 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - name: Compatibilidad de paquetes Expo
+        run: npx expo-doctor

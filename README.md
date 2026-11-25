@@ -13,16 +13,49 @@ Laravel 13, PHP 8.3, Blade, Tailwind 4, MySQL 8, PHPUnit, Docker.
 ## Inicio (Docker)
 
 ```bash
-cd rodante
+cd trazabilidad-neumaticos   # carpeta del repo
 cp .env.example .env
 docker compose up -d --build
 docker compose exec app php artisan key:generate
 docker compose exec app php artisan migrate --seed
-cd /ruta/del/proyecto && npm install && npm run build
+npm install && npm run build
 ```
 
 App: http://localhost:8093  
-MySQL: `localhost:33062` / `trazabilidad` / `laravel` / `secret`
+MySQL: `localhost:33062` / `trazabilidad` / `laravel` / `secret` (solo desarrollo local)
+
+## Inicio sin Docker (backend + web)
+
+Requiere PHP 8.3 con `pdo_sqlite` (o MySQL), Composer 2 y Node 22.
+
+```bash
+composer install
+cp .env.example .env && php artisan key:generate
+touch database/database.sqlite   # o configurar DB_* para MySQL
+php artisan migrate --seed
+npm install
+npm run dev                      # Vite en desarrollo; o `npm run build` para producción
+php artisan serve                # http://127.0.0.1:8000
+```
+
+## Verificación (lo mismo que corre la CI)
+
+Ver [`.github/workflows/tests.yml`](.github/workflows/tests.yml).
+
+```bash
+# Backend
+vendor/bin/pint --test          # formato
+composer audit                  # vulnerabilidades de dependencias
+php artisan test                # SQLite en memoria (phpunit.xml)
+php artisan test --configuration=phpunit.mysql.xml   # requiere MySQL 8 (TESTING_MYSQL=1)
+
+# Web
+npm run build
+
+# Mobile
+cd mobile && npm ci && npm run typecheck && npm test
+npx expo-doctor                 # compatibilidad de paquetes Expo
+```
 
 ### Documentación
 
